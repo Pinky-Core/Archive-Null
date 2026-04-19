@@ -4,10 +4,10 @@ namespace ArchiveNull.UI
 {
     public static class CRTMainMenuBootstrap
     {
-        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void CreateMainMenu()
         {
-            if (Object.FindFirstObjectByType<CRTMainMenuController>() != null)
+            if (Object.FindAnyObjectByType<CRTMainMenuController>() != null)
             {
                 return;
             }

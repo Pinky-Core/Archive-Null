@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using TMPro;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.SceneManagement;
@@ -35,10 +36,84 @@ namespace ArchiveNull.UI
             public System.Action Action;
         }
 
+        [Header("Content")]
+        [Tooltip("Titulo idle principal que aparece en la pantalla antes y durante el menu.")]
+        [SerializeField] private string _idleTitle = "Archive: {null}";
+        [Tooltip("Prompt mostrado cuando la pantalla ya encendio pero el menu aun no se abrio.")]
+        [SerializeField] private string _bootPrompt = "PRESS ENTER OR CLICK TO INITIALIZE";
+        [Tooltip("Mensajes de la secuencia inquietante al activar la pantalla.")]
+        [SerializeField] private string[] _bootMessages = { "it remembers", "you opened it", "not empty" };
+        [Tooltip("Subtitulo por defecto del menu principal.")]
+        [SerializeField] private string _mainSubtitle = "RECOVERED TERMINAL // RESTRICTED ACCESS NODE";
+
+        [Header("Visual Style")]
+        [SerializeField] private Color _idleScreenColor = new(0.03f, 0.06f, 0.055f, 1f);
+        [SerializeField] private Color _screenOnColor = new(0.06f, 0.15f, 0.14f, 1f);
+        [SerializeField] private Color _accentColor = new(0.78f, 0.96f, 0.92f, 1f);
+        [SerializeField] private Color _mutedColor = new(0.47f, 0.66f, 0.63f, 1f);
+        [SerializeField] private Color _dangerColor = new(1f, 0.2f, 0.18f, 1f);
+        [Range(0.05f, 1f)]
+        [SerializeField] private float _flickerStrength = 0.45f;
+
+        [Header("Timing")]
+        [SerializeField] private float _bootInitialDelay = 0.1f;
+        [SerializeField] private float _bootLineDuration = 0.16f;
+        [SerializeField] private float _bootBloomDuration = 0.14f;
+        [SerializeField] private float _contentFadeDuration = 0.18f;
+        [SerializeField] private float _messageGlitchDuration = 0.28f;
+        [SerializeField] private float _messagePause = 0.12f;
+        [SerializeField] private float _fatalPause = 0.32f;
+        [SerializeField] private float _finalMessagePause = 0.22f;
+
+        [Header("Scene Layout")]
+        [Tooltip("Activa esto si vas a colocar toda la UI manualmente en el Canvas y queres que el script solo controle el comportamiento.")]
+        [SerializeField] private bool _useSceneLayout;
+        [Tooltip("Canvas que contiene toda la UI del menu.")]
+        [SerializeField] private Canvas _sceneCanvas;
+        [Tooltip("RectTransform del marco/monitor completo.")]
+        [SerializeField] private RectTransform _sceneMonitor;
+        [Tooltip("RectTransform de la pantalla CRT. Debe tener un Image.")]
+        [SerializeField] private RectTransform _sceneScreen;
+        [Tooltip("Grupo principal del contenido visible.")]
+        [SerializeField] private CanvasGroup _sceneContentGroup;
+        [Tooltip("Grupo overlay CRT. Si usas layout manual, sus hijos de overlay deben ser RawImage, no Image.")]
+        [SerializeField] private CanvasGroup _sceneOverlayGroup;
+        [Tooltip("Root del menu principal.")]
+        [SerializeField] private RectTransform _sceneMainMenuRoot;
+        [Tooltip("Root del submenu de settings.")]
+        [SerializeField] private RectTransform _sceneSettingsRoot;
+        [Tooltip("Barra visual de seleccion opcional.")]
+        [SerializeField] private RectTransform _sceneSelectionBar;
+        [Tooltip("Glow general de la pantalla.")]
+        [SerializeField] private Image _sceneScreenGlow;
+        [Tooltip("Linea brillante del encendido CRT.")]
+        [SerializeField] private Image _sceneBootLine;
+        [Tooltip("Bloom del encendido CRT.")]
+        [SerializeField] private Image _sceneBootBloom;
+
+        [Header("Scene Text References")]
+        [SerializeField] private TMP_Text _sceneTitleText;
+        [SerializeField] private TMP_Text _sceneGhostTitleText;
+        [SerializeField] private TMP_Text _sceneSubtitleText;
+        [SerializeField] private TMP_Text _scenePromptText;
+        [SerializeField] private TMP_Text _sceneStatusText;
+        [SerializeField] private TMP_Text _sceneFooterText;
+        [SerializeField] private TMP_Text _sceneDiagnosticText;
+        [SerializeField] private TMP_Text[] _sceneMainMenuOptionTexts;
+        [SerializeField] private TMP_Text[] _sceneSettingsOptionTexts;
+
+        [Header("Scene Overlay RawImages")]
+        [Tooltip("RawImage para scanlines. Si lo asignas, el script le carga la textura automaticamente.")]
+        [SerializeField] private RawImage _sceneScanlines;
+        [Tooltip("RawImage para mascara RGB.")]
+        [SerializeField] private RawImage _sceneRgbMask;
+        [Tooltip("RawImage para ruido CRT.")]
+        [SerializeField] private RawImage _sceneNoise;
+
         private readonly List<MenuItem> _mainMenuItems = new();
         private readonly List<MenuItem> _settingsItems = new();
-        private readonly List<Text> _mainMenuTexts = new();
-        private readonly List<Text> _settingsTexts = new();
+        private readonly List<TMP_Text> _mainMenuTexts = new();
+        private readonly List<TMP_Text> _settingsTexts = new();
 
         private Canvas _canvas;
         private RectTransform _monitor;
@@ -55,27 +130,19 @@ namespace ArchiveNull.UI
         private RectTransform _settingsRoot;
         private RectTransform _selectionBar;
 
-        private Text _titleText;
-        private Text _ghostTitleText;
-        private Text _subtitleText;
-        private Text _promptText;
-        private Text _statusText;
-        private Text _footerText;
-        private Text _diagnosticText;
-
-        private Font _terminalFont;
+        private TMP_Text _titleText;
+        private TMP_Text _ghostTitleText;
+        private TMP_Text _subtitleText;
+        private TMP_Text _promptText;
+        private TMP_Text _statusText;
+        private TMP_Text _footerText;
+        private TMP_Text _diagnosticText;
         private Vector2 _monitorBasePosition;
-        private readonly Color _idleScreenColor = new(0.03f, 0.06f, 0.055f, 1f);
-        private readonly Color _screenOnColor = new(0.06f, 0.15f, 0.14f, 1f);
-        private readonly Color _accentColor = new(0.78f, 0.96f, 0.92f, 1f);
-        private readonly Color _mutedColor = new(0.47f, 0.66f, 0.63f, 1f);
-        private readonly Color _dangerColor = new(1f, 0.2f, 0.18f, 1f);
 
         private bool _sequenceRunning;
         private bool _poweredOn;
         private bool _scanlinesEnabled = true;
         private bool _chromaticEnabled = true;
-        private float _flickerStrength = 0.45f;
         private float _flickerTimer;
         private float _idleGlitchTimer;
         private float _promptBlinkTimer;
@@ -83,10 +150,19 @@ namespace ArchiveNull.UI
         private int _mainIndex;
         private int _settingsIndex;
         private MenuState _state;
+        private Coroutine _menuOpenRoutine;
 
         private void Awake()
         {
-            BuildInterface();
+            if (_useSceneLayout && TryBindSceneLayout())
+            {
+                ApplySceneTextTheme();
+            }
+            else
+            {
+                BuildInterface();
+            }
+
             ConfigureCamera();
             BuildMenus();
             SetStatus("DISPLAY COLD. WAITING FOR POWER.");
@@ -110,8 +186,6 @@ namespace ArchiveNull.UI
 
         private void BuildInterface()
         {
-            _terminalFont = LoadTerminalFont();
-
             GameObject canvasObject = new("MainMenuCanvas", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
             canvasObject.transform.SetParent(transform, false);
 
@@ -151,14 +225,14 @@ namespace ArchiveNull.UI
             CreateHeaderBand(contentRoot);
             CreateFooterBand(contentRoot);
 
-            _titleText = CreateText("Title", contentRoot, IdleTitle, 64, TextAnchor.UpperLeft, _accentColor, FontStyle.Bold);
+            _titleText = CreateText("Title", contentRoot, _idleTitle, 64, TextAlignmentOptions.TopLeft, _accentColor, FontStyles.Bold);
             SetRect(_titleText.rectTransform, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0f, 1f), new Vector2(84f, -150f), new Vector2(-360f, -56f));
             AddShadow(_titleText.gameObject, new Color(0.45f, 0.95f, 0.9f, 0.25f), Vector2.zero);
 
-            _ghostTitleText = CreateText("GhostTitle", contentRoot, IdleTitle, 64, TextAnchor.UpperLeft, new Color(1f, 0.08f, 0.08f, 0.08f), FontStyle.Bold);
+            _ghostTitleText = CreateText("GhostTitle", contentRoot, _idleTitle, 64, TextAlignmentOptions.TopLeft, new Color(1f, 0.08f, 0.08f, 0.08f), FontStyles.Bold);
             SetRect(_ghostTitleText.rectTransform, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0f, 1f), new Vector2(90f, -154f), new Vector2(-354f, -60f));
 
-            _subtitleText = CreateText("Subtitle", contentRoot, "RECOVERED TERMINAL // RESTRICTED ACCESS NODE", 22, TextAnchor.UpperLeft, _mutedColor, FontStyle.Normal);
+            _subtitleText = CreateText("Subtitle", contentRoot, _mainSubtitle, 22, TextAlignmentOptions.TopLeft, _mutedColor, FontStyles.Normal);
             SetRect(_subtitleText.rectTransform, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0f, 1f), new Vector2(88f, -212f), new Vector2(-360f, -152f));
 
             _mainMenuRoot = CreateLayoutRoot("MainMenuRoot", contentRoot, new Vector2(88f, -286f), new Vector2(500f, 280f));
@@ -169,21 +243,21 @@ namespace ArchiveNull.UI
             _settingsRoot = CreateLayoutRoot("SettingsRoot", contentRoot, new Vector2(88f, -286f), new Vector2(760f, 320f));
             CreateMenuPanel(_settingsRoot, new Vector2(790f, 344f));
 
-            _diagnosticText = CreateText("DiagnosticText", contentRoot, "STATUS: STANDBY", 19, TextAnchor.UpperLeft, _mutedColor, FontStyle.Normal);
+            _diagnosticText = CreateText("DiagnosticText", contentRoot, "STATUS: STANDBY", 19, TextAlignmentOptions.TopLeft, _mutedColor, FontStyles.Normal);
             SetPointRect(_diagnosticText.rectTransform, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-88f, -146f), new Vector2(320f, 150f));
-            _diagnosticText.horizontalOverflow = HorizontalWrapMode.Wrap;
-            _diagnosticText.verticalOverflow = VerticalWrapMode.Overflow;
+            _diagnosticText.textWrappingMode = TextWrappingModes.Normal;
+            _diagnosticText.overflowMode = TextOverflowModes.Overflow;
 
-            _promptText = CreateText("Prompt", contentRoot, BootPrompt, 24, TextAnchor.MiddleLeft, _accentColor, FontStyle.Normal);
+            _promptText = CreateText("Prompt", contentRoot, _bootPrompt, 24, TextAlignmentOptions.MidlineLeft, _accentColor, FontStyles.Normal);
             SetPointRect(_promptText.rectTransform, new Vector2(0f, 0f), new Vector2(0f, 0f), new Vector2(0f, 0f), new Vector2(88f, 118f), new Vector2(440f, 32f));
 
-            _statusText = CreateText("Status", contentRoot, "READY", 18, TextAnchor.MiddleLeft, _mutedColor, FontStyle.Normal);
+            _statusText = CreateText("Status", contentRoot, "READY", 18, TextAlignmentOptions.MidlineLeft, _mutedColor, FontStyles.Normal);
             SetPointRect(_statusText.rectTransform, new Vector2(0f, 0f), new Vector2(0f, 0f), new Vector2(0f, 0f), new Vector2(88f, 70f), new Vector2(520f, 26f));
-            _statusText.horizontalOverflow = HorizontalWrapMode.Wrap;
+            _statusText.textWrappingMode = TextWrappingModes.Normal;
 
-            _footerText = CreateText("Footer", contentRoot, "NAV: W/S OR ARROWS  //  EXECUTE: ENTER  //  BACK: ESC", 17, TextAnchor.MiddleRight, _mutedColor, FontStyle.Normal);
+            _footerText = CreateText("Footer", contentRoot, "NAV: W/S OR ARROWS  //  EXECUTE: ENTER  //  BACK: ESC", 17, TextAlignmentOptions.MidlineRight, _mutedColor, FontStyles.Normal);
             SetPointRect(_footerText.rectTransform, new Vector2(1f, 0f), new Vector2(1f, 0f), new Vector2(1f, 0f), new Vector2(-88f, 36f), new Vector2(480f, 22f));
-            _footerText.horizontalOverflow = HorizontalWrapMode.Wrap;
+            _footerText.textWrappingMode = TextWrappingModes.Normal;
 
             _overlayGroup = CreateCanvasGroup("OverlayGroup", _screen);
             CreateScanlines(_overlayGroup.transform as RectTransform);
@@ -198,6 +272,115 @@ namespace ArchiveNull.UI
             _bootLine.rectTransform.sizeDelta = new Vector2(0f, 8f);
 
             CreateCornerDetails(_monitor);
+        }
+
+        private bool TryBindSceneLayout()
+        {
+            if (_sceneScreen == null ||
+                _sceneTitleText == null ||
+                _sceneGhostTitleText == null ||
+                _scenePromptText == null ||
+                _sceneStatusText == null ||
+                _sceneMainMenuRoot == null ||
+                _sceneSettingsRoot == null)
+            {
+                return false;
+            }
+
+            _canvas = _sceneCanvas != null ? _sceneCanvas : GetComponentInParent<Canvas>();
+            _monitor = _sceneMonitor != null ? _sceneMonitor : _sceneScreen;
+            _screen = _sceneScreen;
+            _screenImage = _screen.GetComponent<Image>();
+
+            if (_canvas == null || _screenImage == null)
+            {
+                return false;
+            }
+
+            _contentGroup = _sceneContentGroup != null ? _sceneContentGroup : EnsureCanvasGroup(_screen.gameObject);
+            _overlayGroup = _sceneOverlayGroup != null ? _sceneOverlayGroup : CreateCanvasGroup("OverlayGroup", _screen);
+            _mainMenuRoot = _sceneMainMenuRoot;
+            _settingsRoot = _sceneSettingsRoot;
+            ApplySceneOverlayTextures();
+
+            _selectionBar = _sceneSelectionBar != null
+                ? _sceneSelectionBar
+                : CreateImage("SelectionBar", _mainMenuRoot, new Color(0.75f, 0.96f, 0.92f, 0.12f), false).rectTransform;
+            _selectionBar.SetSiblingIndex(Mathf.Min(1, _selectionBar.parent.childCount - 1));
+
+            _screenGlow = _sceneScreenGlow != null
+                ? _sceneScreenGlow
+                : CreateImage("ScreenGlow", _screen, new Color(0.42f, 0.95f, 0.9f, 0.08f), true);
+            if (_screenGlow.sprite == null)
+            {
+                _screenGlow.sprite = CreateRadialSprite(256, 0.85f);
+            }
+
+            _bootLine = _sceneBootLine != null
+                ? _sceneBootLine
+                : CreateImage("BootLine", _screen, new Color(1f, 1f, 1f, 0f), false);
+            _bootBloom = _sceneBootBloom != null
+                ? _sceneBootBloom
+                : CreateImage("BootBloom", _screen, new Color(0.87f, 1f, 0.98f, 0f), false);
+
+            _titleText = _sceneTitleText;
+            _ghostTitleText = _sceneGhostTitleText;
+            _subtitleText = _sceneSubtitleText;
+            _promptText = _scenePromptText;
+            _statusText = _sceneStatusText;
+            _footerText = _sceneFooterText;
+            _diagnosticText = _sceneDiagnosticText;
+
+            _monitorBasePosition = _monitor.anchoredPosition;
+            return true;
+        }
+
+        private void ApplySceneOverlayTextures()
+        {
+            if (_sceneScanlines != null)
+            {
+                _sceneScanlines.texture = GenerateScanlineTexture();
+                _sceneScanlines.color = new Color(1f, 1f, 1f, 0.46f);
+                _sceneScanlines.uvRect = new Rect(0f, 0f, 190f, 90f);
+            }
+
+            if (_sceneRgbMask != null)
+            {
+                _sceneRgbMask.texture = GenerateRgbMaskTexture();
+                _sceneRgbMask.color = Color.white;
+                _sceneRgbMask.uvRect = new Rect(0f, 0f, 370f, 1f);
+            }
+
+            if (_sceneNoise != null)
+            {
+                _sceneNoise.texture = GenerateNoiseTexture();
+                _sceneNoise.color = Color.white;
+                _sceneNoise.uvRect = new Rect(0f, 0f, 16f, 9f);
+            }
+        }
+
+        private void ApplySceneTextTheme()
+        {
+            ApplyTextTheme(_titleText, 64, FontStyles.Bold, _accentColor);
+            ApplyTextTheme(_ghostTitleText, 64, FontStyles.Bold, new Color(1f, 0.08f, 0.08f, 0.08f));
+            ApplyTextTheme(_subtitleText, 22, FontStyles.Normal, _mutedColor);
+            ApplyTextTheme(_promptText, 24, FontStyles.Normal, _accentColor);
+            ApplyTextTheme(_statusText, 18, FontStyles.Normal, _mutedColor);
+            ApplyTextTheme(_footerText, 17, FontStyles.Normal, _mutedColor);
+            ApplyTextTheme(_diagnosticText, 19, FontStyles.Normal, _mutedColor);
+        }
+
+        private void ApplyTextTheme(TMP_Text text, float fontSize, FontStyles style, Color color)
+        {
+            if (text == null)
+            {
+                return;
+            }
+
+            text.fontSize = fontSize;
+            text.fontStyle = style;
+            text.color = color;
+            text.richText = false;
         }
 
         private void BuildMenus()
@@ -229,11 +412,29 @@ namespace ArchiveNull.UI
                 Action = QuitGame
             });
 
-            for (int i = 0; i < _mainMenuItems.Count; i++)
+            if (_useSceneLayout && _sceneMainMenuOptionTexts != null && _sceneMainMenuOptionTexts.Length >= _mainMenuItems.Count)
             {
-                Text option = CreateMenuText(_mainMenuRoot, _mainMenuItems[i].Label);
-                option.rectTransform.anchoredPosition = new Vector2(0f, -i * 54f);
-                _mainMenuTexts.Add(option);
+                for (int i = 0; i < _mainMenuItems.Count; i++)
+                {
+                    TMP_Text option = _sceneMainMenuOptionTexts[i];
+                    if (option == null)
+                    {
+                        continue;
+                    }
+
+                    option.text = _mainMenuItems[i].Label;
+                    ApplyTextTheme(option, 30, FontStyles.Bold, _accentColor);
+                    _mainMenuTexts.Add(option);
+                }
+            }
+            else
+            {
+                for (int i = 0; i < _mainMenuItems.Count; i++)
+                {
+                    TMP_Text option = CreateMenuText(_mainMenuRoot, _mainMenuItems[i].Label);
+                    option.rectTransform.anchoredPosition = new Vector2(0f, -i * 54f);
+                    _mainMenuTexts.Add(option);
+                }
             }
 
             _settingsItems.Add(new MenuItem
@@ -264,15 +465,33 @@ namespace ArchiveNull.UI
 
             RefreshSettingsLabels();
 
-            for (int i = 0; i < _settingsItems.Count; i++)
+            if (_useSceneLayout && _sceneSettingsOptionTexts != null && _sceneSettingsOptionTexts.Length >= _settingsItems.Count)
             {
-                Text option = CreateMenuText(_settingsRoot, _settingsItems[i].Label);
-                option.rectTransform.anchoredPosition = new Vector2(0f, -i * 50f);
-                _settingsTexts.Add(option);
+                for (int i = 0; i < _settingsItems.Count; i++)
+                {
+                    TMP_Text option = _sceneSettingsOptionTexts[i];
+                    if (option == null)
+                    {
+                        continue;
+                    }
+
+                    option.text = _settingsItems[i].Label;
+                    ApplyTextTheme(option, 30, FontStyles.Bold, _accentColor);
+                    _settingsTexts.Add(option);
+                }
+            }
+            else
+            {
+                for (int i = 0; i < _settingsItems.Count; i++)
+                {
+                    TMP_Text option = CreateMenuText(_settingsRoot, _settingsItems[i].Label);
+                    option.rectTransform.anchoredPosition = new Vector2(0f, -i * 50f);
+                    _settingsTexts.Add(option);
+                }
             }
 
-            _mainMenuGroup = _mainMenuRoot.gameObject.AddComponent<CanvasGroup>();
-            _settingsGroup = _settingsRoot.gameObject.AddComponent<CanvasGroup>();
+            _mainMenuGroup = EnsureCanvasGroup(_mainMenuRoot.gameObject);
+            _settingsGroup = EnsureCanvasGroup(_settingsRoot.gameObject);
             _mainMenuGroup.alpha = 0f;
             _settingsGroup.alpha = 0f;
             _settingsRoot.gameObject.SetActive(false);
@@ -302,14 +521,13 @@ namespace ArchiveNull.UI
             _bootLine.color = new Color(1f, 1f, 1f, 0f);
             _bootBloom.color = new Color(0.87f, 1f, 0.98f, 0f);
 
-            yield return new WaitForSeconds(0.1f);
+            yield return new WaitForSeconds(_bootInitialDelay);
 
             float timer = 0f;
-            const float lineDuration = 0.16f;
-            while (timer < lineDuration)
+            while (timer < _bootLineDuration)
             {
                 timer += Time.unscaledDeltaTime;
-                float t = EaseOutExpo(Mathf.Clamp01(timer / lineDuration));
+                float t = EaseOutExpo(Mathf.Clamp01(timer / _bootLineDuration));
                 _screenImage.color = Color.Lerp(new Color(0.002f, 0.005f, 0.005f, 1f), new Color(0.05f, 0.12f, 0.11f, 1f), t * 0.65f);
                 _bootLine.color = new Color(1f, 1f, 1f, Mathf.Lerp(0.15f, 1f, t));
                 _bootBloom.color = new Color(0.85f, 1f, 0.97f, Mathf.Lerp(0.1f, 0.9f, t));
@@ -319,11 +537,10 @@ namespace ArchiveNull.UI
             }
 
             timer = 0f;
-            const float bloomDuration = 0.14f;
-            while (timer < bloomDuration)
+            while (timer < _bootBloomDuration)
             {
                 timer += Time.unscaledDeltaTime;
-                float t = EaseOutCubic(Mathf.Clamp01(timer / bloomDuration));
+                float t = EaseOutCubic(Mathf.Clamp01(timer / _bootBloomDuration));
                 _bootLine.rectTransform.sizeDelta = new Vector2(1110f, Mathf.Lerp(10f, 640f, t));
                 _bootBloom.rectTransform.sizeDelta = new Vector2(1110f, Mathf.Lerp(54f, 720f, t));
                 _bootLine.color = new Color(1f, 1f, 1f, Mathf.Lerp(1f, 0.12f, t));
@@ -338,14 +555,14 @@ namespace ArchiveNull.UI
 
             _screenImage.color = _idleScreenColor;
             _screenGlow.color = new Color(0.42f, 0.95f, 0.9f, 0.08f);
-            _titleText.text = IdleTitle;
-            _ghostTitleText.text = IdleTitle;
-            _subtitleText.text = "RECOVERED TERMINAL // RESTRICTED ACCESS NODE";
-            _promptText.text = BootPrompt;
+            _titleText.text = _idleTitle;
+            _ghostTitleText.text = _idleTitle;
+            _subtitleText.text = _mainSubtitle;
+            _promptText.text = _bootPrompt;
             _statusText.text = "SYSTEM READY // ACCESS GATE LOCKED";
             _diagnosticText.text = "CRT SIGNAL STABLE // ARCHIVE INDEX ONLINE";
             _footerText.text = "EXECUTE: ENTER OR CLICK";
-            yield return StartCoroutine(FadeCanvasGroup(_contentGroup, 0f, 1f, 0.18f));
+            yield return StartCoroutine(FadeCanvasGroup(_contentGroup, 0f, 1f, _contentFadeDuration));
 
             _poweredOn = true;
             _state = MenuState.AwaitingAccess;
@@ -438,13 +655,12 @@ namespace ArchiveNull.UI
             _promptText.text = ">";
             _footerText.text = "NAV: W/S OR ARROWS  //  EXECUTE: ENTER  //  SETTINGS: CLICK";
             SetStatus("ARCHIVE INTERFACE UNLOCKED.");
-            RefreshMenuVisuals();
+            StartMenuOpenAnimation(_mainMenuTexts, _mainMenuItems, _mainIndex);
         }
 
         private void OpenSettings()
         {
             _state = MenuState.Settings;
-            _mainMenuRoot.gameObject.SetActive(false);
             _settingsRoot.gameObject.SetActive(true);
             _mainMenuGroup.alpha = 0f;
             _settingsGroup.alpha = 1f;
@@ -454,21 +670,20 @@ namespace ArchiveNull.UI
             _footerText.text = "NAV: W/S OR ARROWS  //  EXECUTE: ENTER  //  BACK: ESC";
             SetStatus("LOCAL DISPLAY PARAMETERS AVAILABLE.");
             RefreshSettingsLabels();
-            RefreshMenuVisuals();
+            StartMenuOpenAnimation(_settingsTexts, _settingsItems, _settingsIndex, hideRoot: _mainMenuRoot, showRoot: _settingsRoot);
         }
 
         private void CloseSettings()
         {
             _state = MenuState.MainMenu;
-            _settingsRoot.gameObject.SetActive(false);
             _mainMenuRoot.gameObject.SetActive(true);
             _settingsGroup.alpha = 0f;
             _mainMenuGroup.alpha = 1f;
-            _subtitleText.text = "RECOVERED TERMINAL // RESTRICTED ACCESS NODE";
+            _subtitleText.text = _mainSubtitle;
             _promptText.text = ">";
             _footerText.text = "NAV: W/S OR ARROWS  //  EXECUTE: ENTER  //  SETTINGS: CLICK";
             SetStatus("RETURNED TO PRIMARY DIRECTORY.");
-            RefreshMenuVisuals();
+            StartMenuOpenAnimation(_mainMenuTexts, _mainMenuItems, _mainIndex, hideRoot: _settingsRoot, showRoot: _mainMenuRoot);
         }
 
         private IEnumerator ActivationSequence()
@@ -482,13 +697,13 @@ namespace ArchiveNull.UI
             _promptText.text = string.Empty;
             _footerText.text = string.Empty;
 
-            for (int i = 0; i < BootMessages.Length; i++)
+            for (int i = 0; i < _bootMessages.Length; i++)
             {
-                yield return StartCoroutine(GlitchTo(BootMessages[i], 0.28f));
+                yield return StartCoroutine(GlitchTo(_bootMessages[i], _messageGlitchDuration));
 
-                if (i < BootMessages.Length - 1)
+                if (i < _bootMessages.Length - 1)
                 {
-                    yield return new WaitForSeconds(0.12f);
+                    yield return new WaitForSeconds(_messagePause);
                 }
             }
 
@@ -503,10 +718,10 @@ namespace ArchiveNull.UI
 
             yield return StartCoroutine(ShakeMonitor(0.32f, 16f));
 
-            yield return new WaitForSeconds(0.32f);
+            yield return new WaitForSeconds(_fatalPause);
             _titleText.text = "you shouldn't be here";
             _ghostTitleText.text = _titleText.text;
-            yield return new WaitForSeconds(0.22f);
+            yield return new WaitForSeconds(_finalMessagePause);
             yield return StartCoroutine(WhiteoutAndShutdown());
         }
 
@@ -625,7 +840,7 @@ namespace ArchiveNull.UI
                 if (_idleGlitchTimer <= 0f)
                 {
                     _idleGlitchTimer = 0.08f;
-                    string title = ScrambleText(IdleTitle, 0.04f);
+                    string title = ScrambleText(_idleTitle, 0.04f);
                     _titleText.text = title;
                     _ghostTitleText.text = title;
                 }
@@ -667,13 +882,14 @@ namespace ArchiveNull.UI
             for (int i = 0; i < _mainMenuTexts.Count; i++)
             {
                 bool selected = i == _mainIndex && _state == MenuState.MainMenu;
+                _mainMenuTexts[i].text = BuildMenuLine(_mainMenuItems[i].Label, selected, _mainMenuItems[i].Enabled);
                 ApplyMenuItemStyle(_mainMenuTexts[i], _mainMenuItems[i], selected);
             }
 
             for (int i = 0; i < _settingsTexts.Count; i++)
             {
                 bool selected = i == _settingsIndex && _state == MenuState.Settings;
-                _settingsTexts[i].text = _settingsItems[i].Label;
+                _settingsTexts[i].text = BuildMenuLine(_settingsItems[i].Label, selected, _settingsItems[i].Enabled);
                 ApplyMenuItemStyle(_settingsTexts[i], _settingsItems[i], selected);
             }
 
@@ -687,7 +903,7 @@ namespace ArchiveNull.UI
             }
         }
 
-        private void ApplyMenuItemStyle(Text text, MenuItem item, bool selected)
+        private void ApplyMenuItemStyle(TMP_Text text, MenuItem item, bool selected)
         {
             if (!item.Enabled)
             {
@@ -720,6 +936,69 @@ namespace ArchiveNull.UI
             RefreshMenuVisuals();
         }
 
+        private string BuildMenuLine(string label, bool selected, bool enabled)
+        {
+            string prefix = selected && enabled ? "> " : "  ";
+            return prefix + label;
+        }
+
+        private void StartMenuOpenAnimation(List<TMP_Text> texts, List<MenuItem> items, int selectedIndex, RectTransform hideRoot = null, RectTransform showRoot = null)
+        {
+            if (_menuOpenRoutine != null)
+            {
+                StopCoroutine(_menuOpenRoutine);
+            }
+
+            _menuOpenRoutine = StartCoroutine(AnimateMenuOpen(texts, items, selectedIndex, hideRoot, showRoot));
+        }
+
+        private IEnumerator AnimateMenuOpen(List<TMP_Text> texts, List<MenuItem> items, int selectedIndex, RectTransform hideRoot, RectTransform showRoot)
+        {
+            _sequenceRunning = true;
+
+            if (hideRoot != null)
+            {
+                hideRoot.gameObject.SetActive(false);
+            }
+
+            if (showRoot != null)
+            {
+                showRoot.gameObject.SetActive(true);
+            }
+
+            for (int i = 0; i < texts.Count; i++)
+            {
+                texts[i].text = string.Empty;
+            }
+
+            _promptText.text = "> loading directory";
+            yield return new WaitForSeconds(0.04f);
+
+            for (int i = 0; i < texts.Count && i < items.Count; i++)
+            {
+                bool selected = i == selectedIndex;
+                string line = BuildMenuLine(items[i].Label, selected, items[i].Enabled);
+                yield return StartCoroutine(TypeLine(texts[i], line, 0.009f));
+                ApplyMenuItemStyle(texts[i], items[i], selected);
+                yield return new WaitForSeconds(0.02f);
+            }
+
+            _promptText.text = _state == MenuState.Settings ? "SETTINGS MODE" : ">";
+            RefreshMenuVisuals();
+            _sequenceRunning = false;
+            _menuOpenRoutine = null;
+        }
+
+        private IEnumerator TypeLine(TMP_Text text, string content, float charDelay)
+        {
+            text.text = string.Empty;
+            for (int i = 0; i < content.Length; i++)
+            {
+                text.text += content[i];
+                yield return new WaitForSeconds(charDelay);
+            }
+        }
+
         private void MoveSelection(List<MenuItem> items, ref int index, int direction)
         {
             if (items.Count == 0)
@@ -736,7 +1015,7 @@ namespace ArchiveNull.UI
             while (!items[index].Enabled && safety < items.Count + 1);
         }
 
-        private void UpdateSelectionFromPointer(List<Text> texts, List<MenuItem> items, ref int index)
+        private void UpdateSelectionFromPointer(List<TMP_Text> texts, List<MenuItem> items, ref int index)
         {
             if (Mouse.current == null)
             {
@@ -928,19 +1207,6 @@ namespace ArchiveNull.UI
             camera.transform.rotation = Quaternion.identity;
         }
 
-        private Font LoadTerminalFont()
-        {
-            string[] candidates =
-            {
-                "Consolas",
-                "Lucida Console",
-                "Courier New"
-            };
-
-            Font font = Font.CreateDynamicFontFromOSFont(candidates, 32);
-            return font != null ? font : Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-        }
-
         private static RectTransform CreatePanel(string name, RectTransform parent, Vector2 size, Color color)
         {
             Image image = CreateImage(name, parent, color, false);
@@ -983,27 +1249,32 @@ namespace ArchiveNull.UI
             return go.GetComponent<CanvasGroup>();
         }
 
-        private Text CreateText(string name, RectTransform parent, string content, int fontSize, TextAnchor anchor, Color color, FontStyle style)
+        private static CanvasGroup EnsureCanvasGroup(GameObject target)
         {
-            GameObject go = new(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(Text));
+            CanvasGroup group = target.GetComponent<CanvasGroup>();
+            return group != null ? group : target.AddComponent<CanvasGroup>();
+        }
+
+        private TMP_Text CreateText(string name, RectTransform parent, string content, float fontSize, TextAlignmentOptions anchor, Color color, FontStyles style)
+        {
+            GameObject go = new(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(TextMeshProUGUI));
             go.transform.SetParent(parent, false);
 
-            Text text = go.GetComponent<Text>();
-            text.font = _terminalFont;
+            TMP_Text text = go.GetComponent<TextMeshProUGUI>();
             text.fontSize = fontSize;
             text.fontStyle = style;
             text.alignment = anchor;
             text.text = content;
             text.color = color;
-            text.supportRichText = false;
-            text.horizontalOverflow = HorizontalWrapMode.Overflow;
-            text.verticalOverflow = VerticalWrapMode.Overflow;
+            text.richText = false;
+            text.textWrappingMode = TextWrappingModes.NoWrap;
+            text.overflowMode = TextOverflowModes.Overflow;
             return text;
         }
 
-        private Text CreateMenuText(RectTransform parent, string content)
+        private TMP_Text CreateMenuText(RectTransform parent, string content)
         {
-            Text text = CreateText("MenuOption", parent, content, 30, TextAnchor.MiddleLeft, _accentColor, FontStyle.Bold);
+            TMP_Text text = CreateText("MenuOption", parent, content, 30, TextAlignmentOptions.MidlineLeft, _accentColor, FontStyles.Bold);
             SetPointRect(text.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f), Vector2.zero, new Vector2(470f, 42f));
             return text;
         }
@@ -1086,6 +1357,27 @@ namespace ArchiveNull.UI
 
         private void CreateScanlines(RectTransform parent)
         {
+            RawImage scanlines = CreateRawImage("Scanlines", parent, GenerateScanlineTexture());
+            scanlines.color = new Color(1f, 1f, 1f, 0.46f);
+            scanlines.uvRect = new Rect(0f, 0f, 190f, 90f);
+        }
+
+        private void CreateRgbMask(RectTransform parent)
+        {
+            RawImage mask = CreateRawImage("RgbMask", parent, GenerateRgbMaskTexture());
+            mask.color = Color.white;
+            mask.uvRect = new Rect(0f, 0f, 370f, 1f);
+        }
+
+        private void CreateNoiseSpecks(RectTransform parent)
+        {
+            RawImage noise = CreateRawImage("Noise", parent, GenerateNoiseTexture());
+            noise.color = Color.white;
+            noise.uvRect = new Rect(0f, 0f, 16f, 9f);
+        }
+
+        private static Texture2D GenerateScanlineTexture()
+        {
             Texture2D texture = new(4, 8, TextureFormat.RGBA32, false);
             for (int y = 0; y < texture.height; y++)
             {
@@ -1099,13 +1391,10 @@ namespace ArchiveNull.UI
             texture.wrapMode = TextureWrapMode.Repeat;
             texture.filterMode = FilterMode.Point;
             texture.Apply();
-
-            RawImage scanlines = CreateRawImage("Scanlines", parent, texture);
-            scanlines.color = new Color(1f, 1f, 1f, 0.46f);
-            scanlines.uvRect = new Rect(0f, 0f, 190f, 90f);
+            return texture;
         }
 
-        private void CreateRgbMask(RectTransform parent)
+        private static Texture2D GenerateRgbMaskTexture()
         {
             Texture2D texture = new(6, 1, TextureFormat.RGBA32, false);
             texture.SetPixels(new[]
@@ -1120,13 +1409,10 @@ namespace ArchiveNull.UI
             texture.wrapMode = TextureWrapMode.Repeat;
             texture.filterMode = FilterMode.Point;
             texture.Apply();
-
-            RawImage mask = CreateRawImage("RgbMask", parent, texture);
-            mask.color = Color.white;
-            mask.uvRect = new Rect(0f, 0f, 370f, 1f);
+            return texture;
         }
 
-        private void CreateNoiseSpecks(RectTransform parent)
+        private static Texture2D GenerateNoiseTexture()
         {
             Texture2D texture = new(128, 128, TextureFormat.RGBA32, false);
             for (int y = 0; y < texture.height; y++)
@@ -1141,10 +1427,7 @@ namespace ArchiveNull.UI
             texture.wrapMode = TextureWrapMode.Repeat;
             texture.filterMode = FilterMode.Point;
             texture.Apply();
-
-            RawImage noise = CreateRawImage("Noise", parent, texture);
-            noise.color = Color.white;
-            noise.uvRect = new Rect(0f, 0f, 16f, 9f);
+            return texture;
         }
 
         private static RawImage CreateRawImage(string name, RectTransform parent, Texture texture)
@@ -1180,7 +1463,7 @@ namespace ArchiveNull.UI
 
         private void CreateCornerDetails(RectTransform monitor)
         {
-            Text label = CreateText("MonitorLabel", monitor, "ARCHIVE NULL  //  CRT-77 RESTORATION UNIT", 18, TextAnchor.MiddleCenter, new Color(0.58f, 0.58f, 0.58f, 1f), FontStyle.Normal);
+            TMP_Text label = CreateText("MonitorLabel", monitor, "ARCHIVE NULL  //  CRT-77 RESTORATION UNIT", 18, TextAlignmentOptions.Center, new Color(0.58f, 0.58f, 0.58f, 1f), FontStyles.Normal);
             SetPointRect(label.rectTransform, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 38f), new Vector2(500f, 26f));
 
             Image led = CreateImage("PowerLed", monitor, new Color(0.88f, 0.15f, 0.15f, 1f), false);
