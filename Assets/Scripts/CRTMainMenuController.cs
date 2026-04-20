@@ -12,6 +12,16 @@ namespace ArchiveNull.UI
     {
         private const string IdleTitle = "Archive: {null}";
         private const string BootPrompt = "PRESS ENTER OR CLICK TO INITIALIZE";
+        private const string PrefAudioEnabled = "crt.menu.audio.enabled";
+        private const string PrefMasterVolume = "crt.menu.audio.master";
+        private const string PrefInterfaceVolume = "crt.menu.audio.interface";
+        private const string PrefSystemVolume = "crt.menu.audio.system";
+        private const string PrefEffectsVolume = "crt.menu.audio.effects";
+        private const string PrefSubtitlesEnabled = "crt.menu.subtitles.enabled";
+        private const string PrefLanguageIndex = "crt.menu.language.index";
+        private const string PrefQualityIndex = "crt.menu.quality.index";
+        private const string PrefScanlinesEnabled = "crt.menu.scanlines.enabled";
+        private const string PrefChromaticEnabled = "crt.menu.chromatic.enabled";
 
         private static readonly string[] BootMessages =
         {
@@ -29,11 +39,22 @@ namespace ArchiveNull.UI
             LockedSequence
         }
 
+        private enum SettingsPage
+        {
+            Categories,
+            General,
+            Audio,
+            Video
+        }
+
         private sealed class MenuItem
         {
             public string Label;
             public bool Enabled = true;
+            public bool Hidden;
             public System.Action Action;
+            public System.Action<int> AdjustAction;
+            public bool PreferAdjustWithHorizontal;
         }
 
         [Header("Content")]
@@ -64,6 +85,57 @@ namespace ArchiveNull.UI
         [SerializeField] private float _messagePause = 0.12f;
         [SerializeField] private float _fatalPause = 0.32f;
         [SerializeField] private float _finalMessagePause = 0.22f;
+        [Tooltip("Acelera especificamente la secuencia de power cycle / error.")]
+        [SerializeField] private float _powerCycleSpeedMultiplier = 2.5f;
+
+        [Header("Menu Behaviour")]
+        [Tooltip("Muestra una barra visual de seleccion. Desactivalo si queres controlar toda la presentacion a mano.")]
+        [SerializeField] private bool _showSelectionBar = false;
+        [Tooltip("Si esta activo, el menu y submenus se escriben al abrirse. Si esta desactivado, aparecen ya escritos.")]
+        [SerializeField] private bool _typeMenusOnOpen = false;
+        [Tooltip("Recorta todo el contenido visual al rectangulo de la pantalla para que nada se salga del monitor.")]
+        [SerializeField] private bool _clipContentToScreen = true;
+        [Tooltip("Si esta asignado, al activar CLICK TO START primero se mueve la camara al monitor y luego se abre el menu.")]
+        [SerializeField] private CRTMenuCameraFocus _cameraFocus;
+
+        [Header("Monitor Light")]
+        [SerializeField] private Light _monitorPowerLight;
+        [SerializeField] private float _monitorLightDelay = 0.04f;
+        [SerializeField] private float _monitorLightFadeDuration = 0.18f;
+        [SerializeField] private float _monitorLightIntensity = 1.2f;
+
+        [Header("Audio")]
+        [Tooltip("AudioSource usado para reproducir sonidos del menu. Si esta vacio, el script intenta usar uno del mismo GameObject o crear uno.")]
+        [SerializeField] private AudioSource _audioSource;
+        [SerializeField] private AudioClip _bootStartClip;
+        [SerializeField] private AudioClip _menuOpenClip;
+        [SerializeField] private AudioClip _moveClip;
+        [SerializeField] private AudioClip _confirmClip;
+        [SerializeField] private AudioClip _backClip;
+        [SerializeField] private AudioClip _glitchClip;
+        [SerializeField] private AudioClip _shutdownClip;
+        [Range(0f, 1f)]
+        [SerializeField] private float _masterVolume = 0.9f;
+        [Range(0f, 1f)]
+        [SerializeField] private float _interfaceVolume = 0.8f;
+        [Range(0f, 1f)]
+        [SerializeField] private float _systemVolume = 0.8f;
+        [Range(0f, 1f)]
+        [SerializeField] private float _effectsVolume = 0.85f;
+        [Tooltip("Activa o desactiva todos los sonidos del menu.")]
+        [SerializeField] private bool _audioEnabled = true;
+        [Tooltip("Si esta activo y faltan clips manuales, el script genera un banco retro procedural automaticamente.")]
+        [SerializeField] private bool _useProceduralRetroSounds = true;
+
+        [Header("Functional Settings")]
+        [Tooltip("Idiomas disponibles para el submenu de opciones. El primero se usa como fallback.")]
+        [SerializeField] private string[] _languageOptions = { "ESPANOL", "ENGLISH" };
+        [Tooltip("Cantidad de filas visibles simultaneamente en el submenu de opciones generado por script.")]
+        [SerializeField] private int _settingsVisibleRows = 6;
+        [Tooltip("Paso de ajuste para sliders de audio.")]
+        [SerializeField] private float _audioSliderStep = 0.05f;
+        [Tooltip("Cantidad de segmentos usados para dibujar barras de audio en texto.")]
+        [SerializeField] private int _sliderSegments = 10;
 
         [Header("Scene Layout")]
         [Tooltip("Activa esto si vas a colocar toda la UI manualmente en el Canvas y queres que el script solo controle el comportamiento.")]
@@ -110,6 +182,12 @@ namespace ArchiveNull.UI
         [Tooltip("RawImage para ruido CRT.")]
         [SerializeField] private RawImage _sceneNoise;
 
+        [Header("Camera")]
+        [Tooltip("Si esta activo, el script fuerza fondo negro en la Main Camera. Si esta desactivado, respeta totalmente la camara de la escena.")]
+        [SerializeField] private bool _configureMainCamera = false;
+        [Tooltip("Si se configura la camara, solo se ajusta el background y clear flags. La posicion y rotacion quedan intactas.")]
+        [SerializeField] private Color _cameraBackgroundColor = Color.black;
+
         private readonly List<MenuItem> _mainMenuItems = new();
         private readonly List<MenuItem> _settingsItems = new();
         private readonly List<TMP_Text> _mainMenuTexts = new();
@@ -138,9 +216,11 @@ namespace ArchiveNull.UI
         private TMP_Text _footerText;
         private TMP_Text _diagnosticText;
         private Vector2 _monitorBasePosition;
+        private CRTRetroSoundBank _retroSoundBank;
 
         private bool _sequenceRunning;
         private bool _poweredOn;
+        private bool _subtitlesEnabled = true;
         private bool _scanlinesEnabled = true;
         private bool _chromaticEnabled = true;
         private float _flickerTimer;
@@ -149,11 +229,19 @@ namespace ArchiveNull.UI
         private float _glitchOverlayTimer;
         private int _mainIndex;
         private int _settingsIndex;
+        private int _settingsScrollOffset;
+        private int _languageIndex;
+        private SettingsPage _settingsPage = SettingsPage.Categories;
         private MenuState _state;
         private Coroutine _menuOpenRoutine;
+        private Coroutine _monitorLightRoutine;
 
         private void Awake()
         {
+            EnsureAudioSource();
+            NormalizeSettingsData();
+            LoadPreferences();
+
             if (_useSceneLayout && TryBindSceneLayout())
             {
                 ApplySceneTextTheme();
@@ -165,6 +253,7 @@ namespace ArchiveNull.UI
 
             ConfigureCamera();
             BuildMenus();
+            ApplyRuntimeSettings();
             SetStatus("DISPLAY COLD. WAITING FOR POWER.");
         }
 
@@ -213,6 +302,7 @@ namespace ArchiveNull.UI
             _screen = CreatePanel("Screen", outerBezel, new Vector2(1110f, 640f), _idleScreenColor);
             _screenImage = _screen.GetComponent<Image>();
             AddShadow(_screen.gameObject, new Color(0f, 0.7f, 0.65f, 0.18f), Vector2.zero);
+            EnsureScreenMask();
 
             _screenGlow = CreateImage("ScreenGlow", _screen, new Color(0.42f, 0.95f, 0.9f, 0.08f), true);
             _screenGlow.sprite = CreateRadialSprite(256, 0.85f);
@@ -297,6 +387,8 @@ namespace ArchiveNull.UI
                 return false;
             }
 
+            EnsureScreenMask();
+
             _contentGroup = _sceneContentGroup != null ? _sceneContentGroup : EnsureCanvasGroup(_screen.gameObject);
             _overlayGroup = _sceneOverlayGroup != null ? _sceneOverlayGroup : CreateCanvasGroup("OverlayGroup", _screen);
             _mainMenuRoot = _sceneMainMenuRoot;
@@ -359,6 +451,27 @@ namespace ArchiveNull.UI
             }
         }
 
+        private void EnsureScreenMask()
+        {
+            if (_screen == null)
+            {
+                return;
+            }
+
+            RectMask2D rectMask = _screen.GetComponent<RectMask2D>();
+            if (_clipContentToScreen)
+            {
+                if (rectMask == null)
+                {
+                    _screen.gameObject.AddComponent<RectMask2D>();
+                }
+            }
+            else if (rectMask != null)
+            {
+                Destroy(rectMask);
+            }
+        }
+
         private void ApplySceneTextTheme()
         {
             ApplyTextTheme(_titleText, 64, FontStyles.Bold, _accentColor);
@@ -392,103 +505,29 @@ namespace ArchiveNull.UI
 
             _mainMenuItems.Add(new MenuItem
             {
-                Label = "NEW GAME",
+                Label = GetLocalizedMainMenuLabel(0),
                 Action = StartNewGame
             });
             _mainMenuItems.Add(new MenuItem
             {
-                Label = "CONTINUE",
+                Label = GetLocalizedMainMenuLabel(1),
                 Enabled = false,
                 Action = () => SetStatus("NO RECOVERABLE SESSION FOUND.")
             });
             _mainMenuItems.Add(new MenuItem
             {
-                Label = "SETTINGS",
+                Label = GetLocalizedMainMenuLabel(2),
                 Action = OpenSettings
             });
             _mainMenuItems.Add(new MenuItem
             {
-                Label = "QUIT",
+                Label = GetLocalizedMainMenuLabel(3),
                 Action = QuitGame
             });
 
-            if (_useSceneLayout && _sceneMainMenuOptionTexts != null && _sceneMainMenuOptionTexts.Length >= _mainMenuItems.Count)
-            {
-                for (int i = 0; i < _mainMenuItems.Count; i++)
-                {
-                    TMP_Text option = _sceneMainMenuOptionTexts[i];
-                    if (option == null)
-                    {
-                        continue;
-                    }
-
-                    option.text = _mainMenuItems[i].Label;
-                    ApplyTextTheme(option, 30, FontStyles.Bold, _accentColor);
-                    _mainMenuTexts.Add(option);
-                }
-            }
-            else
-            {
-                for (int i = 0; i < _mainMenuItems.Count; i++)
-                {
-                    TMP_Text option = CreateMenuText(_mainMenuRoot, _mainMenuItems[i].Label);
-                    option.rectTransform.anchoredPosition = new Vector2(0f, -i * 54f);
-                    _mainMenuTexts.Add(option);
-                }
-            }
-
-            _settingsItems.Add(new MenuItem
-            {
-                Label = string.Empty,
-                Action = CycleFlicker
-            });
-            _settingsItems.Add(new MenuItem
-            {
-                Label = string.Empty,
-                Action = ToggleScanlines
-            });
-            _settingsItems.Add(new MenuItem
-            {
-                Label = string.Empty,
-                Action = ToggleChromatic
-            });
-            _settingsItems.Add(new MenuItem
-            {
-                Label = "POWER CYCLE DISPLAY",
-                Action = () => StartCoroutine(PowerCycleFromSettings())
-            });
-            _settingsItems.Add(new MenuItem
-            {
-                Label = "RETURN TO MAIN MENU",
-                Action = CloseSettings
-            });
-
-            RefreshSettingsLabels();
-
-            if (_useSceneLayout && _sceneSettingsOptionTexts != null && _sceneSettingsOptionTexts.Length >= _settingsItems.Count)
-            {
-                for (int i = 0; i < _settingsItems.Count; i++)
-                {
-                    TMP_Text option = _sceneSettingsOptionTexts[i];
-                    if (option == null)
-                    {
-                        continue;
-                    }
-
-                    option.text = _settingsItems[i].Label;
-                    ApplyTextTheme(option, 30, FontStyles.Bold, _accentColor);
-                    _settingsTexts.Add(option);
-                }
-            }
-            else
-            {
-                for (int i = 0; i < _settingsItems.Count; i++)
-                {
-                    TMP_Text option = CreateMenuText(_settingsRoot, _settingsItems[i].Label);
-                    option.rectTransform.anchoredPosition = new Vector2(0f, -i * 50f);
-                    _settingsTexts.Add(option);
-                }
-            }
+            BuildMainMenuTextPool();
+            BuildSettingsTextPool();
+            RebuildSettingsPage(SettingsPage.Categories, true, false);
 
             _mainMenuGroup = EnsureCanvasGroup(_mainMenuRoot.gameObject);
             _settingsGroup = EnsureCanvasGroup(_settingsRoot.gameObject);
@@ -497,11 +536,103 @@ namespace ArchiveNull.UI
             _settingsRoot.gameObject.SetActive(false);
         }
 
+        private void BuildMainMenuTextPool()
+        {
+            int providedCount = _useSceneLayout && _sceneMainMenuOptionTexts != null ? _sceneMainMenuOptionTexts.Length : 0;
+
+            if (_useSceneLayout && _sceneMainMenuOptionTexts != null)
+            {
+                for (int i = 0; i < _mainMenuItems.Count; i++)
+                {
+                    TMP_Text option = i < _sceneMainMenuOptionTexts.Length ? _sceneMainMenuOptionTexts[i] : null;
+                    if (option == null)
+                    {
+                        _mainMenuItems[i].Hidden = true;
+                        _mainMenuTexts.Add(null);
+                        continue;
+                    }
+
+                    _mainMenuItems[i].Hidden = !option.gameObject.activeSelf;
+                    ApplyTextTheme(option, 30, FontStyles.Bold, _accentColor);
+                    _mainMenuTexts.Add(option);
+                }
+
+                EnsureSelectableIndex(_mainMenuItems, ref _mainIndex);
+                return;
+            }
+
+            for (int i = 0; i < _mainMenuItems.Count; i++)
+            {
+                TMP_Text option = CreateMenuText(_mainMenuRoot, _mainMenuItems[i].Label);
+                option.rectTransform.anchoredPosition = new Vector2(0f, -i * 54f);
+                _mainMenuTexts.Add(option);
+            }
+        }
+
+        private void BuildSettingsTextPool()
+        {
+            int activeProvidedCount = 0;
+            if (_useSceneLayout && _sceneSettingsOptionTexts != null)
+            {
+                for (int i = 0; i < _sceneSettingsOptionTexts.Length; i++)
+                {
+                    if (_sceneSettingsOptionTexts[i] != null && _sceneSettingsOptionTexts[i].gameObject.activeSelf)
+                    {
+                        activeProvidedCount++;
+                    }
+                }
+            }
+
+            int desiredSlotCount = activeProvidedCount > 0 ? activeProvidedCount : _settingsVisibleRows;
+
+            desiredSlotCount = Mathf.Max(1, desiredSlotCount);
+
+            if (_useSceneLayout && _sceneSettingsOptionTexts != null)
+            {
+                for (int i = 0; i < _sceneSettingsOptionTexts.Length; i++)
+                {
+                    TMP_Text option = _sceneSettingsOptionTexts[i];
+                    if (option == null || !option.gameObject.activeSelf)
+                    {
+                        continue;
+                    }
+
+                    ApplyTextTheme(option, 30, FontStyles.Bold, _accentColor);
+                    _settingsTexts.Add(option);
+                }
+            }
+
+            while (_settingsTexts.Count < desiredSlotCount)
+            {
+                TMP_Text option = CreateMenuText(_settingsRoot, string.Empty);
+                _settingsTexts.Add(option);
+            }
+
+            LayoutSettingsTextSlots();
+        }
+
+        private void LayoutSettingsTextSlots()
+        {
+            float spacing = 48f;
+            for (int i = 0; i < _settingsTexts.Count; i++)
+            {
+                TMP_Text text = _settingsTexts[i];
+                if (text == null)
+                {
+                    continue;
+                }
+
+                text.rectTransform.anchoredPosition = new Vector2(0f, -i * spacing);
+                text.rectTransform.sizeDelta = new Vector2(720f, 40f);
+            }
+        }
+
         private IEnumerator BootSequence()
         {
             _sequenceRunning = true;
             _poweredOn = false;
             _state = MenuState.Booting;
+            SetMonitorLightImmediate(0f);
 
             _mainMenuGroup.alpha = 0f;
             _settingsGroup.alpha = 0f;
@@ -521,7 +652,24 @@ namespace ArchiveNull.UI
             _bootLine.color = new Color(1f, 1f, 1f, 0f);
             _bootBloom.color = new Color(0.87f, 1f, 0.98f, 0f);
 
-            yield return new WaitForSeconds(_bootInitialDelay);
+            if (_monitorLightRoutine != null)
+            {
+                StopCoroutine(_monitorLightRoutine);
+            }
+            _monitorLightRoutine = StartCoroutine(AnimateMonitorLight(_monitorLightDelay, _monitorLightFadeDuration, _monitorLightIntensity));
+
+            if (_monitorLightDelay > 0f)
+            {
+                yield return new WaitForSeconds(_monitorLightDelay);
+            }
+
+            PlayUiSound(_bootStartClip, _systemVolume);
+
+            float remainingBootDelay = Mathf.Max(0f, _bootInitialDelay - _monitorLightDelay);
+            if (remainingBootDelay > 0f)
+            {
+                yield return new WaitForSeconds(remainingBootDelay);
+            }
 
             float timer = 0f;
             while (timer < _bootLineDuration)
@@ -595,7 +743,14 @@ namespace ArchiveNull.UI
             {
                 if (submit || pointerClick)
                 {
-                    OpenMainMenu();
+                    if (_cameraFocus != null)
+                    {
+                        _cameraFocus.FocusComputer();
+                    }
+                    else
+                    {
+                        OpenMainMenu();
+                    }
                 }
 
                 return;
@@ -607,13 +762,15 @@ namespace ArchiveNull.UI
                 if (direction != 0)
                 {
                     MoveSelection(_mainMenuItems, ref _mainIndex, direction);
+                    PlayUiSound(_moveClip, _interfaceVolume);
                     RefreshMenuVisuals();
                 }
 
-                UpdateSelectionFromPointer(_mainMenuTexts, _mainMenuItems, ref _mainIndex);
+                bool pointerOverMainOption = UpdateSelectionFromPointer(_mainMenuTexts, _mainMenuItems, ref _mainIndex);
 
-                if (submit || pointerClick)
+                if (submit || (pointerClick && pointerOverMainOption))
                 {
+                    PlayUiSound(_confirmClip, _interfaceVolume);
                     ExecuteItem(_mainMenuItems[_mainIndex]);
                 }
 
@@ -626,19 +783,47 @@ namespace ArchiveNull.UI
                 if (direction != 0)
                 {
                     MoveSelection(_settingsItems, ref _settingsIndex, direction);
+                    ClampSettingsScrollToSelection();
+                    PlayUiSound(_moveClip, _interfaceVolume);
                     RefreshMenuVisuals();
                 }
 
-                UpdateSelectionFromPointer(_settingsTexts, _settingsItems, ref _settingsIndex);
-
-                if (WasBackPressed())
+                int horizontal = ReadHorizontalNavigation();
+                if (horizontal != 0 && TryAdjustSelectedSetting(horizontal))
                 {
-                    CloseSettings();
+                    PlayUiSound(_moveClip, _interfaceVolume);
                     return;
                 }
 
-                if (submit || pointerClick)
+                bool pointerOverSettingsOption = UpdateSettingsSelectionFromPointer(ref _settingsIndex);
+
+                if (WasBackPressed())
                 {
+                    PlayUiSound(_backClip, _interfaceVolume);
+                    if (_settingsPage == SettingsPage.Categories)
+                    {
+                        CloseSettings();
+                    }
+                    else
+                    {
+                        OpenSettingsCategoriesFromSubPage();
+                    }
+                    return;
+                }
+
+                if (submit || (pointerClick && pointerOverSettingsOption))
+                {
+                    if (pointerClick)
+                    {
+                        int pointerAdjustDirection = GetPointerAdjustDirection();
+                        if (pointerAdjustDirection != 0 && TryAdjustSelectedSetting(pointerAdjustDirection))
+                        {
+                            PlayUiSound(_moveClip, _interfaceVolume);
+                            return;
+                        }
+                    }
+
+                    PlayUiSound(_confirmClip, _interfaceVolume);
                     ExecuteItem(_settingsItems[_settingsIndex]);
                 }
             }
@@ -647,43 +832,35 @@ namespace ArchiveNull.UI
         private void OpenMainMenu()
         {
             _state = MenuState.MainMenu;
+            PlayUiSound(_menuOpenClip, _interfaceVolume);
             _mainMenuGroup.alpha = 1f;
             _settingsGroup.alpha = 0f;
             _mainMenuRoot.gameObject.SetActive(true);
             _settingsRoot.gameObject.SetActive(false);
-            _mainIndex = Mathf.Clamp(_mainIndex, 0, _mainMenuItems.Count - 1);
-            _promptText.text = ">";
-            _footerText.text = "NAV: W/S OR ARROWS  //  EXECUTE: ENTER  //  SETTINGS: CLICK";
-            SetStatus("ARCHIVE INTERFACE UNLOCKED.");
-            StartMenuOpenAnimation(_mainMenuTexts, _mainMenuItems, _mainIndex);
+            EnsureSelectableIndex(_mainMenuItems, ref _mainIndex);
+            _promptText.text = string.Empty;
+            _footerText.text = GetMainMenuFooter();
+            SetStatus(GetLocalizedStatusUnlocked());
+            ShowMenuState(_mainMenuTexts, _mainMenuItems, _mainIndex);
         }
 
         private void OpenSettings()
         {
-            _state = MenuState.Settings;
-            _settingsRoot.gameObject.SetActive(true);
-            _mainMenuGroup.alpha = 0f;
-            _settingsGroup.alpha = 1f;
-            _settingsIndex = Mathf.Clamp(_settingsIndex, 0, _settingsItems.Count - 1);
-            _subtitleText.text = "DISPLAY CALIBRATION // LOCAL TERMINAL SETTINGS";
-            _promptText.text = "SETTINGS MODE";
-            _footerText.text = "NAV: W/S OR ARROWS  //  EXECUTE: ENTER  //  BACK: ESC";
-            SetStatus("LOCAL DISPLAY PARAMETERS AVAILABLE.");
-            RefreshSettingsLabels();
-            StartMenuOpenAnimation(_settingsTexts, _settingsItems, _settingsIndex, hideRoot: _mainMenuRoot, showRoot: _settingsRoot);
+            OpenSettingsCategories();
         }
 
         private void CloseSettings()
         {
             _state = MenuState.MainMenu;
+            PlayUiSound(_backClip, _interfaceVolume);
             _mainMenuRoot.gameObject.SetActive(true);
             _settingsGroup.alpha = 0f;
             _mainMenuGroup.alpha = 1f;
             _subtitleText.text = _mainSubtitle;
-            _promptText.text = ">";
-            _footerText.text = "NAV: W/S OR ARROWS  //  EXECUTE: ENTER  //  SETTINGS: CLICK";
-            SetStatus("RETURNED TO PRIMARY DIRECTORY.");
-            StartMenuOpenAnimation(_mainMenuTexts, _mainMenuItems, _mainIndex, hideRoot: _settingsRoot, showRoot: _mainMenuRoot);
+            _promptText.text = string.Empty;
+            _footerText.text = GetMainMenuFooter();
+            SetStatus(GetLocalizedStatusReturnMain());
+            ShowMenuState(_mainMenuTexts, _mainMenuItems, _mainIndex, hideRoot: _settingsRoot, showRoot: _mainMenuRoot);
         }
 
         private IEnumerator ActivationSequence()
@@ -696,14 +873,19 @@ namespace ArchiveNull.UI
             _settingsRoot.gameObject.SetActive(false);
             _promptText.text = string.Empty;
             _footerText.text = string.Empty;
+            float speed = Mathf.Max(0.01f, _powerCycleSpeedMultiplier);
+            float glitchDuration = _messageGlitchDuration / speed;
+            float messagePause = _messagePause / speed;
+            float fatalPause = _fatalPause / speed;
+            float finalPause = _finalMessagePause / speed;
 
             for (int i = 0; i < _bootMessages.Length; i++)
             {
-                yield return StartCoroutine(GlitchTo(_bootMessages[i], _messageGlitchDuration));
+                yield return StartCoroutine(GlitchTo(_bootMessages[i], glitchDuration));
 
                 if (i < _bootMessages.Length - 1)
                 {
-                    yield return new WaitForSeconds(_messagePause);
+                    yield return new WaitForSeconds(messagePause);
                 }
             }
 
@@ -715,13 +897,14 @@ namespace ArchiveNull.UI
             _diagnosticText.text = "MEMORY GATE DESYNC // ORIGIN UNKNOWN";
             SetStatus("KERNEL PANIC.");
             _glitchOverlayTimer = 0.9f;
+            PlayUiSound(_glitchClip, _effectsVolume);
 
             yield return StartCoroutine(ShakeMonitor(0.32f, 16f));
 
-            yield return new WaitForSeconds(_fatalPause);
+            yield return new WaitForSeconds(fatalPause);
             _titleText.text = "you shouldn't be here";
             _ghostTitleText.text = _titleText.text;
-            yield return new WaitForSeconds(_finalMessagePause);
+            yield return new WaitForSeconds(finalPause);
             yield return StartCoroutine(WhiteoutAndShutdown());
         }
 
@@ -760,6 +943,8 @@ namespace ArchiveNull.UI
             _ghostTitleText.color = new Color(1f, 0.08f, 0.08f, 0.08f);
             _sequenceRunning = false;
             _poweredOn = false;
+            SetMonitorLightImmediate(0f);
+            PlayUiSound(_shutdownClip, _systemVolume);
             yield return new WaitForSeconds(0.08f);
             StartCoroutine(BootSequence());
         }
@@ -881,17 +1066,35 @@ namespace ArchiveNull.UI
         {
             for (int i = 0; i < _mainMenuTexts.Count; i++)
             {
+                if (i >= _mainMenuItems.Count)
+                {
+                    continue;
+                }
+
+                TMP_Text text = _mainMenuTexts[i];
+                MenuItem item = _mainMenuItems[i];
+                if (text == null)
+                {
+                    continue;
+                }
+
+                if (item.Hidden)
+                {
+                    text.gameObject.SetActive(false);
+                    continue;
+                }
+
+                if (!text.gameObject.activeSelf)
+                {
+                    text.gameObject.SetActive(true);
+                }
+
                 bool selected = i == _mainIndex && _state == MenuState.MainMenu;
-                _mainMenuTexts[i].text = BuildMenuLine(_mainMenuItems[i].Label, selected, _mainMenuItems[i].Enabled);
-                ApplyMenuItemStyle(_mainMenuTexts[i], _mainMenuItems[i], selected);
+                text.text = BuildMenuLine(item.Label, selected, item.Enabled);
+                ApplyMenuItemStyle(text, item, selected);
             }
 
-            for (int i = 0; i < _settingsTexts.Count; i++)
-            {
-                bool selected = i == _settingsIndex && _state == MenuState.Settings;
-                _settingsTexts[i].text = BuildMenuLine(_settingsItems[i].Label, selected, _settingsItems[i].Enabled);
-                ApplyMenuItemStyle(_settingsTexts[i], _settingsItems[i], selected);
-            }
+            RefreshSettingsTextSlots();
 
             if (_state == MenuState.MainMenu && _mainMenuTexts.Count > 0)
             {
@@ -899,7 +1102,19 @@ namespace ArchiveNull.UI
             }
             else if (_state == MenuState.Settings && _settingsTexts.Count > 0)
             {
-                PositionSelectionBar(_settingsTexts[_settingsIndex].rectTransform);
+                TMP_Text selectedText = GetVisibleSettingsTextForIndex(_settingsIndex);
+                if (selectedText != null)
+                {
+                    PositionSelectionBar(selectedText.rectTransform);
+                }
+                else if (_selectionBar != null)
+                {
+                    _selectionBar.gameObject.SetActive(false);
+                }
+            }
+            else if (_selectionBar != null)
+            {
+                _selectionBar.gameObject.SetActive(false);
             }
         }
 
@@ -911,11 +1126,28 @@ namespace ArchiveNull.UI
                 return;
             }
 
+            if (item.PreferAdjustWithHorizontal)
+            {
+                text.color = selected ? new Color(0.98f, 1f, 0.98f, 1f) : new Color(0.76f, 0.93f, 0.9f, 1f);
+                return;
+            }
+
             text.color = selected ? new Color(0.94f, 1f, 0.97f, 1f) : _accentColor;
         }
 
         private void PositionSelectionBar(RectTransform target)
         {
+            if (_selectionBar == null)
+            {
+                return;
+            }
+
+            if (!_showSelectionBar)
+            {
+                _selectionBar.gameObject.SetActive(false);
+                return;
+            }
+
             _selectionBar.gameObject.SetActive(true);
             _selectionBar.SetParent(target.parent, false);
             _selectionBar.anchorMin = target.anchorMin;
@@ -927,13 +1159,17 @@ namespace ArchiveNull.UI
 
         private void ExecuteItem(MenuItem item)
         {
-            if (!item.Enabled || item.Action == null)
+            if (!item.Enabled || item.Hidden || item.Action == null)
             {
                 return;
             }
 
             item.Action.Invoke();
-            RefreshMenuVisuals();
+
+            if (_menuOpenRoutine == null && !_sequenceRunning)
+            {
+                RefreshMenuVisuals();
+            }
         }
 
         private string BuildMenuLine(string label, bool selected, bool enabled)
@@ -942,11 +1178,101 @@ namespace ArchiveNull.UI
             return prefix + label;
         }
 
+        private void RefreshSettingsTextSlots()
+        {
+            for (int slot = 0; slot < _settingsTexts.Count; slot++)
+            {
+                TMP_Text text = _settingsTexts[slot];
+                if (text == null)
+                {
+                    continue;
+                }
+
+                int itemIndex = _settingsScrollOffset + slot;
+                bool isVisible = itemIndex >= 0 && itemIndex < _settingsItems.Count;
+                text.gameObject.SetActive(isVisible);
+                if (!isVisible)
+                {
+                    continue;
+                }
+
+                MenuItem item = _settingsItems[itemIndex];
+                bool selected = itemIndex == _settingsIndex && _state == MenuState.Settings;
+                text.text = BuildMenuLine(item.Label, selected, item.Enabled);
+                ApplyMenuItemStyle(text, item, selected);
+                text.maxVisibleCharacters = 9999;
+            }
+
+            UpdateSettingsDiagnostic();
+        }
+
+        private TMP_Text GetVisibleSettingsTextForIndex(int itemIndex)
+        {
+            int slot = itemIndex - _settingsScrollOffset;
+            if (slot < 0 || slot >= _settingsTexts.Count)
+            {
+                return null;
+            }
+
+            return _settingsTexts[slot];
+        }
+
+        private void ShowMenuState(List<TMP_Text> texts, List<MenuItem> items, int selectedIndex, RectTransform hideRoot = null, RectTransform showRoot = null)
+        {
+            if (_typeMenusOnOpen)
+            {
+                StartMenuOpenAnimation(texts, items, selectedIndex, hideRoot, showRoot);
+                return;
+            }
+
+            if (_menuOpenRoutine != null)
+            {
+                StopCoroutine(_menuOpenRoutine);
+                _menuOpenRoutine = null;
+            }
+
+            if (hideRoot != null)
+            {
+                hideRoot.gameObject.SetActive(false);
+            }
+
+            if (showRoot != null)
+            {
+                showRoot.gameObject.SetActive(true);
+            }
+
+            _sequenceRunning = false;
+            RefreshMenuVisuals();
+        }
+
         private void StartMenuOpenAnimation(List<TMP_Text> texts, List<MenuItem> items, int selectedIndex, RectTransform hideRoot = null, RectTransform showRoot = null)
         {
             if (_menuOpenRoutine != null)
             {
                 StopCoroutine(_menuOpenRoutine);
+            }
+
+            _sequenceRunning = true;
+
+            if (hideRoot != null)
+            {
+                hideRoot.gameObject.SetActive(false);
+            }
+
+            if (showRoot != null)
+            {
+                showRoot.gameObject.SetActive(true);
+            }
+
+            for (int i = 0; i < texts.Count; i++)
+            {
+                if (texts[i] == null)
+                {
+                    continue;
+                }
+
+                texts[i].text = string.Empty;
+                texts[i].maxVisibleCharacters = 0;
             }
 
             _menuOpenRoutine = StartCoroutine(AnimateMenuOpen(texts, items, selectedIndex, hideRoot, showRoot));
@@ -968,14 +1294,25 @@ namespace ArchiveNull.UI
 
             for (int i = 0; i < texts.Count; i++)
             {
+                if (texts[i] == null)
+                {
+                    continue;
+                }
+
                 texts[i].text = string.Empty;
+                texts[i].maxVisibleCharacters = 0;
             }
 
-            _promptText.text = "> loading directory";
+            _promptText.text = string.Empty;
             yield return new WaitForSeconds(0.04f);
 
             for (int i = 0; i < texts.Count && i < items.Count; i++)
             {
+                if (texts[i] == null || items[i].Hidden || !texts[i].gameObject.activeInHierarchy)
+                {
+                    continue;
+                }
+
                 bool selected = i == selectedIndex;
                 string line = BuildMenuLine(items[i].Label, selected, items[i].Enabled);
                 yield return StartCoroutine(TypeLine(texts[i], line, 0.009f));
@@ -983,7 +1320,7 @@ namespace ArchiveNull.UI
                 yield return new WaitForSeconds(0.02f);
             }
 
-            _promptText.text = _state == MenuState.Settings ? "SETTINGS MODE" : ">";
+            _promptText.text = string.Empty;
             RefreshMenuVisuals();
             _sequenceRunning = false;
             _menuOpenRoutine = null;
@@ -991,12 +1328,115 @@ namespace ArchiveNull.UI
 
         private IEnumerator TypeLine(TMP_Text text, string content, float charDelay)
         {
-            text.text = string.Empty;
-            for (int i = 0; i < content.Length; i++)
+            text.text = content;
+            text.ForceMeshUpdate();
+            int totalCharacters = text.textInfo.characterCount;
+            text.maxVisibleCharacters = 0;
+
+            for (int i = 0; i <= totalCharacters; i++)
             {
-                text.text += content[i];
+                text.maxVisibleCharacters = i;
                 yield return new WaitForSeconds(charDelay);
             }
+
+            text.maxVisibleCharacters = 9999;
+        }
+
+        private void RebuildSettingsPage(SettingsPage page, bool resetSelection, bool refreshImmediately = true)
+        {
+            _settingsPage = page;
+            _settingsItems.Clear();
+
+            switch (page)
+            {
+                case SettingsPage.Categories:
+                    _settingsItems.Add(new MenuItem { Label = GetSettingsCategoryLabel(SettingsPage.General), Action = () => OpenSettingsSubPage(SettingsPage.General) });
+                    _settingsItems.Add(new MenuItem { Label = GetSettingsCategoryLabel(SettingsPage.Audio), Action = () => OpenSettingsSubPage(SettingsPage.Audio) });
+                    _settingsItems.Add(new MenuItem { Label = GetSettingsCategoryLabel(SettingsPage.Video), Action = () => OpenSettingsSubPage(SettingsPage.Video) });
+                    _settingsItems.Add(new MenuItem { Label = GetLocalizedReturnLabel(), Action = CloseSettings });
+                    break;
+
+                case SettingsPage.General:
+                    _settingsItems.Add(new MenuItem { Label = BuildLanguageLabel(), Action = CycleLanguage, AdjustAction = AdjustLanguage, PreferAdjustWithHorizontal = true });
+                    _settingsItems.Add(new MenuItem { Label = BuildSubtitlesLabel(), Action = ToggleSubtitles });
+                    _settingsItems.Add(new MenuItem { Label = BuildAudioEnabledLabel(), Action = ToggleAudioEnabled });
+                    _settingsItems.Add(new MenuItem { Label = Localize("VOLVER A CATEGORIAS", "BACK TO CATEGORIES"), Action = OpenSettingsCategoriesFromSubPage });
+                    break;
+
+                case SettingsPage.Audio:
+                    _settingsItems.Add(new MenuItem { Label = BuildSliderLabel(Localize("VOLUMEN MAESTRO", "MASTER VOLUME"), _masterVolume), Action = () => AdjustMasterVolume(1), AdjustAction = AdjustMasterVolume, PreferAdjustWithHorizontal = true });
+                    _settingsItems.Add(new MenuItem { Label = BuildSliderLabel(Localize("SONIDOS MENU", "MENU SOUNDS"), _interfaceVolume), Action = () => AdjustInterfaceVolume(1), AdjustAction = AdjustInterfaceVolume, PreferAdjustWithHorizontal = true });
+                    _settingsItems.Add(new MenuItem { Label = BuildSliderLabel(Localize("SISTEMA CRT", "CRT SYSTEM"), _systemVolume), Action = () => AdjustSystemVolume(1), AdjustAction = AdjustSystemVolume, PreferAdjustWithHorizontal = true });
+                    _settingsItems.Add(new MenuItem { Label = BuildSliderLabel(Localize("EFECTOS GLITCH", "GLITCH FX"), _effectsVolume), Action = () => AdjustEffectsVolume(1), AdjustAction = AdjustEffectsVolume, PreferAdjustWithHorizontal = true });
+                    _settingsItems.Add(new MenuItem { Label = BuildAudioEnabledLabel(), Action = ToggleAudioEnabled });
+                    _settingsItems.Add(new MenuItem { Label = Localize("VOLVER A CATEGORIAS", "BACK TO CATEGORIES"), Action = OpenSettingsCategoriesFromSubPage });
+                    break;
+
+                case SettingsPage.Video:
+                    _settingsItems.Add(new MenuItem { Label = BuildQualityLabel(), Action = CycleQuality, AdjustAction = AdjustQuality, PreferAdjustWithHorizontal = true });
+                    _settingsItems.Add(new MenuItem { Label = BuildScanlinesLabel(), Action = ToggleScanlines });
+                    _settingsItems.Add(new MenuItem { Label = BuildChromaticLabel(), Action = ToggleChromatic });
+                    _settingsItems.Add(new MenuItem { Label = BuildFlickerLabel(), Action = CycleFlicker });
+                    _settingsItems.Add(new MenuItem { Label = Localize("POWER CYCLE DISPLAY", "POWER CYCLE DISPLAY"), Action = () => StartCoroutine(PowerCycleFromSettings()) });
+                    _settingsItems.Add(new MenuItem { Label = Localize("VOLVER A CATEGORIAS", "BACK TO CATEGORIES"), Action = OpenSettingsCategoriesFromSubPage });
+                    break;
+            }
+
+            if (resetSelection)
+            {
+                _settingsIndex = 0;
+                _settingsScrollOffset = 0;
+            }
+            else
+            {
+                _settingsIndex = Mathf.Clamp(_settingsIndex, 0, Mathf.Max(0, _settingsItems.Count - 1));
+                ClampSettingsScrollToSelection();
+            }
+
+            UpdateSettingsContextText();
+            if (refreshImmediately)
+            {
+                RefreshMenuVisuals();
+            }
+        }
+
+        private void OpenSettingsCategories()
+        {
+            _state = MenuState.Settings;
+            PlayUiSound(_menuOpenClip, _interfaceVolume);
+            _settingsRoot.gameObject.SetActive(true);
+            _mainMenuGroup.alpha = 0f;
+            _settingsGroup.alpha = 1f;
+            RebuildSettingsPage(SettingsPage.Categories, true, false);
+            ShowMenuState(_settingsTexts, _settingsItems, _settingsIndex, hideRoot: _mainMenuRoot, showRoot: _settingsRoot);
+        }
+
+        private void OpenSettingsSubPage(SettingsPage page)
+        {
+            RebuildSettingsPage(page, true, false);
+            ShowMenuState(_settingsTexts, _settingsItems, _settingsIndex, showRoot: _settingsRoot);
+        }
+
+        private void OpenSettingsCategoriesFromSubPage()
+        {
+            RebuildSettingsPage(SettingsPage.Categories, true, false);
+            ShowMenuState(_settingsTexts, _settingsItems, _settingsIndex, showRoot: _settingsRoot);
+        }
+
+        private void UpdateSettingsContextText()
+        {
+            _subtitleText.text = _settingsPage switch
+            {
+                SettingsPage.Categories => GetSettingsSubtitle(),
+                SettingsPage.General => Localize("GENERAL // AJUSTES DEL TERMINAL", "GENERAL // TERMINAL SETTINGS"),
+                SettingsPage.Audio => Localize("AUDIO // MEZCLA Y VOLUMENES", "AUDIO // MIX AND LEVELS"),
+                SettingsPage.Video => Localize("VIDEO // CRT Y RENDER", "VIDEO // CRT AND RENDER"),
+                _ => GetSettingsSubtitle()
+            };
+
+            _promptText.text = string.Empty;
+            _footerText.text = GetSettingsFooter();
+            SetStatus(GetLocalizedStatusSettings());
         }
 
         private void MoveSelection(List<MenuItem> items, ref int index, int direction)
@@ -1012,31 +1452,140 @@ namespace ArchiveNull.UI
                 index = (index + direction + items.Count) % items.Count;
                 safety++;
             }
-            while (!items[index].Enabled && safety < items.Count + 1);
+            while ((!items[index].Enabled || items[index].Hidden) && safety < items.Count + 1);
         }
 
-        private void UpdateSelectionFromPointer(List<TMP_Text> texts, List<MenuItem> items, ref int index)
+        private void EnsureSelectableIndex(List<MenuItem> items, ref int index)
         {
-            if (Mouse.current == null)
+            if (items.Count == 0)
             {
+                index = 0;
                 return;
             }
 
-            Vector2 mousePosition = Mouse.current.position.ReadValue();
-            for (int i = 0; i < texts.Count; i++)
+            index = Mathf.Clamp(index, 0, items.Count - 1);
+            if (!items[index].Enabled || items[index].Hidden)
             {
-                if (!items[i].Enabled)
+                MoveSelection(items, ref index, 1);
+            }
+        }
+
+        private void ClampSettingsScrollToSelection()
+        {
+            int visibleCount = Mathf.Max(1, _settingsTexts.Count);
+            if (_settingsIndex < _settingsScrollOffset)
+            {
+                _settingsScrollOffset = _settingsIndex;
+            }
+            else if (_settingsIndex >= _settingsScrollOffset + visibleCount)
+            {
+                _settingsScrollOffset = _settingsIndex - visibleCount + 1;
+            }
+
+            _settingsScrollOffset = Mathf.Clamp(_settingsScrollOffset, 0, Mathf.Max(0, _settingsItems.Count - visibleCount));
+        }
+
+        private bool UpdateSettingsSelectionFromPointer(ref int index)
+        {
+            if (Mouse.current == null)
+            {
+                return false;
+            }
+
+            Vector2 mousePosition = Mouse.current.position.ReadValue();
+            Camera eventCamera = _canvas != null && _canvas.renderMode != RenderMode.ScreenSpaceOverlay ? _canvas.worldCamera : null;
+            for (int slot = 0; slot < _settingsTexts.Count; slot++)
+            {
+                TMP_Text text = _settingsTexts[slot];
+                int itemIndex = _settingsScrollOffset + slot;
+                if (text == null || !text.gameObject.activeSelf || itemIndex >= _settingsItems.Count)
                 {
                     continue;
                 }
 
-                if (RectTransformUtility.RectangleContainsScreenPoint(texts[i].rectTransform, mousePosition, null))
+                if (!_settingsItems[itemIndex].Enabled)
+                {
+                    continue;
+                }
+
+                if (RectTransformUtility.RectangleContainsScreenPoint(text.rectTransform, mousePosition, eventCamera))
+                {
+                    index = itemIndex;
+                    ClampSettingsScrollToSelection();
+                    RefreshMenuVisuals();
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private int GetPointerAdjustDirection()
+        {
+            TMP_Text selectedText = GetVisibleSettingsTextForIndex(_settingsIndex);
+            if (selectedText == null || Mouse.current == null)
+            {
+                return 0;
+            }
+
+            Vector2 mousePosition = Mouse.current.position.ReadValue();
+            Camera eventCamera = _canvas != null && _canvas.renderMode != RenderMode.ScreenSpaceOverlay ? _canvas.worldCamera : null;
+            if (!RectTransformUtility.RectangleContainsScreenPoint(selectedText.rectTransform, mousePosition, eventCamera))
+            {
+                return 0;
+            }
+
+            RectTransformUtility.ScreenPointToLocalPointInRectangle(selectedText.rectTransform, mousePosition, eventCamera, out Vector2 localPoint);
+            return localPoint.x >= 0f ? 1 : -1;
+        }
+
+        private bool TryAdjustSelectedSetting(int direction)
+        {
+            if (_settingsIndex < 0 || _settingsIndex >= _settingsItems.Count)
+            {
+                return false;
+            }
+
+            MenuItem item = _settingsItems[_settingsIndex];
+            if (item.AdjustAction == null)
+            {
+                return false;
+            }
+
+            item.AdjustAction.Invoke(direction);
+            return true;
+        }
+
+        private bool UpdateSelectionFromPointer(List<TMP_Text> texts, List<MenuItem> items, ref int index)
+        {
+            if (Mouse.current == null)
+            {
+                return false;
+            }
+
+            Vector2 mousePosition = Mouse.current.position.ReadValue();
+            Camera eventCamera = _canvas != null && _canvas.renderMode != RenderMode.ScreenSpaceOverlay ? _canvas.worldCamera : null;
+            for (int i = 0; i < texts.Count; i++)
+            {
+                if (i >= items.Count || texts[i] == null || !texts[i].gameObject.activeInHierarchy)
+                {
+                    continue;
+                }
+
+                if (!items[i].Enabled || items[i].Hidden)
+                {
+                    continue;
+                }
+
+                if (RectTransformUtility.RectangleContainsScreenPoint(texts[i].rectTransform, mousePosition, eventCamera))
                 {
                     index = i;
                     RefreshMenuVisuals();
-                    return;
+                    return true;
                 }
             }
+
+            return false;
         }
 
         private int ReadVerticalNavigation()
@@ -1081,6 +1630,85 @@ namespace ArchiveNull.UI
             return Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame;
         }
 
+        private static int ReadHorizontalNavigation()
+        {
+            if (Keyboard.current == null)
+            {
+                return 0;
+            }
+
+            if (Keyboard.current.aKey.wasPressedThisFrame || Keyboard.current.leftArrowKey.wasPressedThisFrame)
+            {
+                return -1;
+            }
+
+            if (Keyboard.current.dKey.wasPressedThisFrame || Keyboard.current.rightArrowKey.wasPressedThisFrame)
+            {
+                return 1;
+            }
+
+            return 0;
+        }
+
+        private void NormalizeSettingsData()
+        {
+            if (_languageOptions == null || _languageOptions.Length == 0)
+            {
+                _languageOptions = new[] { "ESPANOL", "ENGLISH" };
+            }
+
+            _settingsVisibleRows = Mathf.Max(3, _settingsVisibleRows);
+            _audioSliderStep = Mathf.Clamp(_audioSliderStep, 0.01f, 0.25f);
+            _sliderSegments = Mathf.Clamp(_sliderSegments, 6, 20);
+        }
+
+        private void LoadPreferences()
+        {
+            _audioEnabled = PlayerPrefs.GetInt(PrefAudioEnabled, _audioEnabled ? 1 : 0) == 1;
+            _masterVolume = PlayerPrefs.GetFloat(PrefMasterVolume, _masterVolume);
+            _interfaceVolume = PlayerPrefs.GetFloat(PrefInterfaceVolume, _interfaceVolume);
+            _systemVolume = PlayerPrefs.GetFloat(PrefSystemVolume, _systemVolume);
+            _effectsVolume = PlayerPrefs.GetFloat(PrefEffectsVolume, _effectsVolume);
+            _subtitlesEnabled = PlayerPrefs.GetInt(PrefSubtitlesEnabled, _subtitlesEnabled ? 1 : 0) == 1;
+            _scanlinesEnabled = PlayerPrefs.GetInt(PrefScanlinesEnabled, _scanlinesEnabled ? 1 : 0) == 1;
+            _chromaticEnabled = PlayerPrefs.GetInt(PrefChromaticEnabled, _chromaticEnabled ? 1 : 0) == 1;
+            _languageIndex = Mathf.Clamp(PlayerPrefs.GetInt(PrefLanguageIndex, _languageIndex), 0, _languageOptions.Length - 1);
+
+            string[] qualityNames = QualitySettings.names;
+            if (qualityNames != null && qualityNames.Length > 0)
+            {
+                int qualityIndex = Mathf.Clamp(PlayerPrefs.GetInt(PrefQualityIndex, QualitySettings.GetQualityLevel()), 0, qualityNames.Length - 1);
+                QualitySettings.SetQualityLevel(qualityIndex, true);
+            }
+
+            ApplyRuntimeSettings();
+        }
+
+        private void SavePreferences()
+        {
+            PlayerPrefs.SetInt(PrefAudioEnabled, _audioEnabled ? 1 : 0);
+            PlayerPrefs.SetFloat(PrefMasterVolume, _masterVolume);
+            PlayerPrefs.SetFloat(PrefInterfaceVolume, _interfaceVolume);
+            PlayerPrefs.SetFloat(PrefSystemVolume, _systemVolume);
+            PlayerPrefs.SetFloat(PrefEffectsVolume, _effectsVolume);
+            PlayerPrefs.SetInt(PrefSubtitlesEnabled, _subtitlesEnabled ? 1 : 0);
+            PlayerPrefs.SetInt(PrefLanguageIndex, _languageIndex);
+            PlayerPrefs.SetInt(PrefQualityIndex, QualitySettings.GetQualityLevel());
+            PlayerPrefs.SetInt(PrefScanlinesEnabled, _scanlinesEnabled ? 1 : 0);
+            PlayerPrefs.SetInt(PrefChromaticEnabled, _chromaticEnabled ? 1 : 0);
+            PlayerPrefs.Save();
+        }
+
+        private void ApplyRuntimeSettings()
+        {
+            _masterVolume = Mathf.Clamp01(_masterVolume);
+            _interfaceVolume = Mathf.Clamp01(_interfaceVolume);
+            _systemVolume = Mathf.Clamp01(_systemVolume);
+            _effectsVolume = Mathf.Clamp01(_effectsVolume);
+            ToggleOverlayGraphic("Scanlines", _scanlinesEnabled);
+            ToggleOverlayGraphic("RgbMask", _chromaticEnabled);
+        }
+
         private void StartNewGame()
         {
             int currentIndex = SceneManager.GetActiveScene().buildIndex;
@@ -1106,6 +1734,98 @@ namespace ArchiveNull.UI
 #endif
         }
 
+        private void ToggleAudioEnabled()
+        {
+            _audioEnabled = !_audioEnabled;
+            SavePreferences();
+            RebuildSettingsPage(_settingsPage, false);
+            SetStatus(_audioEnabled ? Localize("SALIDA DE AUDIO ACTIVADA.", "AUDIO OUTPUT ENABLED.") : Localize("SALIDA DE AUDIO DESACTIVADA.", "AUDIO OUTPUT DISABLED."));
+        }
+
+        private void AdjustMasterVolume(int direction)
+        {
+            _masterVolume = StepSlider(_masterVolume, direction);
+            SavePreferences();
+            RebuildSettingsPage(_settingsPage, false);
+            SetStatus(Localize($"VOLUMEN MAESTRO {GetPercentLabel(_masterVolume)}.", $"MASTER VOLUME {GetPercentLabel(_masterVolume)}."));
+        }
+
+        private void AdjustInterfaceVolume(int direction)
+        {
+            _interfaceVolume = StepSlider(_interfaceVolume, direction);
+            SavePreferences();
+            RebuildSettingsPage(_settingsPage, false);
+            SetStatus(Localize($"SONIDOS DE MENU {GetPercentLabel(_interfaceVolume)}.", $"MENU SOUND VOLUME {GetPercentLabel(_interfaceVolume)}."));
+        }
+
+        private void AdjustSystemVolume(int direction)
+        {
+            _systemVolume = StepSlider(_systemVolume, direction);
+            SavePreferences();
+            RebuildSettingsPage(_settingsPage, false);
+            SetStatus(Localize($"SISTEMA CRT {GetPercentLabel(_systemVolume)}.", $"CRT SYSTEM VOLUME {GetPercentLabel(_systemVolume)}."));
+        }
+
+        private void AdjustEffectsVolume(int direction)
+        {
+            _effectsVolume = StepSlider(_effectsVolume, direction);
+            SavePreferences();
+            RebuildSettingsPage(_settingsPage, false);
+            SetStatus(Localize($"EFECTOS GLITCH {GetPercentLabel(_effectsVolume)}.", $"GLITCH FX VOLUME {GetPercentLabel(_effectsVolume)}."));
+        }
+
+        private void CycleQuality()
+        {
+            AdjustQuality(1);
+        }
+
+        private void AdjustQuality(int direction)
+        {
+            string[] qualityNames = QualitySettings.names;
+            if (qualityNames == null || qualityNames.Length == 0)
+            {
+                SetStatus(Localize("NO HAY PRESETS DE CALIDAD DISPONIBLES.", "NO QUALITY PRESETS AVAILABLE."));
+                return;
+            }
+
+            int nextIndex = QualitySettings.GetQualityLevel() + direction;
+            if (nextIndex < 0)
+            {
+                nextIndex = qualityNames.Length - 1;
+            }
+            else if (nextIndex >= qualityNames.Length)
+            {
+                nextIndex = 0;
+            }
+
+            QualitySettings.SetQualityLevel(nextIndex, true);
+            SavePreferences();
+            RebuildSettingsPage(_settingsPage, false);
+            SetStatus(Localize($"CALIDAD CAMBIADA A {GetQualityLabel()}.", $"QUALITY SET TO {GetQualityLabel()}."));
+        }
+
+        private void ToggleSubtitles()
+        {
+            _subtitlesEnabled = !_subtitlesEnabled;
+            SavePreferences();
+            RebuildSettingsPage(_settingsPage, false);
+            SetStatus(_subtitlesEnabled ? Localize("SUBTITULOS ACTIVADOS.", "SUBTITLES ENABLED.") : Localize("SUBTITULOS DESACTIVADOS.", "SUBTITLES DISABLED."));
+        }
+
+        private void CycleLanguage()
+        {
+            AdjustLanguage(1);
+        }
+
+        private void AdjustLanguage(int direction)
+        {
+            int count = Mathf.Max(1, _languageOptions.Length);
+            _languageIndex = (_languageIndex + direction + count) % count;
+            RefreshLocalizedLabels();
+            SavePreferences();
+            SetStatus(Localize("IDIOMA DEL TERMINAL ACTUALIZADO.", "TERMINAL LANGUAGE UPDATED."));
+        }
+
         private void CycleFlicker()
         {
             if (_flickerStrength < 0.2f)
@@ -1121,28 +1841,35 @@ namespace ArchiveNull.UI
                 _flickerStrength = 0.12f;
             }
 
-            RefreshSettingsLabels();
-            SetStatus($"FLICKER PROFILE SET TO {GetFlickerLabel()}.");
+            RebuildSettingsPage(_settingsPage, false);
+            SetStatus(Localize($"PERFIL DE FLICKER {GetFlickerLabel()}.", $"FLICKER PROFILE {GetFlickerLabel()}."));
         }
 
         private void ToggleScanlines()
         {
             _scanlinesEnabled = !_scanlinesEnabled;
             ToggleOverlayGraphic("Scanlines", _scanlinesEnabled);
-            RefreshSettingsLabels();
-            SetStatus(_scanlinesEnabled ? "SCANLINES ENABLED." : "SCANLINES DISABLED.");
+            SavePreferences();
+            RebuildSettingsPage(_settingsPage, false);
+            SetStatus(_scanlinesEnabled ? Localize("SCANLINES ACTIVADAS.", "SCANLINES ENABLED.") : Localize("SCANLINES DESACTIVADAS.", "SCANLINES DISABLED."));
         }
 
         private void ToggleChromatic()
         {
             _chromaticEnabled = !_chromaticEnabled;
             ToggleOverlayGraphic("RgbMask", _chromaticEnabled);
-            RefreshSettingsLabels();
-            SetStatus(_chromaticEnabled ? "CHROMATIC BLEED ENABLED." : "CHROMATIC BLEED DISABLED.");
+            SavePreferences();
+            RebuildSettingsPage(_settingsPage, false);
+            SetStatus(_chromaticEnabled ? Localize("ABERRACION RGB ACTIVADA.", "RGB BLEED ENABLED.") : Localize("RGB BLEED DESACTIVADO.", "RGB BLEED DISABLED."));
         }
 
         private void ToggleOverlayGraphic(string childName, bool active)
         {
+            if (_overlayGroup == null)
+            {
+                return;
+            }
+
             Transform child = _overlayGroup.transform.Find(childName);
             if (child != null)
             {
@@ -1150,16 +1877,192 @@ namespace ArchiveNull.UI
             }
         }
 
-        private void RefreshSettingsLabels()
+        private void RefreshLocalizedLabels()
         {
-            _settingsItems[0].Label = $"FLICKER PROFILE .......... {GetFlickerLabel()}";
-            _settingsItems[1].Label = $"SCANLINES ................ {(_scanlinesEnabled ? "ON" : "OFF")}";
-            _settingsItems[2].Label = $"CHROMATIC BLEED .......... {(_chromaticEnabled ? "ON" : "OFF")}";
-
-            for (int i = 0; i < _settingsTexts.Count && i < _settingsItems.Count; i++)
+            if (_mainMenuItems.Count >= 4)
             {
-                _settingsTexts[i].text = _settingsItems[i].Label;
+                _mainMenuItems[0].Label = GetLocalizedMainMenuLabel(0);
+                _mainMenuItems[1].Label = GetLocalizedMainMenuLabel(1);
+                _mainMenuItems[2].Label = GetLocalizedMainMenuLabel(2);
+                _mainMenuItems[3].Label = GetLocalizedMainMenuLabel(3);
             }
+
+            RebuildSettingsPage(_settingsPage, false);
+
+            if (_state == MenuState.MainMenu)
+            {
+                _footerText.text = GetMainMenuFooter();
+            }
+            else if (_state == MenuState.Settings)
+            {
+                UpdateSettingsContextText();
+            }
+
+            RefreshMenuVisuals();
+        }
+
+        private void UpdateSettingsDiagnostic()
+        {
+            if (_diagnosticText == null || _state != MenuState.Settings)
+            {
+                return;
+            }
+
+            int visibleCount = Mathf.Max(1, _settingsTexts.Count);
+            int total = _settingsItems.Count;
+            int start = total == 0 ? 0 : _settingsScrollOffset + 1;
+            int end = Mathf.Min(total, _settingsScrollOffset + visibleCount);
+
+            _diagnosticText.text = _settingsPage switch
+            {
+                SettingsPage.Categories => Localize("SELECCIONA UNA CATEGORIA DEL TERMINAL", "SELECT A TERMINAL CATEGORY"),
+                SettingsPage.General => $"{Localize("GENERAL", "GENERAL")} // {start:00}-{end:00} / {total:00}",
+                SettingsPage.Audio => $"{Localize("AUDIO", "AUDIO")} // {start:00}-{end:00} / {total:00}",
+                SettingsPage.Video => $"{Localize("VIDEO", "VIDEO")} // {start:00}-{end:00} / {total:00}",
+                _ => _diagnosticText.text
+            };
+        }
+
+        private string GetSettingsCategoryLabel(SettingsPage page)
+        {
+            return page switch
+            {
+                SettingsPage.General => Localize("GENERAL", "GENERAL"),
+                SettingsPage.Audio => Localize("AUDIO", "AUDIO"),
+                SettingsPage.Video => Localize("VIDEO", "VIDEO"),
+                _ => string.Empty
+            };
+        }
+
+        private string BuildAudioEnabledLabel()
+        {
+            return $"{Localize("SALIDA DE AUDIO", "AUDIO OUTPUT")} ......... {(_audioEnabled ? "ON" : "OFF")}";
+        }
+
+        private string BuildLanguageLabel()
+        {
+            return $"{Localize("IDIOMA", "LANGUAGE")} ................. {GetLanguageLabel()}";
+        }
+
+        private string BuildSubtitlesLabel()
+        {
+            return $"{Localize("SUBTITULOS", "SUBTITLES")} ............. {(_subtitlesEnabled ? "ON" : "OFF")}";
+        }
+
+        private string BuildQualityLabel()
+        {
+            return $"{Localize("CALIDAD", "QUALITY")} ................ {GetQualityLabel()}";
+        }
+
+        private string BuildScanlinesLabel()
+        {
+            return $"{Localize("SCANLINES CRT", "CRT SCANLINES")} ...... {(_scanlinesEnabled ? "ON" : "OFF")}";
+        }
+
+        private string BuildChromaticLabel()
+        {
+            return $"{Localize("SANGRADO RGB", "RGB BLEED")} ........... {(_chromaticEnabled ? "ON" : "OFF")}";
+        }
+
+        private string BuildFlickerLabel()
+        {
+            return $"{Localize("FLICKER", "FLICKER")} ................ {GetFlickerLabel()}";
+        }
+
+        private string BuildSliderLabel(string title, float value)
+        {
+            return $"{title} {BuildSlider(value)} {GetPercentLabel(value)}";
+        }
+
+        private string BuildSlider(float value)
+        {
+            int filled = Mathf.RoundToInt(Mathf.Clamp01(value) * _sliderSegments);
+            filled = Mathf.Clamp(filled, 0, _sliderSegments);
+            return "[" + new string('|', filled) + new string('.', _sliderSegments - filled) + "]";
+        }
+
+        private float StepSlider(float value, int direction)
+        {
+            return Mathf.Clamp01(value + direction * _audioSliderStep);
+        }
+
+        private string GetPercentLabel(float value)
+        {
+            return $"{Mathf.RoundToInt(Mathf.Clamp01(value) * 100f)}%";
+        }
+
+        private string GetLocalizedMainMenuLabel(int index)
+        {
+            return index switch
+            {
+                0 => Localize("NUEVA PARTIDA", "NEW GAME"),
+                1 => Localize("CONTINUAR", "CONTINUE"),
+                2 => Localize("OPCIONES", "SETTINGS"),
+                3 => Localize("SALIR", "QUIT"),
+                _ => string.Empty
+            };
+        }
+
+        private string GetLocalizedReturnLabel()
+        {
+            return Localize("VOLVER AL MENU", "RETURN TO MENU");
+        }
+
+        private string GetSettingsSubtitle()
+        {
+            return Localize("PREFERENCIAS LOCALES // CONSOLA DEL TERMINAL", "LOCAL PREFERENCES // TERMINAL CONSOLE");
+        }
+
+        private string GetMainMenuFooter()
+        {
+            return Localize("NAV: W/S O FLECHAS  //  ACEPTAR: ENTER O CLICK", "NAV: W/S OR ARROWS  //  EXECUTE: ENTER OR CLICK");
+        }
+
+        private string GetSettingsFooter()
+        {
+            return Localize("NAV: W/S  //  AJUSTAR: A/D O CLICK  //  ABRIR: ENTER  //  ATRAS: ESC", "NAV: W/S  //  ADJUST: A/D OR CLICK  //  OPEN: ENTER  //  BACK: ESC");
+        }
+
+        private string GetLocalizedStatusUnlocked()
+        {
+            return Localize("INTERFAZ DEL ARCHIVO DESBLOQUEADA.", "ARCHIVE INTERFACE UNLOCKED.");
+        }
+
+        private string GetLocalizedStatusSettings()
+        {
+            return Localize("AJUSTES LOCALES DISPONIBLES.", "LOCAL TERMINAL SETTINGS AVAILABLE.");
+        }
+
+        private string GetLocalizedStatusReturnMain()
+        {
+            return Localize("VOLVISTE AL DIRECTORIO PRINCIPAL.", "RETURNED TO PRIMARY DIRECTORY.");
+        }
+
+        private string GetQualityLabel()
+        {
+            string[] qualityNames = QualitySettings.names;
+            if (qualityNames == null || qualityNames.Length == 0)
+            {
+                return "---";
+            }
+
+            int currentIndex = Mathf.Clamp(QualitySettings.GetQualityLevel(), 0, qualityNames.Length - 1);
+            return qualityNames[currentIndex].ToUpperInvariant();
+        }
+
+        private string GetLanguageLabel()
+        {
+            if (_languageOptions == null || _languageOptions.Length == 0)
+            {
+                return "ESPANOL";
+            }
+
+            return _languageOptions[Mathf.Clamp(_languageIndex, 0, _languageOptions.Length - 1)].ToUpperInvariant();
+        }
+
+        private string Localize(string spanish, string english)
+        {
+            return _languageIndex == 0 ? spanish : english;
         }
 
         private string GetFlickerLabel()
@@ -1195,6 +2098,11 @@ namespace ArchiveNull.UI
 
         private void ConfigureCamera()
         {
+            if (!_configureMainCamera)
+            {
+                return;
+            }
+
             Camera camera = Camera.main;
             if (camera == null)
             {
@@ -1202,9 +2110,117 @@ namespace ArchiveNull.UI
             }
 
             camera.clearFlags = CameraClearFlags.SolidColor;
-            camera.backgroundColor = Color.black;
-            camera.transform.position = new Vector3(0f, 0f, -10f);
-            camera.transform.rotation = Quaternion.identity;
+            camera.backgroundColor = _cameraBackgroundColor;
+        }
+
+        private IEnumerator AnimateMonitorLight(float delay, float duration, float targetIntensity)
+        {
+            if (_monitorPowerLight == null)
+            {
+                yield break;
+            }
+
+            _monitorPowerLight.enabled = false;
+            _monitorPowerLight.intensity = 0f;
+
+            if (delay > 0f)
+            {
+                yield return new WaitForSeconds(delay);
+            }
+
+            _monitorPowerLight.enabled = true;
+            float timer = 0f;
+            while (timer < duration)
+            {
+                timer += Time.unscaledDeltaTime;
+                float t = Mathf.Clamp01(timer / Mathf.Max(0.001f, duration));
+                _monitorPowerLight.intensity = Mathf.Lerp(0f, targetIntensity, EaseOutCubic(t));
+                yield return null;
+            }
+
+            _monitorPowerLight.intensity = targetIntensity;
+        }
+
+        private void SetMonitorLightImmediate(float intensity)
+        {
+            if (_monitorPowerLight == null)
+            {
+                return;
+            }
+
+            if (_monitorLightRoutine != null)
+            {
+                StopCoroutine(_monitorLightRoutine);
+                _monitorLightRoutine = null;
+            }
+
+            _monitorPowerLight.intensity = intensity;
+            _monitorPowerLight.enabled = intensity > 0.001f;
+        }
+
+        private void EnsureAudioSource()
+        {
+            if (_audioSource != null)
+            {
+                AssignProceduralFallbacks();
+                return;
+            }
+
+            _audioSource = GetComponent<AudioSource>();
+            if (_audioSource == null)
+            {
+                _audioSource = gameObject.AddComponent<AudioSource>();
+            }
+
+            _audioSource.playOnAwake = false;
+            _audioSource.loop = false;
+            _audioSource.spatialBlend = 0f;
+            AssignProceduralFallbacks();
+        }
+
+        private void AssignProceduralFallbacks()
+        {
+            if (!_useProceduralRetroSounds)
+            {
+                return;
+            }
+
+            _retroSoundBank = GetComponent<CRTRetroSoundBank>();
+            if (_retroSoundBank == null)
+            {
+                _retroSoundBank = gameObject.AddComponent<CRTRetroSoundBank>();
+            }
+
+            if (_bootStartClip == null) _bootStartClip = _retroSoundBank.BootStartClip;
+            if (_menuOpenClip == null) _menuOpenClip = _retroSoundBank.MenuOpenClip;
+            if (_moveClip == null) _moveClip = _retroSoundBank.MoveClip;
+            if (_confirmClip == null) _confirmClip = _retroSoundBank.ConfirmClip;
+            if (_backClip == null) _backClip = _retroSoundBank.BackClip;
+            if (_glitchClip == null) _glitchClip = _retroSoundBank.GlitchClip;
+            if (_shutdownClip == null) _shutdownClip = _retroSoundBank.ShutdownClip;
+        }
+
+        private void PlayUiSound(AudioClip clip, float channelVolume = 1f)
+        {
+            if (!_audioEnabled || _audioSource == null || clip == null)
+            {
+                return;
+            }
+
+            _audioSource.PlayOneShot(clip, Mathf.Clamp01(_masterVolume * channelVolume));
+        }
+
+        public void FocusOpenMenu()
+        {
+            if (_sequenceRunning || !_poweredOn)
+            {
+                return;
+            }
+
+            if (_state == MenuState.AwaitingAccess)
+            {
+                OpenMainMenu();
+            }
         }
 
         private static RectTransform CreatePanel(string name, RectTransform parent, Vector2 size, Color color)
