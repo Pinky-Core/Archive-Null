@@ -1861,12 +1861,12 @@ namespace ArchiveNull.UI
 
         private int ReadVerticalNavigation()
         {
-            if (WasKeyPressed(_navUpKey))
+            if (WasKeyPressed(_navUpKey) || (Keyboard.current != null && Keyboard.current.upArrowKey.wasPressedThisFrame))
             {
                 return -1;
             }
 
-            if (WasKeyPressed(_navDownKey))
+            if (WasKeyPressed(_navDownKey) || (Keyboard.current != null && Keyboard.current.downArrowKey.wasPressedThisFrame))
             {
                 return 1;
             }
@@ -1881,22 +1881,27 @@ namespace ArchiveNull.UI
 
         private bool WasSubmitPressedCustom()
         {
-            return WasKeyPressed(_submitKey);
+            return WasKeyPressed(_submitKey) ||
+                   (Keyboard.current != null &&
+                    (Keyboard.current.enterKey.wasPressedThisFrame ||
+                     Keyboard.current.numpadEnterKey.wasPressedThisFrame ||
+                     Keyboard.current.spaceKey.wasPressedThisFrame));
         }
 
         private bool WasBackPressed()
         {
-            return WasKeyPressed(_backKey);
+            return WasKeyPressed(_backKey) ||
+                   (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame);
         }
 
         private int ReadHorizontalNavigation()
         {
-            if (WasKeyPressed(_navLeftKey))
+            if (WasKeyPressed(_navLeftKey) || (Keyboard.current != null && Keyboard.current.leftArrowKey.wasPressedThisFrame))
             {
                 return -1;
             }
 
-            if (WasKeyPressed(_navRightKey))
+            if (WasKeyPressed(_navRightKey) || (Keyboard.current != null && Keyboard.current.rightArrowKey.wasPressedThisFrame))
             {
                 return 1;
             }
@@ -1906,7 +1911,13 @@ namespace ArchiveNull.UI
 
         private bool WasKeyPressed(Key key)
         {
-            return Keyboard.current != null && Keyboard.current[key] != null && Keyboard.current[key].wasPressedThisFrame;
+            if (Keyboard.current == null || key == Key.None)
+            {
+                return false;
+            }
+
+            KeyControl control = Keyboard.current[key];
+            return control != null && control.wasPressedThisFrame;
         }
 
         private void NormalizeSettingsData()
@@ -2205,8 +2216,13 @@ namespace ArchiveNull.UI
         private void CloseLevelBrowser()
         {
             _state = MenuState.MainMenu;
+            EnsureSelectableIndex(_mainMenuItems, ref _mainIndex);
+            RebuildSettingsPage(SettingsPage.Categories, true, false);
+            _mainMenuGroup.alpha = 1f;
+            _settingsGroup.alpha = 0f;
             _subtitleText.text = _mainSubtitle;
             _footerText.text = GetMainMenuFooter();
+            _diagnosticText.text = "CRT SIGNAL STABLE // ARCHIVE INDEX ONLINE";
             SetStatus(GetLocalizedStatusReturnMain());
             ShowMenuState(_mainMenuTexts, _mainMenuItems, _mainIndex, hideRoot: _settingsRoot, showRoot: _mainMenuRoot);
         }
