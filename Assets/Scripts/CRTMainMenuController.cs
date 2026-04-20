@@ -286,12 +286,11 @@ namespace ArchiveNull.UI
             ConfigureCamera();
             BuildMenus();
             ApplyRuntimeSettings();
-            SetStatus("DISPLAY COLD. WAITING FOR POWER.");
+            InitializePoweredOffState();
         }
 
         private void Start()
         {
-            InitializePoweredOffState();
         }
 
         private void Update()
@@ -1113,6 +1112,16 @@ namespace ArchiveNull.UI
 
         private void UpdateVisualNoise()
         {
+            if (_state == MenuState.PoweredOff)
+            {
+                _screenImage.color = Color.black;
+                _overlayGroup.alpha = 0f;
+                _screenGlow.color = Color.black;
+                _screen.anchoredPosition = Vector2.zero;
+                _screen.localScale = Vector3.one;
+                return;
+            }
+
             _flickerTimer -= Time.unscaledDeltaTime;
             if (_flickerTimer <= 0f)
             {
