@@ -43,18 +43,19 @@ namespace ArchiveNull.UI
 
         private AudioClip CreateBootHum()
         {
-            float length = 0.26f;
+            float length = 0.42f;
             int sampleCount = Mathf.CeilToInt(length * _sampleRate);
             float[] data = new float[sampleCount];
 
             for (int i = 0; i < sampleCount; i++)
             {
                 float t = i / (float)_sampleRate;
-                float env = Mathf.Clamp01(t / 0.04f) * (1f - Mathf.Clamp01((t - 0.18f) / 0.08f));
-                float low = SampleWave(Waveform.Sine, 52f, t);
-                float buzz = SampleWave(Waveform.Square, Mathf.Lerp(90f, 140f, t / length), t) * 0.45f;
-                float sparkle = SampleWave(Waveform.Sine, 1200f, t) * 0.05f;
-                data[i] = (low * 0.75f + buzz + sparkle) * env * _masterVolume;
+                float env = Mathf.Clamp01(t / 0.02f) * (1f - Mathf.Clamp01((t - 0.32f) / 0.1f));
+                float bass = SampleWave(Waveform.Sine, Mathf.Lerp(110f, 146f, Mathf.Clamp01(t / 0.16f)), t) * 0.18f;
+                float toneA = SampleWave(Waveform.Sine, 587f, t) * Mathf.Clamp01(1f - Mathf.Abs(t - 0.08f) / 0.1f) * 0.6f;
+                float toneB = SampleWave(Waveform.Sine, 880f, t) * Mathf.Clamp01(1f - Mathf.Abs(t - 0.18f) / 0.11f) * 0.5f;
+                float shimmer = SampleWave(Waveform.Triangle, 1180f, t) * 0.08f;
+                data[i] = (bass + toneA + toneB + shimmer) * env * _masterVolume;
             }
 
             return ToClip("crt_boot_start", data);

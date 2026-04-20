@@ -30,7 +30,7 @@ namespace ArchiveNull.UI
         [SerializeField] private float _mouseFollowSpeed = 4f;
 
         [Header("Return")]
-        [SerializeField] private bool _allowReturnWithEscape = true;
+        [SerializeField] private bool _allowReturnWithEscape = false;
         [SerializeField] private bool _allowReturnWithRightClick = true;
 
         private bool _isFocused;
@@ -84,8 +84,7 @@ namespace ArchiveNull.UI
                 return;
             }
 
-            if ((_allowReturnWithEscape && Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame) ||
-                (_allowReturnWithRightClick && Mouse.current != null && Mouse.current.rightButton.wasPressedThisFrame))
+            if (_allowReturnWithRightClick && Mouse.current != null && Mouse.current.rightButton.wasPressedThisFrame)
             {
                 ReturnToFarPose();
             }
