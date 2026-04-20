@@ -42,6 +42,8 @@ namespace ArchiveNull.UI
         private bool _pendingMenuOpen;
         private Vector2 _mouseLook;
 
+        public bool IsFocused => _isFocused;
+
         private void Reset()
         {
             _targetCamera = Camera.main;
@@ -173,6 +175,7 @@ namespace ArchiveNull.UI
         {
             _isFocused = false;
             _pendingMenuOpen = false;
+            _menuController?.SuspendTerminalInteraction();
             StartMove(_farPose.position, _farPose.rotation);
         }
 

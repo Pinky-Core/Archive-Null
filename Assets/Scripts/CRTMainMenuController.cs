@@ -671,18 +671,18 @@ namespace ArchiveNull.UI
             _settingsGroup.alpha = 0f;
             _mainMenuRoot.gameObject.SetActive(false);
             _settingsRoot.gameObject.SetActive(false);
-            _contentGroup.alpha = 1f;
-            _overlayGroup.alpha = 0.08f;
-            _screenImage.color = new Color(0.002f, 0.004f, 0.004f, 1f);
-            _screenGlow.color = new Color(0.42f, 0.95f, 0.9f, 0f);
+            _contentGroup.alpha = 0f;
+            _overlayGroup.alpha = 0f;
+            _screenImage.color = Color.black;
+            _screenGlow.color = Color.black;
             _bootLine.color = new Color(1f, 1f, 1f, 0f);
             _bootBloom.color = new Color(0.87f, 1f, 0.98f, 0f);
             _titleText.text = string.Empty;
             _ghostTitleText.text = string.Empty;
             _subtitleText.text = string.Empty;
             _promptText.text = string.Empty;
-            _statusText.text = Localize("MONITOR APAGADO.", "MONITOR OFFLINE.");
-            _diagnosticText.text = Localize("CLICK EN LA COMPUTADORA PARA ENCENDER", "CLICK COMPUTER TO POWER ON");
+            _statusText.text = string.Empty;
+            _diagnosticText.text = string.Empty;
             _footerText.text = string.Empty;
         }
 
@@ -706,8 +706,8 @@ namespace ArchiveNull.UI
             _diagnosticText.text = string.Empty;
             _footerText.text = string.Empty;
             _overlayGroup.alpha = 0.72f;
-            _screenImage.color = new Color(0.002f, 0.005f, 0.005f, 1f);
-            _screenGlow.color = new Color(0.5f, 1f, 0.95f, 0f);
+            _screenImage.color = Color.black;
+            _screenGlow.color = Color.black;
             _bootLine.color = new Color(1f, 1f, 1f, 0f);
             _bootBloom.color = new Color(0.87f, 1f, 0.98f, 0f);
 
@@ -809,6 +809,11 @@ namespace ArchiveNull.UI
                 return;
             }
 
+            if (_cameraFocus != null && !_cameraFocus.IsFocused)
+            {
+                return;
+            }
+
             bool submit = WasSubmitPressedCustom();
             bool pointerClick = WasPointerClicked();
 
@@ -826,14 +831,7 @@ namespace ArchiveNull.UI
             {
                 if (submit || pointerClick)
                 {
-                    if (_cameraFocus != null)
-                    {
-                        _cameraFocus.FocusComputer();
-                    }
-                    else
-                    {
-                        OpenMainMenu();
-                    }
+                    OpenMainMenu();
                 }
 
                 return;
@@ -1994,7 +1992,7 @@ namespace ArchiveNull.UI
         {
             SetStatus("TERMINATING SESSION.");
 #if UNITY_EDITOR
-            Debug.Log("Quit requested from main menu.");
+            UnityEditor.EditorApplication.isPlaying = false;
 #else
             Application.Quit();
 #endif
@@ -2562,7 +2560,7 @@ namespace ArchiveNull.UI
 
             if (!_poweredOn)
             {
-                _openMainMenuAfterBoot = true;
+                _openMainMenuAfterBoot = false;
                 StartCoroutine(BootSequence());
                 return;
             }
@@ -2570,6 +2568,22 @@ namespace ArchiveNull.UI
             if (_state == MenuState.AwaitingAccess)
             {
                 OpenMainMenu();
+            }
+        }
+
+        public void SuspendTerminalInteraction()
+        {
+            if (_state == MenuState.MainMenu || _state == MenuState.Settings || _state == MenuState.LevelSelect)
+            {
+                _state = _poweredOn ? MenuState.AwaitingAccess : MenuState.PoweredOff;
+                _mainMenuGroup.alpha = 0f;
+                _settingsGroup.alpha = 0f;
+                _mainMenuRoot.gameObject.SetActive(false);
+                _settingsRoot.gameObject.SetActive(false);
+                _promptText.text = _poweredOn ? _bootPrompt : string.Empty;
+                _footerText.text = _poweredOn ? "EXECUTE: ENTER OR CLICK" : string.Empty;
+                _subtitleText.text = _poweredOn ? _mainSubtitle : string.Empty;
+                _diagnosticText.text = _poweredOn ? "CRT SIGNAL STABLE // ARCHIVE INDEX ONLINE" : _diagnosticText.text;
             }
         }
 
