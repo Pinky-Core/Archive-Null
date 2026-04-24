@@ -29,6 +29,8 @@ namespace ArchiveNull.UI
         private const string PrefBindRight = "crt.menu.bind.right";
         private const string PrefBindSubmit = "crt.menu.bind.submit";
         private const string PrefBindBack = "crt.menu.bind.back";
+        private const string PrefUnlockedArchive = "crt.archive.unlocked";
+        private const string PrefMountedArchive = "crt.archive.mounted";
 
         private static readonly string[] BootMessages =
         {
@@ -158,6 +160,14 @@ namespace ArchiveNull.UI
         [Tooltip("Cantidad de segmentos usados para dibujar barras de audio en texto.")]
         [SerializeField] private int _sliderSegments = 10;
 
+        [Header("Archive Flow")]
+        [Tooltip("Cantidad total de archivos/niveles que aparecen en la computadora.")]
+        [SerializeField] private int _archiveCount = 4;
+        [Tooltip("Nombres visibles de los archivos. Si faltan nombres, el script usa ARCHIVE_XX.NULL.")]
+        [SerializeField] private string[] _archiveNames = { "ARCHIVE_01.NULL", "ARCHIVE_02.NULL", "ARCHIVE_03.NULL", "ARCHIVE_04.NULL" };
+        [Tooltip("Build index de cada archivo. Si queda vacio o incompleto, usa escenas 1..4.")]
+        [SerializeField] private int[] _archiveSceneBuildIndices = { 1, 2, 3, 4 };
+
         [Header("Scene Layout")]
         [Tooltip("Activa esto si vas a colocar toda la UI manualmente en el Canvas y queres que el script solo controle el comportamiento.")]
         [SerializeField] private bool _useSceneLayout;
@@ -254,6 +264,8 @@ namespace ArchiveNull.UI
         private int _levelIndex;
         private int _levelScrollOffset;
         private int _languageIndex;
+        private int _unlockedArchive = 1;
+        private int _mountedArchive = -1;
         private SettingsPage _settingsPage = SettingsPage.Categories;
         private Key _navUpKey = Key.W;
         private Key _navDownKey = Key.S;
@@ -537,22 +549,16 @@ namespace ArchiveNull.UI
             _mainMenuItems.Add(new MenuItem
             {
                 Label = GetLocalizedMainMenuLabel(0),
-                Action = StartNewGame
+                Action = OpenLevelBrowser
             });
             _mainMenuItems.Add(new MenuItem
             {
                 Label = GetLocalizedMainMenuLabel(1),
-                Enabled = false,
-                Action = () => SetStatus("NO RECOVERABLE SESSION FOUND.")
-            });
-            _mainMenuItems.Add(new MenuItem
-            {
-                Label = GetLocalizedMainMenuLabel(2),
                 Action = OpenSettings
             });
             _mainMenuItems.Add(new MenuItem
             {
-                Label = GetLocalizedMainMenuLabel(3),
+                Label = GetLocalizedMainMenuLabel(2),
                 Action = QuitGame
             });
 
@@ -589,6 +595,17 @@ namespace ArchiveNull.UI
                 }
 
                 EnsureSelectableIndex(_mainMenuItems, ref _mainIndex);
+
+                if (_sceneMainMenuOptionTexts.Length > _mainMenuItems.Count)
+                {
+                    for (int i = _mainMenuItems.Count; i < _sceneMainMenuOptionTexts.Length; i++)
+                    {
+                        if (_sceneMainMenuOptionTexts[i] != null)
+                        {
+                            _sceneMainMenuOptionTexts[i].gameObject.SetActive(false);
+                        }
+                    }
+                }
                 return;
             }
 
@@ -838,6 +855,12 @@ namespace ArchiveNull.UI
 
             if (_state == MenuState.MainMenu)
             {
+                if (WasBackPressed())
+                {
+                    _cameraFocus?.MoveToStandPose();
+                    return;
+                }
+
                 int direction = ReadVerticalNavigation();
                 if (direction != 0)
                 {
@@ -1937,6 +1960,7 @@ namespace ArchiveNull.UI
             _settingsVisibleRows = Mathf.Max(3, _settingsVisibleRows);
             _audioSliderStep = Mathf.Clamp(_audioSliderStep, 0.01f, 0.25f);
             _sliderSegments = Mathf.Clamp(_sliderSegments, 6, 20);
+            _archiveCount = Mathf.Clamp(_archiveCount, 1, 16);
         }
 
         private void LoadPreferences()
@@ -1956,6 +1980,9 @@ namespace ArchiveNull.UI
             _scanlinesEnabled = PlayerPrefs.GetInt(PrefScanlinesEnabled, _scanlinesEnabled ? 1 : 0) == 1;
             _chromaticEnabled = PlayerPrefs.GetInt(PrefChromaticEnabled, _chromaticEnabled ? 1 : 0) == 1;
             _languageIndex = Mathf.Clamp(PlayerPrefs.GetInt(PrefLanguageIndex, _languageIndex), 0, _languageOptions.Length - 1);
+            int availableArchiveCount = GetEffectiveArchiveCount();
+            _unlockedArchive = Mathf.Clamp(PlayerPrefs.GetInt(PrefUnlockedArchive, 1), 1, Mathf.Max(1, availableArchiveCount));
+            _mountedArchive = Mathf.Clamp(PlayerPrefs.GetInt(PrefMountedArchive, -1), -1, availableArchiveCount - 1);
 
             string[] qualityNames = QualitySettings.names;
             if (qualityNames != null && qualityNames.Length > 0)
@@ -1990,11 +2017,6 @@ namespace ArchiveNull.UI
             _effectsVolume = Mathf.Clamp01(_effectsVolume);
             ToggleOverlayGraphic("Scanlines", _scanlinesEnabled);
             ToggleOverlayGraphic("RgbMask", _chromaticEnabled);
-        }
-
-        private void StartNewGame()
-        {
-            OpenLevelBrowser();
         }
 
         private void QuitGame()
@@ -2152,12 +2174,11 @@ namespace ArchiveNull.UI
 
         private void RefreshLocalizedLabels()
         {
-            if (_mainMenuItems.Count >= 4)
+            if (_mainMenuItems.Count >= 3)
             {
                 _mainMenuItems[0].Label = GetLocalizedMainMenuLabel(0);
                 _mainMenuItems[1].Label = GetLocalizedMainMenuLabel(1);
                 _mainMenuItems[2].Label = GetLocalizedMainMenuLabel(2);
-                _mainMenuItems[3].Label = GetLocalizedMainMenuLabel(3);
             }
 
             RebuildSettingsPage(_settingsPage, false);
@@ -2178,18 +2199,19 @@ namespace ArchiveNull.UI
         {
             _state = MenuState.LevelSelect;
             _settingsItems.Clear();
+            int availableArchiveCount = GetEffectiveArchiveCount();
 
-            int currentIndex = SceneManager.GetActiveScene().buildIndex;
-            int sceneCount = SceneManager.sceneCountInBuildSettings;
-            for (int i = currentIndex + 1; i < sceneCount; i++)
+            for (int i = 0; i < availableArchiveCount; i++)
             {
-                int sceneIndex = i;
-                string scenePath = SceneUtility.GetScenePathByBuildIndex(sceneIndex);
-                string sceneName = System.IO.Path.GetFileNameWithoutExtension(scenePath).ToUpperInvariant();
+                int archiveIndex = i;
+                bool unlocked = archiveIndex < _unlockedArchive;
+                string archiveName = GetArchiveName(archiveIndex);
+                string prefix = unlocked ? "[FILE]" : "[LOCK]";
                 _settingsItems.Add(new MenuItem
                 {
-                    Label = $"[FILE] {sceneName}",
-                    Action = () => LoadSceneFromBrowser(sceneIndex, sceneName)
+                    Label = $"{prefix} {archiveName}",
+                    Enabled = unlocked,
+                    Action = () => MountArchive(archiveIndex)
                 });
             }
 
@@ -2203,21 +2225,38 @@ namespace ArchiveNull.UI
             }
 
             _levelIndex = 0;
+            EnsureSelectableIndex(_settingsItems, ref _levelIndex);
             _levelScrollOffset = 0;
             _settingsRoot.gameObject.SetActive(true);
             _mainMenuGroup.alpha = 0f;
             _settingsGroup.alpha = 1f;
-            _subtitleText.text = Localize("EXPLORADOR // ARCHIVOS DE NIVEL", "EXPLORER // LEVEL FILES");
+            _subtitleText.text = Localize("ARCHIVES // ARCHIVOS DE NIVEL", "ARCHIVES // LEVEL FILES");
             _footerText.text = Localize("NAV: ARRIBA/ABAJO  //  ABRIR: ENTER  //  CERRAR: ATRAS", "NAV: UP/DOWN  //  OPEN: ENTER  //  CLOSE: BACK");
-            _diagnosticText.text = Localize("DIRECTORIO DEL ARCHIVO CENTRAL", "CENTRAL ARCHIVE DIRECTORY");
-            SetStatus(Localize("SELECCIONA UN ARCHIVO DE NIVEL.", "SELECT A LEVEL FILE."));
+            _diagnosticText.text = Localize($"DESBLOQUEADOS: {Mathf.Min(_unlockedArchive, availableArchiveCount):00}/{availableArchiveCount:00}", $"UNLOCKED: {Mathf.Min(_unlockedArchive, availableArchiveCount):00}/{availableArchiveCount:00}");
+            SetStatus(Localize("SELECCIONA UN ARCHIVO PARA MONTAR.", "SELECT AN ARCHIVE TO MOUNT."));
             ShowMenuState(_settingsTexts, _settingsItems, _levelIndex, hideRoot: _mainMenuRoot, showRoot: _settingsRoot);
         }
 
-        private void LoadSceneFromBrowser(int sceneIndex, string sceneName)
+        private void MountArchive(int archiveIndex)
         {
-            SetStatus($"{Localize("ABRIENDO", "OPENING")} {sceneName}...");
-            SceneManager.LoadScene(sceneIndex);
+            int maxArchiveIndex = GetEffectiveArchiveCount() - 1;
+            if (maxArchiveIndex < 0)
+            {
+                SetStatus(Localize("NO HAY ESCENAS VALIDAS PARA MONTAR.", "THERE ARE NO VALID SCENES TO MOUNT."));
+                return;
+            }
+
+            int sceneBuildIndex = GetArchiveSceneBuildIndex(archiveIndex);
+            if (sceneBuildIndex < 0)
+            {
+                SetStatus(Localize("EL ARCHIVO SELECCIONADO NO TIENE ESCENA VALIDA.", "THE SELECTED ARCHIVE HAS NO VALID SCENE."));
+                return;
+            }
+
+            _mountedArchive = Mathf.Clamp(archiveIndex, 0, maxArchiveIndex);
+            PlayerPrefs.SetInt(PrefMountedArchive, _mountedArchive);
+            PlayerPrefs.Save();
+            CloseLevelBrowser();
         }
 
         private void CloseLevelBrowser()
@@ -2230,7 +2269,7 @@ namespace ArchiveNull.UI
             _subtitleText.text = _mainSubtitle;
             _footerText.text = GetMainMenuFooter();
             _diagnosticText.text = "CRT SIGNAL STABLE // ARCHIVE INDEX ONLINE";
-            SetStatus(GetLocalizedStatusReturnMain());
+            SetStatus(HasMountedArchive ? GetMountedArchiveStatus() : GetLocalizedStatusReturnMain());
             ShowMenuState(_mainMenuTexts, _mainMenuItems, _mainIndex, hideRoot: _settingsRoot, showRoot: _mainMenuRoot);
         }
 
@@ -2345,12 +2384,78 @@ namespace ArchiveNull.UI
         {
             return index switch
             {
-                0 => Localize("NUEVA PARTIDA", "NEW GAME"),
-                1 => Localize("CONTINUAR", "CONTINUE"),
-                2 => Localize("OPCIONES", "SETTINGS"),
-                3 => Localize("SALIR", "QUIT"),
+                0 => Localize("ARCHIVES", "ARCHIVES"),
+                1 => Localize("OPCIONES", "SETTINGS"),
+                2 => Localize("SALIR", "QUIT"),
                 _ => string.Empty
             };
+        }
+
+        private string GetArchiveName(int archiveIndex)
+        {
+            if (_archiveNames != null && archiveIndex >= 0 && archiveIndex < _archiveNames.Length && !string.IsNullOrWhiteSpace(_archiveNames[archiveIndex]))
+            {
+                return _archiveNames[archiveIndex].ToUpperInvariant();
+            }
+
+            return $"ARCHIVE_{archiveIndex + 1:00}.NULL";
+        }
+
+        private int GetArchiveSceneBuildIndex(int archiveIndex)
+        {
+            int buildSceneCount = SceneManager.sceneCountInBuildSettings;
+
+            if (_archiveSceneBuildIndices != null && archiveIndex >= 0 && archiveIndex < _archiveSceneBuildIndices.Length)
+            {
+                int configuredIndex = _archiveSceneBuildIndices[archiveIndex];
+                if (configuredIndex > 0 && configuredIndex < buildSceneCount)
+                {
+                    return configuredIndex;
+                }
+            }
+
+            int fallbackIndex = archiveIndex + 1;
+            return fallbackIndex > 0 && fallbackIndex < buildSceneCount ? fallbackIndex : -1;
+        }
+
+        public bool HasMountedArchive => _mountedArchive >= 0 && _mountedArchive < GetEffectiveArchiveCount() && GetArchiveSceneBuildIndex(_mountedArchive) >= 0;
+        public int MountedArchiveIndex => _mountedArchive;
+        public int MountedArchiveSceneBuildIndex => HasMountedArchive ? GetArchiveSceneBuildIndex(_mountedArchive) : -1;
+        public string MountedArchiveName => HasMountedArchive ? GetArchiveName(_mountedArchive) : string.Empty;
+
+        public void MarkArchiveCompleted(int archiveIndex)
+        {
+            int availableArchiveCount = GetEffectiveArchiveCount();
+            int completedNumber = Mathf.Clamp(archiveIndex + 1, 1, Mathf.Max(1, availableArchiveCount));
+            if (completedNumber >= _unlockedArchive && _unlockedArchive < availableArchiveCount)
+            {
+                _unlockedArchive = completedNumber + 1;
+                PlayerPrefs.SetInt(PrefUnlockedArchive, Mathf.Clamp(_unlockedArchive, 1, availableArchiveCount));
+                PlayerPrefs.Save();
+            }
+        }
+
+        public void ClearMountedArchive()
+        {
+            _mountedArchive = -1;
+            PlayerPrefs.SetInt(PrefMountedArchive, _mountedArchive);
+            PlayerPrefs.Save();
+        }
+
+        private int GetEffectiveArchiveCount()
+        {
+            int playableSceneCount = Mathf.Max(0, SceneManager.sceneCountInBuildSettings - 1);
+            if (playableSceneCount <= 0)
+            {
+                return 0;
+            }
+
+            return Mathf.Min(_archiveCount, playableSceneCount);
+        }
+
+        private string GetMountedArchiveStatus()
+        {
+            return Localize($"{GetArchiveName(_mountedArchive)} MONTADO. USA LOS CASCOS VR.", $"{GetArchiveName(_mountedArchive)} MOUNTED. USE THE VR HEADSET.");
         }
 
         private string GetLocalizedReturnLabel()

@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.Events;
 
 namespace ArchiveNull.UI
 {
@@ -7,6 +8,7 @@ namespace ArchiveNull.UI
     {
         [Header("References")]
         [SerializeField] private Camera _targetCamera;
+        [SerializeField] private Transform _standPose;
         [SerializeField] private Transform _farPose;
         [SerializeField] private Transform _focusPose;
         [SerializeField] private Collider _computerClickCollider;
@@ -32,17 +34,34 @@ namespace ArchiveNull.UI
         [Header("Return")]
         [SerializeField] private bool _allowReturnWithEscape = false;
         [SerializeField] private bool _allowReturnWithRightClick = true;
+        [SerializeField] private bool _allowStandExitFromFarWithEscape = true;
+        [SerializeField] private bool _releaseCameraWhenUnfocused = true;
+        [SerializeField] private bool _startAtFarPose = true;
+        [SerializeField] private UnityEvent _onFocusReleased;
+
+        private enum CameraPose
+        {
+            Stand,
+            Far,
+            Focus
+        }
 
         private bool _isFocused;
         private float _moveTimer;
+        private Vector3 _initialCameraPosition;
+        private Quaternion _initialCameraRotation;
+        private CameraPose _currentPose = CameraPose.Far;
         private Vector3 _moveStartPosition;
         private Quaternion _moveStartRotation;
         private Vector3 _moveTargetPosition;
         private Quaternion _moveTargetRotation;
         private bool _pendingMenuOpen;
+        private bool _pendingFocusReleasedEvent;
         private Vector2 _mouseLook;
 
         public bool IsFocused => _isFocused;
+        public bool IsInFarPose => !_isFocused && _currentPose == CameraPose.Far;
+        public bool IsInStandPose => !_isFocused && _currentPose == CameraPose.Stand;
 
         private void Reset()
         {
@@ -60,11 +79,27 @@ namespace ArchiveNull.UI
             {
                 _moveEase = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
             }
+
+            if (_targetCamera != null)
+            {
+                _initialCameraPosition = _targetCamera.transform.position;
+                _initialCameraRotation = _targetCamera.transform.rotation;
+                Vector3 startPosition = _startAtFarPose ? GetPosePosition(CameraPose.Far) : _initialCameraPosition;
+                Quaternion startRotation = _startAtFarPose ? GetPoseRotation(CameraPose.Far) : _initialCameraRotation;
+                _currentPose = _startAtFarPose ? CameraPose.Far : CameraPose.Stand;
+                _targetCamera.transform.SetPositionAndRotation(startPosition, startRotation);
+                _moveStartPosition = startPosition;
+                _moveStartRotation = startRotation;
+                _moveTargetPosition = startPosition;
+                _moveTargetRotation = startRotation;
+            }
+
+            _moveTimer = _moveDuration;
         }
 
         private void Update()
         {
-            if (_targetCamera == null || _farPose == null || _focusPose == null)
+            if (_targetCamera == null || _focusPose == null)
             {
                 return;
             }
@@ -75,6 +110,12 @@ namespace ArchiveNull.UI
 
         private void HandleInput()
         {
+            if (!_isFocused && _allowStandExitFromFarWithEscape && _currentPose == CameraPose.Far && WasEscapePressedThisFrame())
+            {
+                MoveToStandPose();
+                return;
+            }
+
             if (!_isFocused && _focusOnComputerClick && WasLeftClickThisFrame() && IsClickingComputer())
             {
                 FocusComputer();
@@ -89,6 +130,12 @@ namespace ArchiveNull.UI
             if (_allowReturnWithRightClick && Mouse.current != null && Mouse.current.rightButton.wasPressedThisFrame)
             {
                 ReturnToFarPose();
+                return;
+            }
+
+            if (_allowReturnWithEscape && WasEscapePressedThisFrame())
+            {
+                MoveToStandPose();
             }
         }
 
@@ -107,6 +154,17 @@ namespace ArchiveNull.UI
                     _pendingMenuOpen = false;
                     _menuController?.FocusOpenMenu();
                 }
+
+                if (_pendingFocusReleasedEvent && t >= 1f)
+                {
+                    _pendingFocusReleasedEvent = false;
+                    _onFocusReleased?.Invoke();
+                }
+                return;
+            }
+
+            if (!_isFocused && _releaseCameraWhenUnfocused && _currentPose == CameraPose.Stand)
+            {
                 return;
             }
 
@@ -116,8 +174,8 @@ namespace ArchiveNull.UI
             }
 
             float swayTime = Time.time * _swaySpeed;
-            Vector3 basePosition = _farPose.position;
-            Quaternion baseRotation = _farPose.rotation;
+            Vector3 basePosition = GetPosePosition(CameraPose.Far);
+            Quaternion baseRotation = GetPoseRotation(CameraPose.Far);
 
             Vector3 positionOffset = new(
                 Mathf.Sin(swayTime * 0.9f) * _swayPositionAmount,
@@ -156,7 +214,8 @@ namespace ArchiveNull.UI
         public void FocusComputer()
         {
             _isFocused = true;
-            StartMove(_focusPose.position, _focusPose.rotation);
+            _currentPose = CameraPose.Focus;
+            StartMove(GetPosePosition(CameraPose.Focus), GetPoseRotation(CameraPose.Focus));
 
             if (_openMenuWhenFocused && _menuController != null)
             {
@@ -175,8 +234,29 @@ namespace ArchiveNull.UI
         {
             _isFocused = false;
             _pendingMenuOpen = false;
+            _pendingFocusReleasedEvent = false;
             _menuController?.SuspendTerminalInteraction();
-            StartMove(_farPose.position, _farPose.rotation);
+            _currentPose = CameraPose.Far;
+            StartMove(GetPosePosition(CameraPose.Far), GetPoseRotation(CameraPose.Far));
+        }
+
+        public void MoveToStandPose()
+        {
+            _isFocused = false;
+            _pendingMenuOpen = false;
+            _pendingFocusReleasedEvent = true;
+            _menuController?.SuspendTerminalInteraction();
+            _currentPose = CameraPose.Stand;
+            StartMove(GetPosePosition(CameraPose.Stand), GetPoseRotation(CameraPose.Stand));
+        }
+
+        public void MoveToFarPose()
+        {
+            _isFocused = false;
+            _pendingMenuOpen = false;
+            _pendingFocusReleasedEvent = false;
+            _currentPose = CameraPose.Far;
+            StartMove(GetPosePosition(CameraPose.Far), GetPoseRotation(CameraPose.Far));
         }
 
         private void StartMove(Vector3 targetPosition, Quaternion targetRotation)
@@ -186,6 +266,29 @@ namespace ArchiveNull.UI
             _moveTargetPosition = targetPosition;
             _moveTargetRotation = targetRotation;
             _moveTimer = 0f;
+        }
+
+        private Vector3 GetPosePosition(CameraPose pose)
+        {
+            Transform poseTransform = GetPoseTransform(pose);
+            return poseTransform != null ? poseTransform.position : _initialCameraPosition;
+        }
+
+        private Quaternion GetPoseRotation(CameraPose pose)
+        {
+            Transform poseTransform = GetPoseTransform(pose);
+            return poseTransform != null ? poseTransform.rotation : _initialCameraRotation;
+        }
+
+        private Transform GetPoseTransform(CameraPose pose)
+        {
+            return pose switch
+            {
+                CameraPose.Stand => _standPose != null ? _standPose : _farPose,
+                CameraPose.Far => _farPose,
+                CameraPose.Focus => _focusPose,
+                _ => null
+            };
         }
 
         private bool IsClickingComputer()
@@ -202,6 +305,11 @@ namespace ArchiveNull.UI
         private static bool WasLeftClickThisFrame()
         {
             return Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame;
+        }
+
+        private static bool WasEscapePressedThisFrame()
+        {
+            return Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame;
         }
     }
 }
