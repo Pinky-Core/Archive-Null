@@ -12,6 +12,7 @@ namespace ArchiveNull.UI
         [SerializeField] private Transform _farPose;
         [SerializeField] private Transform _focusPose;
         [SerializeField] private Collider _computerClickCollider;
+        [SerializeField] private Collider[] _returnToFarClickColliders;
         [SerializeField] private CRTMainMenuController _menuController;
 
         [Header("Focus")]
@@ -62,6 +63,7 @@ namespace ArchiveNull.UI
         public bool IsFocused => _isFocused;
         public bool IsInFarPose => !_isFocused && _currentPose == CameraPose.Far;
         public bool IsInStandPose => !_isFocused && _currentPose == CameraPose.Stand;
+        public bool IsTransitioning => _moveTimer < _moveDuration;
 
         private void Reset()
         {
@@ -110,6 +112,12 @@ namespace ArchiveNull.UI
 
         private void HandleInput()
         {
+            if (!_isFocused && _currentPose == CameraPose.Stand && WasLeftClickThisFrame() && IsClickingReturnToFarTarget())
+            {
+                MoveToFarPose();
+                return;
+            }
+
             if (!_isFocused && _allowStandExitFromFarWithEscape && _currentPose == CameraPose.Far && WasEscapePressedThisFrame())
             {
                 MoveToStandPose();
@@ -300,6 +308,26 @@ namespace ArchiveNull.UI
 
             Ray ray = _targetCamera.ScreenPointToRay(Mouse.current.position.ReadValue());
             return _computerClickCollider.Raycast(ray, out _, 100f);
+        }
+
+        private bool IsClickingReturnToFarTarget()
+        {
+            if (_returnToFarClickColliders == null || _returnToFarClickColliders.Length == 0 || _targetCamera == null)
+            {
+                return false;
+            }
+
+            Ray ray = _targetCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
+            for (int i = 0; i < _returnToFarClickColliders.Length; i++)
+            {
+                Collider target = _returnToFarClickColliders[i];
+                if (target != null && target.Raycast(ray, out _, 100f))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private static bool WasLeftClickThisFrame()

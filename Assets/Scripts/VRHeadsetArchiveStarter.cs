@@ -18,6 +18,7 @@ namespace ArchiveNull.UI
         [SerializeField] private CRTMainMenuController _menuController;
         [SerializeField] private CRTMenuCameraFocus _computerFocus;
         [SerializeField] private RoomDissolveTransition _roomTransition;
+        [SerializeField] private MemorySceneLoader _memorySceneLoader;
 
         [Header("Equip")]
         [SerializeField] private float _equipDuration = 0.65f;
@@ -50,6 +51,8 @@ namespace ArchiveNull.UI
         private Vector3 _headsetInitialLocalScale;
         private bool _headsetInitiallyActive;
 
+        public bool IsEquipped => _equipped;
+
         private void Awake()
         {
             if (_camera == null)
@@ -77,6 +80,11 @@ namespace ArchiveNull.UI
 
         private void Update()
         {
+            if (_equipped && !_busy && _fadeToBlack != null && (_fadeToBlack.gameObject.activeSelf || _fadeToBlack.alpha > 0.001f))
+            {
+                SetCanvasGroup(_fadeToBlack, 0f, false);
+            }
+
             if (_busy)
             {
                 return;
@@ -247,6 +255,21 @@ namespace ArchiveNull.UI
                 SetPromptText("ARCHIVE SCENE MISSING");
                 SetPromptVisible(true);
                 _busy = false;
+                yield break;
+            }
+
+            if (_memorySceneLoader != null)
+            {
+                string sceneName = _menuController.MountedArchiveSceneName;
+                if (string.IsNullOrWhiteSpace(sceneName))
+                {
+                    SetPromptText("ARCHIVE SCENE NAME MISSING");
+                    SetPromptVisible(true);
+                    _busy = false;
+                    yield break;
+                }
+
+                _memorySceneLoader.StartMemory(sceneName);
                 yield break;
             }
 

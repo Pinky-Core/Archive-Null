@@ -9,6 +9,7 @@ namespace ArchiveNull.UI
         [Header("References")]
         [SerializeField] private CRTMenuCameraFocus _computerFocus;
         [SerializeField] private Transform _cameraRoot;
+        [SerializeField] private bool _autoSyncWithCameraPose = true;
 
         [Header("Movement")]
         [SerializeField] private bool _startLockedToDesk = true;
@@ -50,6 +51,8 @@ namespace ArchiveNull.UI
 
         private void Update()
         {
+            SyncFlightState();
+
             if (_cameraRoot == null || IsComputerFocused() || !_freeFlightEnabled || !CanMoveFreely())
             {
                 ReleaseCursor();
@@ -82,7 +85,30 @@ namespace ArchiveNull.UI
 
         private bool CanMoveFreely()
         {
-            return _computerFocus == null || _computerFocus.IsInFarPose;
+            return _computerFocus == null || _computerFocus.IsInStandPose;
+        }
+
+        private void SyncFlightState()
+        {
+            if (!_autoSyncWithCameraPose || _computerFocus == null)
+            {
+                return;
+            }
+
+            if (_computerFocus.IsInStandPose)
+            {
+                if (!_freeFlightEnabled)
+                {
+                    EnableFreeFlight();
+                }
+
+                return;
+            }
+
+            if (_freeFlightEnabled)
+            {
+                DisableFreeFlight();
+            }
         }
 
         private void HandleLook()

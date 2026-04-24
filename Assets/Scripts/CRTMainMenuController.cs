@@ -6,6 +6,7 @@ using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.Controls;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
+using System.IO;
 
 namespace ArchiveNull.UI
 {
@@ -575,8 +576,6 @@ namespace ArchiveNull.UI
 
         private void BuildMainMenuTextPool()
         {
-            int providedCount = _useSceneLayout && _sceneMainMenuOptionTexts != null ? _sceneMainMenuOptionTexts.Length : 0;
-
             if (_useSceneLayout && _sceneMainMenuOptionTexts != null)
             {
                 for (int i = 0; i < _mainMenuItems.Count; i++)
@@ -584,13 +583,19 @@ namespace ArchiveNull.UI
                     TMP_Text option = i < _sceneMainMenuOptionTexts.Length ? _sceneMainMenuOptionTexts[i] : null;
                     if (option == null)
                     {
-                        _mainMenuItems[i].Hidden = true;
-                        _mainMenuTexts.Add(null);
-                        continue;
+                        option = CreateMenuText(_mainMenuRoot, _mainMenuItems[i].Label);
                     }
 
-                    _mainMenuItems[i].Hidden = !option.gameObject.activeSelf;
+                    _mainMenuItems[i].Hidden = false;
+                    if (!option.gameObject.activeSelf)
+                    {
+                        option.gameObject.SetActive(true);
+                    }
+
+                    option.transform.SetParent(_mainMenuRoot, false);
                     ApplyTextTheme(option, 30, FontStyles.Bold, _accentColor);
+                    option.rectTransform.anchoredPosition = new Vector2(0f, -i * 54f);
+                    option.rectTransform.sizeDelta = new Vector2(470f, 42f);
                     _mainMenuTexts.Add(option);
                 }
 
@@ -2421,6 +2426,7 @@ namespace ArchiveNull.UI
         public bool HasMountedArchive => _mountedArchive >= 0 && _mountedArchive < GetEffectiveArchiveCount() && GetArchiveSceneBuildIndex(_mountedArchive) >= 0;
         public int MountedArchiveIndex => _mountedArchive;
         public int MountedArchiveSceneBuildIndex => HasMountedArchive ? GetArchiveSceneBuildIndex(_mountedArchive) : -1;
+        public string MountedArchiveSceneName => HasMountedArchive ? GetArchiveSceneName(_mountedArchive) : string.Empty;
         public string MountedArchiveName => HasMountedArchive ? GetArchiveName(_mountedArchive) : string.Empty;
 
         public void MarkArchiveCompleted(int archiveIndex)
@@ -2451,6 +2457,18 @@ namespace ArchiveNull.UI
             }
 
             return Mathf.Min(_archiveCount, playableSceneCount);
+        }
+
+        private string GetArchiveSceneName(int archiveIndex)
+        {
+            int sceneBuildIndex = GetArchiveSceneBuildIndex(archiveIndex);
+            if (sceneBuildIndex < 0)
+            {
+                return string.Empty;
+            }
+
+            string scenePath = SceneUtility.GetScenePathByBuildIndex(sceneBuildIndex);
+            return string.IsNullOrWhiteSpace(scenePath) ? string.Empty : Path.GetFileNameWithoutExtension(scenePath);
         }
 
         private string GetMountedArchiveStatus()
