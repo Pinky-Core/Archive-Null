@@ -3895,6 +3895,7 @@ GameObject:
   m_Component:
   - component: {fileID: 975684151}
   - component: {fileID: 975684150}
+  - component: {fileID: 975684152}
   m_Layer: 0
   m_Name: Game Manager
   m_TagString: Untagged
@@ -3911,55 +3912,27 @@ MonoBehaviour:
   m_GameObject: {fileID: 975684149}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 5c8de13238b01c445a9350bed2207e03, type: 3}
+  m_Script: {fileID: 11500000, guid: 03eea5d9ac901e941aab5c8e547fbf41, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::ArchiveNull.UI.RoomDissolveTransition
-  _roomRenderers:
-  - {fileID: 857346211}
-  - {fileID: 1989372012}
-  - {fileID: 1885417636}
-  - {fileID: 2015465883}
-  - {fileID: 1408698003}
-  - {fileID: 1834131382}
-  - {fileID: 1193474046}
-  - {fileID: 1643729047}
-  - {fileID: 1071487884}
-  - {fileID: 1830946690}
-  - {fileID: 200811391}
-  - {fileID: 1332810040}
-  - {fileID: 575465603}
-  - {fileID: 1946414900}
-  - {fileID: 1051377952}
-  - {fileID: 211698462}
-  - {fileID: 698767292}
-  - {fileID: 165533408}
-  - {fileID: 362740173}
-  - {fileID: 1826126110}
-  - {fileID: 312497920}
-  - {fileID: 161530880}
-  - {fileID: 910213310}
-  - {fileID: 1453877204}
-  - {fileID: 2040002926}
-  - {fileID: 1771068687}
-  _dissolveShader: {fileID: 4800000, guid: bb82048c173156e4598be1adb174f664, type: 3}
-  _applyDissolveShaderAtRuntime: 1
-  _restoreOriginalMaterialsAfterRebuild: 1
-  _dissolveProperty: _DissolveAmount
-  _edgeColor: {r: 0.05, g: 0.75, b: 1, a: 1}
-  _pixelScale: 18
-  _noiseScale: 8
-  _edgeWidth: 0.07
-  _edgeEmission: 3
-  _fragmentJitter: 0.025
-  _dissolveOutDuration: 1.4
-  _rebuildOnStart: 0
-  _rebuildDuration: 1.2
-  _dissolveEase:
-    serializedVersion: 2
-    m_Curve: []
-    m_PreInfinity: 2
-    m_PostInfinity: 2
-    m_RotationOrder: 4
+  m_EditorClassIdentifier: Assembly-CSharp::ArchiveNull.UI.OfficeDissolveTransition
+  officeRoot: {fileID: 482749372}
+  fallbackDissolveShader: {fileID: 4800000, guid: bb82048c173156e4598be1adb174f664, type: 3}
+  dissolveDuration: 1.25
+--- !u!114 &975684152
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 975684149}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 03728b3392fe9654394ace4127dada7f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ArchiveNull.UI.MemorySceneLoader
+  officeDissolveTransition: {fileID: 975684150}
+  memorySceneName: Memory_01
+  loadDelay: 0
 --- !u!4 &975684151
 Transform:
   m_ObjectHideFlags: 0
@@ -4423,7 +4396,7 @@ MonoBehaviour:
   _startPromptText: {fileID: 1684585805}
   _menuController: {fileID: 1527197674}
   _computerFocus: {fileID: 867640841}
-  _roomTransition: {fileID: 975684150}
+  _memorySceneLoader: {fileID: 975684152}
   _equipDuration: 0.65
   _equipEase:
     serializedVersion: 2

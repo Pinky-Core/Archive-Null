@@ -20,72 +20,102 @@ Shader "ArchiveNull/RoomDissolve"
         {
             "RenderType"="TransparentCutout"
             "Queue"="AlphaTest"
+            "RenderPipeline"="UniversalPipeline"
         }
 
-        Cull Back
-        ZWrite On
-
-        CGPROGRAM
-        #pragma surface surf Standard fullforwardshadows vertex:vert addshadow
-        #pragma target 3.0
-
-        sampler2D _MainTex;
-        fixed4 _Color;
-        fixed4 _BaseColor;
-        float _DissolveAmount;
-        float _PixelScale;
-        float _NoiseScale;
-        float _EdgeWidth;
-        fixed4 _EdgeColor;
-        float _EdgeEmission;
-        float _FragmentJitter;
-
-        struct Input
+        Pass
         {
-            float2 uv_MainTex;
-            float3 worldPos;
-        };
+            Name "UniversalForward"
+            Tags { "LightMode"="UniversalForward" }
 
-        float Hash(float3 p)
-        {
-            p = frac(p * 0.3183099 + 0.1);
-            p *= 17.0;
-            return frac(p.x * p.y * p.z * (p.x + p.y + p.z));
+            Cull Back
+            ZWrite On
+            Blend One Zero
+            AlphaToMask Off
+
+            HLSLPROGRAM
+            #pragma vertex vert
+            #pragma fragment frag
+            #pragma target 3.0
+
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+
+            struct Attributes
+            {
+                float4 positionOS : POSITION;
+                float3 normalOS : NORMAL;
+                float2 uv : TEXCOORD0;
+            };
+
+            struct Varyings
+            {
+                float4 positionCS : SV_POSITION;
+                float2 uv : TEXCOORD0;
+                float3 worldPos : TEXCOORD1;
+            };
+
+            TEXTURE2D(_MainTex);
+            SAMPLER(sampler_MainTex);
+
+            CBUFFER_START(UnityPerMaterial)
+                float4 _MainTex_ST;
+                half4 _Color;
+                half4 _BaseColor;
+                half _DissolveAmount;
+                half _PixelScale;
+                half _NoiseScale;
+                half _EdgeWidth;
+                half4 _EdgeColor;
+                half _EdgeEmission;
+                half _FragmentJitter;
+            CBUFFER_END
+
+            float Hash(float3 p)
+            {
+                p = frac(p * 0.3183099 + 0.1);
+                p *= 17.0;
+                return frac(p.x * p.y * p.z * (p.x + p.y + p.z));
+            }
+
+            float PixelNoise(float3 worldPos)
+            {
+                float pixelScale = max(1.0, _PixelScale);
+                float3 pixelCell = floor(worldPos * pixelScale) / pixelScale;
+                float coarse = Hash(pixelCell * _NoiseScale);
+                float fine = Hash(pixelCell * (_NoiseScale * 2.31) + 9.17);
+                return saturate(coarse * 0.78 + fine * 0.22);
+            }
+
+            Varyings vert(Attributes input)
+            {
+                Varyings output;
+
+                float3 worldPos = TransformObjectToWorld(input.positionOS.xyz);
+                float3 worldNormal = TransformObjectToWorldNormal(input.normalOS);
+                float noise = PixelNoise(worldPos);
+                float scatter = saturate((_DissolveAmount - 0.12) / 0.88);
+                worldPos += worldNormal * ((noise - 0.5) * _FragmentJitter * scatter);
+
+                output.positionCS = TransformWorldToHClip(worldPos);
+                output.uv = TRANSFORM_TEX(input.uv, _MainTex);
+                output.worldPos = worldPos;
+                return output;
+            }
+
+            half4 frag(Varyings input) : SV_Target
+            {
+                float noise = PixelNoise(input.worldPos);
+                clip(noise - _DissolveAmount);
+
+                half4 baseCol = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, input.uv) * _Color * _BaseColor;
+                half edge = 1.0 - smoothstep(_DissolveAmount, _DissolveAmount + _EdgeWidth, noise);
+                half3 finalColor = baseCol.rgb + (_EdgeColor.rgb * edge * _EdgeEmission);
+
+                return half4(finalColor, baseCol.a);
+            }
+            ENDHLSL
         }
-
-        float PixelNoise(float3 worldPos)
-        {
-            float pixelScale = max(1.0, _PixelScale);
-            float3 pixelCell = floor(worldPos * pixelScale) / pixelScale;
-            float coarse = Hash(pixelCell * _NoiseScale);
-            float fine = Hash(pixelCell * (_NoiseScale * 2.31) + 9.17);
-            return saturate(coarse * 0.78 + fine * 0.22);
-        }
-
-        void vert(inout appdata_full v)
-        {
-            float3 worldPos = mul(unity_ObjectToWorld, v.vertex).xyz;
-            float noise = PixelNoise(worldPos);
-            float scatter = saturate((_DissolveAmount - 0.12) / 0.88);
-            v.vertex.xyz += v.normal * ((noise - 0.5) * _FragmentJitter * scatter);
-        }
-
-        void surf(Input IN, inout SurfaceOutputStandard o)
-        {
-            float noise = PixelNoise(IN.worldPos);
-            clip(noise - _DissolveAmount);
-
-            fixed4 baseCol = tex2D(_MainTex, IN.uv_MainTex) * _Color * _BaseColor;
-            float edge = 1.0 - smoothstep(_DissolveAmount, _DissolveAmount + _EdgeWidth, noise);
-
-            o.Albedo = baseCol.rgb;
-            o.Alpha = baseCol.a;
-            o.Smoothness = 0.18;
-            o.Metallic = 0.0;
-            o.Emission = _EdgeColor.rgb * edge * _EdgeEmission;
-        }
-        ENDCG
     }
 
-    FallBack "Diffuse"
+    FallBack Off
 }

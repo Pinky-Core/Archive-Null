@@ -7,29 +7,41 @@ namespace ArchiveNull.UI
     public sealed class OfficeDissolveTransition : MonoBehaviour
     {
         private static readonly int DissolveAmountId = Shader.PropertyToID("_DissolveAmount");
+        private static readonly int ColorId = Shader.PropertyToID("_Color");
+        private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
+        private static readonly int MainTexId = Shader.PropertyToID("_MainTex");
 
         [Header("References")]
         [SerializeField] private GameObject officeRoot;
+        [SerializeField] private Shader fallbackDissolveShader;
 
         [Header("Timing")]
         [SerializeField] private float dissolveDuration = 1.25f;
 
-        private Renderer[] _renderers;
         private MaterialPropertyBlock _propertyBlock;
+        private RendererState[] _rendererStates;
 
         public GameObject OfficeRoot => officeRoot;
         public float DissolveDuration => dissolveDuration;
 
+        private sealed class RendererState
+        {
+            public Renderer Renderer;
+        }
+
         private void Awake()
         {
             _propertyBlock = new MaterialPropertyBlock();
-            CacheRenderers();
-            ApplyDissolve(0f);
+            if (fallbackDissolveShader == null)
+            {
+                fallbackDissolveShader = Shader.Find("ArchiveNull/RoomDissolve");
+            }
         }
 
         public IEnumerator PlayDissolve()
         {
-            CacheRenderers();
+            CacheRendererStates();
+            ApplyDissolve(0f);
             Debug.Log("[OfficeDissolveTransition] Starting office dissolve.");
 
             float duration = Mathf.Max(0.001f, dissolveDuration);
@@ -46,30 +58,150 @@ namespace ArchiveNull.UI
             Debug.Log("[OfficeDissolveTransition] Office dissolve completed.");
         }
 
-        private void CacheRenderers()
+        private void CacheRendererStates()
         {
-            _renderers = officeRoot != null ? officeRoot.GetComponentsInChildren<Renderer>(true) : System.Array.Empty<Renderer>();
-        }
-
-        private void ApplyDissolve(float amount)
-        {
-            if (_renderers == null)
+            if (_rendererStates != null && _rendererStates.Length > 0)
             {
                 return;
             }
 
-            for (int i = 0; i < _renderers.Length; i++)
+            Renderer[] renderers = officeRoot != null ? officeRoot.GetComponentsInChildren<Renderer>(true) : System.Array.Empty<Renderer>();
+            _rendererStates = new RendererState[renderers.Length];
+
+            for (int i = 0; i < renderers.Length; i++)
             {
-                Renderer rendererTarget = _renderers[i];
+                Renderer rendererTarget = renderers[i];
                 if (rendererTarget == null)
                 {
                     continue;
                 }
 
-                rendererTarget.GetPropertyBlock(_propertyBlock);
-                _propertyBlock.SetFloat(DissolveAmountId, amount);
-                rendererTarget.SetPropertyBlock(_propertyBlock);
+                Material[] originalMaterials = rendererTarget.sharedMaterials;
+                bool supportsPropertyBlock = true;
+                for (int materialIndex = 0; materialIndex < originalMaterials.Length; materialIndex++)
+                {
+                    Material material = originalMaterials[materialIndex];
+                    if (material == null || !material.HasProperty(DissolveAmountId))
+                    {
+                        supportsPropertyBlock = false;
+                        break;
+                    }
+                }
+
+                RendererState state = new()
+                {
+                    Renderer = rendererTarget
+                };
+
+                if (!supportsPropertyBlock && fallbackDissolveShader != null)
+                {
+                    rendererTarget.sharedMaterials = BuildRuntimeDissolveMaterials(originalMaterials);
+                }
+
+                _rendererStates[i] = state;
             }
+        }
+
+        private void ApplyDissolve(float amount)
+        {
+            if (_rendererStates == null)
+            {
+                return;
+            }
+
+            for (int i = 0; i < _rendererStates.Length; i++)
+            {
+                RendererState state = _rendererStates[i];
+                if (state?.Renderer == null)
+                {
+                    continue;
+                }
+
+                state.Renderer.GetPropertyBlock(_propertyBlock);
+                _propertyBlock.SetFloat(DissolveAmountId, amount);
+                state.Renderer.SetPropertyBlock(_propertyBlock);
+            }
+        }
+
+        private Material[] BuildRuntimeDissolveMaterials(Material[] sourceMaterials)
+        {
+            Material[] runtimeMaterials = new Material[sourceMaterials.Length];
+            for (int i = 0; i < sourceMaterials.Length; i++)
+            {
+                Material source = sourceMaterials[i];
+                Material runtimeMaterial = new(fallbackDissolveShader)
+                {
+                    name = source != null ? source.name + " AutoDissolve Runtime" : "AutoDissolve Runtime"
+                };
+
+                CopyVisualProperties(source, runtimeMaterial);
+                runtimeMaterials[i] = runtimeMaterial;
+            }
+
+            return runtimeMaterials;
+        }
+
+        private static void CopyVisualProperties(Material source, Material target)
+        {
+            if (source == null || target == null)
+            {
+                return;
+            }
+
+            Texture mainTexture = GetFirstTexture(source, "_BaseMap", "_MainTex", "_BaseColorMap");
+            if (mainTexture != null)
+            {
+                target.SetTexture(MainTexId, mainTexture);
+            }
+
+            Color color = GetFirstColor(source, Color.white, "_BaseColor", "_Color", "_TintColor");
+            target.SetColor(ColorId, color);
+            target.SetColor(BaseColorId, Color.white);
+
+            if (source.HasProperty("_MainTex"))
+            {
+                target.SetTextureScale(MainTexId, source.GetTextureScale("_MainTex"));
+                target.SetTextureOffset(MainTexId, source.GetTextureOffset("_MainTex"));
+            }
+            else if (source.HasProperty("_BaseMap"))
+            {
+                target.SetTextureScale(MainTexId, source.GetTextureScale("_BaseMap"));
+                target.SetTextureOffset(MainTexId, source.GetTextureOffset("_BaseMap"));
+            }
+        }
+
+        private static Texture GetFirstTexture(Material material, params string[] propertyNames)
+        {
+            for (int i = 0; i < propertyNames.Length; i++)
+            {
+                string propertyName = propertyNames[i];
+                if (!material.HasProperty(propertyName))
+                {
+                    continue;
+                }
+
+                Texture texture = material.GetTexture(propertyName);
+                if (texture != null)
+                {
+                    return texture;
+                }
+            }
+
+            return null;
+        }
+
+        private static Color GetFirstColor(Material material, Color fallback, params string[] propertyNames)
+        {
+            for (int i = 0; i < propertyNames.Length; i++)
+            {
+                string propertyName = propertyNames[i];
+                if (material.HasProperty(propertyName))
+                {
+                    return material.GetColor(propertyName);
+                }
+            }
+
+            return fallback;
         }
     }
 }

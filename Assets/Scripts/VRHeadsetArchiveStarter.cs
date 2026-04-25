@@ -17,7 +17,6 @@ namespace ArchiveNull.UI
         [SerializeField] private TMP_Text _startPromptText;
         [SerializeField] private CRTMainMenuController _menuController;
         [SerializeField] private CRTMenuCameraFocus _computerFocus;
-        [SerializeField] private RoomDissolveTransition _roomTransition;
         [SerializeField] private MemorySceneLoader _memorySceneLoader;
 
         [Header("Equip")]
@@ -204,6 +203,8 @@ namespace ArchiveNull.UI
 
         private void FinishEquip()
         {
+            SetCanvasGroup(_fadeToBlack, 0f, false);
+            SetCanvasGroup(_vrViewOverlay, 1f, true);
             _busy = false;
             SetPromptText(_startPrompt);
             SetPromptVisible(true);
@@ -234,6 +235,7 @@ namespace ArchiveNull.UI
                 SetCanvasGroup(_fadeToBlack, 0f, false);
             }
 
+            SetCanvasGroup(_vrViewOverlay, 0f, false);
             _busy = false;
         }
 
@@ -249,10 +251,10 @@ namespace ArchiveNull.UI
                 yield break;
             }
 
-            int sceneIndex = _menuController.MountedArchiveSceneBuildIndex;
-            if (sceneIndex < 0)
+            string sceneName = _menuController.MountedArchiveSceneName;
+            if (string.IsNullOrWhiteSpace(sceneName))
             {
-                SetPromptText("ARCHIVE SCENE MISSING");
+                SetPromptText("ARCHIVE SCENE NAME MISSING");
                 SetPromptVisible(true);
                 _busy = false;
                 yield break;
@@ -260,28 +262,12 @@ namespace ArchiveNull.UI
 
             if (_memorySceneLoader != null)
             {
-                string sceneName = _menuController.MountedArchiveSceneName;
-                if (string.IsNullOrWhiteSpace(sceneName))
-                {
-                    SetPromptText("ARCHIVE SCENE NAME MISSING");
-                    SetPromptVisible(true);
-                    _busy = false;
-                    yield break;
-                }
-
                 _memorySceneLoader.StartMemory(sceneName);
                 yield break;
             }
 
-            if (_roomTransition != null)
-            {
-                yield return _roomTransition.PlayAndLoad(sceneIndex);
-            }
-            else
-            {
-                SetCanvasGroup(_fadeToBlack, 1f, true);
-                SceneManager.LoadScene(sceneIndex);
-            }
+            SetCanvasGroup(_fadeToBlack, 1f, true);
+            SceneManager.LoadScene(sceneName);
 
             _busy = false;
         }
@@ -403,6 +389,8 @@ namespace ArchiveNull.UI
         private void RestoreUnequippedState()
         {
             _equipped = false;
+            SetCanvasGroup(_fadeToBlack, 0f, false);
+            SetCanvasGroup(_vrViewOverlay, 0f, false);
 
             if (_headsetVisual != null)
             {
