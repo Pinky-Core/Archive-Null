@@ -16,7 +16,7 @@ namespace ArchiveNull.UI
 
         public void StartMemory()
         {
-            StartMemory(memorySceneName);
+            StartCoroutine(PlayMemory(memorySceneName));
         }
 
         public void StartMemory(string sceneName)
@@ -27,11 +27,17 @@ namespace ArchiveNull.UI
                 return;
             }
 
-            StartCoroutine(StartMemoryRoutine(sceneName));
+            StartCoroutine(PlayMemory(sceneName));
         }
 
-        private IEnumerator StartMemoryRoutine(string sceneName)
+        public IEnumerator PlayMemory(string sceneName)
         {
+            if (string.IsNullOrWhiteSpace(sceneName))
+            {
+                Debug.LogWarning("[MemorySceneLoader] Cannot start memory. Scene name is empty.");
+                yield break;
+            }
+
             Debug.Log($"[MemorySceneLoader] Starting memory transition to scene '{sceneName}'.");
 
             if (officeDissolveTransition != null)

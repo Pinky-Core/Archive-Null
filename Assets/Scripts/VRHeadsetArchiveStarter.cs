@@ -22,7 +22,7 @@ namespace ArchiveNull.UI
         [Header("Equip")]
         [SerializeField] private float _equipDuration = 0.65f;
         [SerializeField] private AnimationCurve _equipEase = null;
-        [SerializeField] private string _startPrompt = "INICIAR";
+        [SerializeField] private string _startPrompt = "INICIAR MEMORIA";
         [SerializeField] private Vector3 _headOffset = new(0f, -0.05f, 0.12f);
         [SerializeField] private Vector3 _liftOffset = new(0f, 0.22f, -0.12f);
         [SerializeField] private Vector3 _wearRotationOffset = new(0f, 180f, 0f);
@@ -32,9 +32,10 @@ namespace ArchiveNull.UI
         [Header("VR View")]
         [SerializeField] private CanvasGroup _fadeToBlack;
         [SerializeField] private CanvasGroup _vrViewOverlay;
-        [SerializeField] private float _visorFadeInDuration = 0.14f;
-        [SerializeField] private float _visorRevealDuration = 0.42f;
-        [SerializeField] private float _vrOverlayFadeDuration = 0.28f;
+        [SerializeField] private float _equipBlackoutDuration = 0.12f;
+        [SerializeField] private float _equipRevealDuration = 0.22f;
+        [SerializeField] private float _overlayFadeDuration = 0.18f;
+        [SerializeField] private float _loadFadeDuration = 0.2f;
 
         [Header("Start Prompt")]
         [SerializeField] private bool _blinkStartPrompt = true;
@@ -72,24 +73,18 @@ namespace ArchiveNull.UI
                 _headsetInitiallyActive = _headsetVisual.gameObject.activeSelf;
             }
 
+            ResetVrUi();
             SetPromptVisible(false);
-            SetCanvasGroup(_fadeToBlack, 0f, false);
-            SetCanvasGroup(_vrViewOverlay, 0f, false);
         }
 
         private void Update()
         {
-            if (_equipped && !_busy && _fadeToBlack != null && (_fadeToBlack.gameObject.activeSelf || _fadeToBlack.alpha > 0.001f))
-            {
-                SetCanvasGroup(_fadeToBlack, 0f, false);
-            }
-
             if (_busy)
             {
                 return;
             }
 
-            if (!_equipped && Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame && IsClickingHeadset())
+            if (!_equipped && WasHeadsetClickThisFrame())
             {
                 TryEquip();
                 return;
@@ -103,7 +98,7 @@ namespace ArchiveNull.UI
 
             if (_equipped && WasStartPressed())
             {
-                StartCoroutine(StartMountedArchive());
+                StartCoroutine(StartMemoryRoutine());
                 return;
             }
 
@@ -119,15 +114,13 @@ namespace ArchiveNull.UI
 
             if (_computerFocus != null && !_computerFocus.IsInFarPose)
             {
-                SetPromptText("MOVE TO FAR TO USE VR");
-                SetPromptVisible(true);
+                ShowPromptMessage("MOVE TO FAR TO USE VR");
                 return;
             }
 
             if (_menuController == null || !_menuController.HasMountedArchive)
             {
-                SetPromptText("NO ARCHIVE MOUNTED");
-                SetPromptVisible(true);
+                ShowPromptMessage("NO ARCHIVE MOUNTED");
                 return;
             }
 
@@ -137,6 +130,9 @@ namespace ArchiveNull.UI
         private IEnumerator EquipRoutine()
         {
             _busy = true;
+            ResetVrUi();
+            SetPromptVisible(false);
+
             if (_headsetVisual != null)
             {
                 Vector3 startPosition = _headsetVisual.position;
@@ -165,25 +161,64 @@ namespace ArchiveNull.UI
                 _headsetVisual.localScale = startScale;
             }
 
-            if (_fadeToBlack != null)
-            {
-                yield return FadeCanvasGroup(_fadeToBlack, _fadeToBlack.alpha, 1f, _visorFadeInDuration, true, true);
-            }
+            yield return FadeCanvasGroup(_fadeToBlack, 0f, 1f, _equipBlackoutDuration, true, true);
 
             ApplyEquippedState();
+            yield return FadeCanvasGroup(_vrViewOverlay, 0f, 1f, _overlayFadeDuration, true, true);
+            yield return FadeCanvasGroup(_fadeToBlack, 1f, 0f, _equipRevealDuration, true, false);
 
-            if (_vrViewOverlay != null)
+            _equipped = true;
+            _busy = false;
+            SetPromptText(_startPrompt);
+            SetPromptVisible(true);
+            _promptBlinkTimer = 0f;
+            SetCanvasGroup(_fadeToBlack, 0f, false);
+        }
+
+        private IEnumerator UnequipRoutine()
+        {
+            _busy = true;
+            SetPromptVisible(false);
+
+            yield return FadeCanvasGroup(_fadeToBlack, 0f, 1f, _equipBlackoutDuration, true, true);
+            yield return FadeCanvasGroup(_vrViewOverlay, _vrViewOverlay != null ? _vrViewOverlay.alpha : 0f, 0f, _overlayFadeDuration, true, false);
+
+            RestoreUnequippedState();
+
+            yield return FadeCanvasGroup(_fadeToBlack, 1f, 0f, _equipRevealDuration, true, false);
+            ResetVrUi();
+            _busy = false;
+        }
+
+        private IEnumerator StartMemoryRoutine()
+        {
+            _busy = true;
+            SetPromptVisible(false);
+
+            if (_menuController == null || !_menuController.HasMountedArchive)
             {
-                yield return FadeCanvasGroup(_vrViewOverlay, 0f, 1f, _vrOverlayFadeDuration, true, true);
+                _busy = false;
+                ShowPromptMessage("NO ARCHIVE MOUNTED");
+                yield break;
             }
 
-            if (_fadeToBlack != null)
+            string sceneName = _menuController.MountedArchiveSceneName;
+            if (string.IsNullOrWhiteSpace(sceneName))
             {
-                yield return FadeCanvasGroup(_fadeToBlack, _fadeToBlack.alpha, 0f, _visorRevealDuration, true, false);
-                SetCanvasGroup(_fadeToBlack, 0f, false);
+                _busy = false;
+                ShowPromptMessage("ARCHIVE SCENE NAME MISSING");
+                yield break;
             }
 
-            FinishEquip();
+            yield return FadeCanvasGroup(_fadeToBlack, 0f, 1f, _loadFadeDuration, true, true);
+
+            if (_memorySceneLoader != null)
+            {
+                yield return _memorySceneLoader.PlayMemory(sceneName);
+                yield break;
+            }
+
+            SceneManager.LoadScene(sceneName);
         }
 
         private void ApplyEquippedState()
@@ -197,84 +232,34 @@ namespace ArchiveNull.UI
             {
                 _headsetClickCollider.enabled = false;
             }
-
-            _equipped = true;
         }
 
-        private void FinishEquip()
+        private void RestoreUnequippedState()
         {
-            SetCanvasGroup(_fadeToBlack, 0f, false);
-            SetCanvasGroup(_vrViewOverlay, 1f, true);
-            _busy = false;
-            SetPromptText(_startPrompt);
-            SetPromptVisible(true);
-            _promptBlinkTimer = 0f;
+            _equipped = false;
+
+            if (_headsetVisual != null)
+            {
+                _headsetVisual.localPosition = _headsetInitialLocalPosition;
+                _headsetVisual.localRotation = _headsetInitialLocalRotation;
+                _headsetVisual.localScale = _headsetInitialLocalScale;
+                _headsetVisual.gameObject.SetActive(_headsetInitiallyActive);
+            }
+
+            if (_headsetClickCollider != null)
+            {
+                _headsetClickCollider.enabled = true;
+            }
         }
 
-        private IEnumerator UnequipRoutine()
+        private bool WasHeadsetClickThisFrame()
         {
-            _busy = true;
-            SetPromptVisible(false);
-
-            if (_fadeToBlack != null)
+            if (Mouse.current == null || !Mouse.current.leftButton.wasPressedThisFrame)
             {
-                yield return FadeCanvasGroup(_fadeToBlack, _fadeToBlack.alpha, 1f, _visorFadeInDuration, true, true);
+                return false;
             }
 
-            if (_vrViewOverlay != null)
-            {
-                yield return FadeCanvasGroup(_vrViewOverlay, _vrViewOverlay.alpha, 0f, _vrOverlayFadeDuration, true, false);
-                SetCanvasGroup(_vrViewOverlay, 0f, false);
-            }
-
-            RestoreUnequippedState();
-
-            if (_fadeToBlack != null)
-            {
-                yield return FadeCanvasGroup(_fadeToBlack, _fadeToBlack.alpha, 0f, _visorRevealDuration, true, false);
-                SetCanvasGroup(_fadeToBlack, 0f, false);
-            }
-
-            SetCanvasGroup(_vrViewOverlay, 0f, false);
-            _busy = false;
-        }
-
-        private IEnumerator StartMountedArchive()
-        {
-            _busy = true;
-            SetPromptVisible(false);
-            if (_menuController == null || !_menuController.HasMountedArchive)
-            {
-                SetPromptText("NO ARCHIVE MOUNTED");
-                SetPromptVisible(true);
-                _busy = false;
-                yield break;
-            }
-
-            string sceneName = _menuController.MountedArchiveSceneName;
-            if (string.IsNullOrWhiteSpace(sceneName))
-            {
-                SetPromptText("ARCHIVE SCENE NAME MISSING");
-                SetPromptVisible(true);
-                _busy = false;
-                yield break;
-            }
-
-            if (_memorySceneLoader != null)
-            {
-                _memorySceneLoader.StartMemory(sceneName);
-                yield break;
-            }
-
-            SetCanvasGroup(_fadeToBlack, 1f, true);
-            SceneManager.LoadScene(sceneName);
-
-            _busy = false;
-        }
-
-        private bool IsClickingHeadset()
-        {
-            if (_camera == null || _headsetClickCollider == null || Mouse.current == null)
+            if (_camera == null || _headsetClickCollider == null)
             {
                 return false;
             }
@@ -283,7 +268,7 @@ namespace ArchiveNull.UI
             return _headsetClickCollider.Raycast(ray, out _, 100f);
         }
 
-        private bool WasStartPressed()
+        private static bool WasStartPressed()
         {
             bool mousePressed = Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame;
             bool keyboardPressed = Keyboard.current != null &&
@@ -293,20 +278,13 @@ namespace ArchiveNull.UI
             return mousePressed || keyboardPressed;
         }
 
-        private bool WasUnequipPressed()
+        private static bool WasUnequipPressed()
         {
             bool rightMousePressed = Mouse.current != null && Mouse.current.rightButton.wasPressedThisFrame;
             bool keyboardPressed = Keyboard.current != null &&
                                    (Keyboard.current.escapeKey.wasPressedThisFrame ||
                                     Keyboard.current.backspaceKey.wasPressedThisFrame);
             return rightMousePressed || keyboardPressed;
-        }
-
-        private static Vector3 QuadraticBezier(Vector3 a, Vector3 b, Vector3 c, float t)
-        {
-            Vector3 ab = Vector3.Lerp(a, b, t);
-            Vector3 bc = Vector3.Lerp(b, c, t);
-            return Vector3.Lerp(ab, bc, t);
         }
 
         private void UpdatePromptBlink()
@@ -321,6 +299,39 @@ namespace ArchiveNull.UI
             Color color = _startPromptText.color;
             color.a = Mathf.Lerp(_promptMinAlpha, _promptMaxAlpha, pulse);
             _startPromptText.color = color;
+        }
+
+        private void ShowPromptMessage(string message)
+        {
+            SetPromptText(message);
+            SetPromptVisible(true);
+        }
+
+        private void SetPromptText(string value)
+        {
+            if (_startPromptText != null)
+            {
+                _startPromptText.text = value;
+            }
+        }
+
+        private void SetPromptVisible(bool visible)
+        {
+            if (_startPromptText == null)
+            {
+                return;
+            }
+
+            _startPromptText.gameObject.SetActive(visible);
+            Color color = _startPromptText.color;
+            color.a = visible ? _promptMaxAlpha : 0f;
+            _startPromptText.color = color;
+        }
+
+        private void ResetVrUi()
+        {
+            SetCanvasGroup(_fadeToBlack, 0f, false);
+            SetCanvasGroup(_vrViewOverlay, 0f, false);
         }
 
         private IEnumerator FadeCanvasGroup(CanvasGroup group, float from, float to, float duration, bool activateAtStart, bool keepActiveAtEnd)
@@ -367,43 +378,11 @@ namespace ArchiveNull.UI
             group.gameObject.SetActive(active);
         }
 
-        private void SetPromptText(string value)
+        private static Vector3 QuadraticBezier(Vector3 a, Vector3 b, Vector3 c, float t)
         {
-            if (_startPromptText != null)
-            {
-                _startPromptText.text = value;
-            }
-        }
-
-        private void SetPromptVisible(bool visible)
-        {
-            if (_startPromptText != null)
-            {
-                _startPromptText.gameObject.SetActive(visible);
-                Color color = _startPromptText.color;
-                color.a = visible ? _promptMaxAlpha : 0f;
-                _startPromptText.color = color;
-            }
-        }
-
-        private void RestoreUnequippedState()
-        {
-            _equipped = false;
-            SetCanvasGroup(_fadeToBlack, 0f, false);
-            SetCanvasGroup(_vrViewOverlay, 0f, false);
-
-            if (_headsetVisual != null)
-            {
-                _headsetVisual.localPosition = _headsetInitialLocalPosition;
-                _headsetVisual.localRotation = _headsetInitialLocalRotation;
-                _headsetVisual.localScale = _headsetInitialLocalScale;
-                _headsetVisual.gameObject.SetActive(_headsetInitiallyActive);
-            }
-
-            if (_headsetClickCollider != null)
-            {
-                _headsetClickCollider.enabled = true;
-            }
+            Vector3 ab = Vector3.Lerp(a, b, t);
+            Vector3 bc = Vector3.Lerp(b, c, t);
+            return Vector3.Lerp(ab, bc, t);
         }
     }
 }
