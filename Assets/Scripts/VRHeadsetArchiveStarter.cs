@@ -33,8 +33,9 @@ namespace ArchiveNull.UI
         [SerializeField] private CanvasGroup _fadeToBlack;
         [SerializeField] private CanvasGroup _vrViewOverlay;
         [SerializeField] private float _equipBlackoutDuration = 0.12f;
-        [SerializeField] private float _equipRevealDuration = 0.22f;
-        [SerializeField] private float _overlayFadeDuration = 0.18f;
+        [SerializeField] private float _equipRevealDelay = 0.45f;
+        [SerializeField] private float _equipRevealDuration = 2f;
+        [SerializeField] private float _overlayFadeDuration = 0.9f;
         [SerializeField] private float _loadFadeDuration = 0.2f;
 
         [Header("Start Prompt")]
@@ -43,6 +44,10 @@ namespace ArchiveNull.UI
         [SerializeField] private float _promptMinAlpha = 0.22f;
         [SerializeField] private float _promptMaxAlpha = 1f;
 
+        [Header("Feedback")]
+        [SerializeField] private bool _autoHideStatusMessages = true;
+        [SerializeField] private float _statusMessageDuration = 1.6f;
+
         private bool _equipped;
         private bool _busy;
         private float _promptBlinkTimer;
@@ -50,6 +55,7 @@ namespace ArchiveNull.UI
         private Quaternion _headsetInitialLocalRotation;
         private Vector3 _headsetInitialLocalScale;
         private bool _headsetInitiallyActive;
+        private Coroutine _statusMessageRoutine;
 
         public bool IsEquipped => _equipped;
 
@@ -165,6 +171,10 @@ namespace ArchiveNull.UI
 
             ApplyEquippedState();
             yield return FadeCanvasGroup(_vrViewOverlay, 0f, 1f, _overlayFadeDuration, true, true);
+            if (_equipRevealDelay > 0f)
+            {
+                yield return new WaitForSeconds(_equipRevealDelay);
+            }
             yield return FadeCanvasGroup(_fadeToBlack, 1f, 0f, _equipRevealDuration, true, false);
 
             _equipped = true;
@@ -303,8 +313,19 @@ namespace ArchiveNull.UI
 
         private void ShowPromptMessage(string message)
         {
+            if (_statusMessageRoutine != null)
+            {
+                StopCoroutine(_statusMessageRoutine);
+                _statusMessageRoutine = null;
+            }
+
             SetPromptText(message);
             SetPromptVisible(true);
+
+            if (_autoHideStatusMessages)
+            {
+                _statusMessageRoutine = StartCoroutine(HidePromptAfterDelay());
+            }
         }
 
         private void SetPromptText(string value)
@@ -330,8 +351,25 @@ namespace ArchiveNull.UI
 
         private void ResetVrUi()
         {
+            if (_statusMessageRoutine != null)
+            {
+                StopCoroutine(_statusMessageRoutine);
+                _statusMessageRoutine = null;
+            }
+
             SetCanvasGroup(_fadeToBlack, 0f, false);
             SetCanvasGroup(_vrViewOverlay, 0f, false);
+        }
+
+        private IEnumerator HidePromptAfterDelay()
+        {
+            yield return new WaitForSeconds(_statusMessageDuration);
+            if (!_equipped)
+            {
+                SetPromptVisible(false);
+            }
+
+            _statusMessageRoutine = null;
         }
 
         private IEnumerator FadeCanvasGroup(CanvasGroup group, float from, float to, float duration, bool activateAtStart, bool keepActiveAtEnd)
