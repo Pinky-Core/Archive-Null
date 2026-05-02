@@ -55,6 +55,8 @@ namespace ArchiveNull.UI
         private Quaternion _headsetInitialLocalRotation;
         private Vector3 _headsetInitialLocalScale;
         private bool _headsetInitiallyActive;
+        private Renderer[] _headsetRenderers;
+        private bool[] _headsetRendererInitialStates;
         private Coroutine _statusMessageRoutine;
 
         public bool IsEquipped => _equipped;
@@ -77,6 +79,12 @@ namespace ArchiveNull.UI
                 _headsetInitialLocalRotation = _headsetVisual.localRotation;
                 _headsetInitialLocalScale = _headsetVisual.localScale;
                 _headsetInitiallyActive = _headsetVisual.gameObject.activeSelf;
+                _headsetRenderers = _headsetVisual.GetComponentsInChildren<Renderer>(true);
+                _headsetRendererInitialStates = new bool[_headsetRenderers.Length];
+                for (int i = 0; i < _headsetRenderers.Length; i++)
+                {
+                    _headsetRendererInitialStates[i] = _headsetRenderers[i] != null && _headsetRenderers[i].enabled;
+                }
             }
 
             ResetVrUi();
@@ -233,9 +241,15 @@ namespace ArchiveNull.UI
 
         private void ApplyEquippedState()
         {
-            if (_hideHeadsetWhenEquipped && _headsetVisual != null)
+            if (_hideHeadsetWhenEquipped && _headsetRenderers != null)
             {
-                _headsetVisual.gameObject.SetActive(false);
+                for (int i = 0; i < _headsetRenderers.Length; i++)
+                {
+                    if (_headsetRenderers[i] != null)
+                    {
+                        _headsetRenderers[i].enabled = false;
+                    }
+                }
             }
 
             if (_headsetClickCollider != null)
@@ -254,6 +268,18 @@ namespace ArchiveNull.UI
                 _headsetVisual.localRotation = _headsetInitialLocalRotation;
                 _headsetVisual.localScale = _headsetInitialLocalScale;
                 _headsetVisual.gameObject.SetActive(_headsetInitiallyActive);
+            }
+
+            if (_headsetRenderers != null)
+            {
+                for (int i = 0; i < _headsetRenderers.Length; i++)
+                {
+                    if (_headsetRenderers[i] != null)
+                    {
+                        bool enabled = i < _headsetRendererInitialStates.Length && _headsetRendererInitialStates[i];
+                        _headsetRenderers[i].enabled = enabled;
+                    }
+                }
             }
 
             if (_headsetClickCollider != null)
