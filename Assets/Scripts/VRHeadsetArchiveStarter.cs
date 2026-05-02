@@ -32,6 +32,7 @@ namespace ArchiveNull.UI
         [Header("VR View")]
         [SerializeField] private CanvasGroup _fadeToBlack;
         [SerializeField] private CanvasGroup _vrViewOverlay;
+        [SerializeField] private float _vrOverlayVisibleAlpha = 0.42f;
         [SerializeField] private float _equipBlackoutDuration = 0.12f;
         [SerializeField] private float _equipRevealDelay = 0.45f;
         [SerializeField] private float _equipRevealDuration = 2f;
@@ -178,7 +179,7 @@ namespace ArchiveNull.UI
             yield return FadeCanvasGroup(_fadeToBlack, 0f, 1f, _equipBlackoutDuration, true, true);
 
             ApplyEquippedState();
-            yield return FadeCanvasGroup(_vrViewOverlay, 0f, 1f, _overlayFadeDuration, true, true);
+            yield return FadeCanvasGroup(_vrViewOverlay, 0f, _vrOverlayVisibleAlpha, _overlayFadeDuration, true, true);
             if (_equipRevealDelay > 0f)
             {
                 yield return new WaitForSeconds(_equipRevealDelay);
@@ -191,6 +192,7 @@ namespace ArchiveNull.UI
             SetPromptVisible(true);
             _promptBlinkTimer = 0f;
             SetCanvasGroup(_fadeToBlack, 0f, false);
+            SetCanvasGroup(_vrViewOverlay, _vrOverlayVisibleAlpha, _vrViewOverlay != null && _vrOverlayVisibleAlpha > 0.001f);
         }
 
         private IEnumerator UnequipRoutine()
@@ -228,6 +230,7 @@ namespace ArchiveNull.UI
                 yield break;
             }
 
+            yield return FadeCanvasGroup(_vrViewOverlay, _vrViewOverlay != null ? _vrViewOverlay.alpha : 0f, 0f, _overlayFadeDuration * 0.65f, true, false);
             yield return FadeCanvasGroup(_fadeToBlack, 0f, 1f, _loadFadeDuration, true, true);
 
             if (_memorySceneLoader != null)
