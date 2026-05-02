@@ -37,7 +37,6 @@ namespace ArchiveNull.UI
         [SerializeField] private float _equipRevealDelay = 0.45f;
         [SerializeField] private float _equipRevealDuration = 2f;
         [SerializeField] private float _overlayFadeDuration = 0.9f;
-        [SerializeField] private float _loadFadeDuration = 0.2f;
 
         [Header("Start Prompt")]
         [SerializeField] private bool _blinkStartPrompt = true;
@@ -231,7 +230,6 @@ namespace ArchiveNull.UI
             }
 
             yield return FadeCanvasGroup(_vrViewOverlay, _vrViewOverlay != null ? _vrViewOverlay.alpha : 0f, 0f, _overlayFadeDuration * 0.65f, true, false);
-            yield return FadeCanvasGroup(_fadeToBlack, 0f, 1f, _loadFadeDuration, true, true);
 
             if (_memorySceneLoader != null)
             {
