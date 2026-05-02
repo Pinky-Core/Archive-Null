@@ -168,6 +168,8 @@ namespace ArchiveNull.UI
         [SerializeField] private string[] _archiveNames = { "ARCHIVE_01.NULL", "ARCHIVE_02.NULL", "ARCHIVE_03.NULL", "ARCHIVE_04.NULL" };
         [Tooltip("Build index de cada archivo. Si queda vacio o incompleto, usa escenas 1..4.")]
         [SerializeField] private int[] _archiveSceneBuildIndices = { 1, 2, 3, 4 };
+        [Tooltip("Si esta activo, al abrir la escena se borra cualquier archivo montado previamente y obliga a seleccionar una memoria de nuevo.")]
+        [SerializeField] private bool _clearMountedArchiveOnStartup = true;
 
         [Header("Scene Layout")]
         [Tooltip("Activa esto si vas a colocar toda la UI manualmente en el Canvas y queres que el script solo controle el comportamiento.")]
@@ -1988,6 +1990,13 @@ namespace ArchiveNull.UI
             int availableArchiveCount = GetEffectiveArchiveCount();
             _unlockedArchive = Mathf.Clamp(PlayerPrefs.GetInt(PrefUnlockedArchive, 1), 1, Mathf.Max(1, availableArchiveCount));
             _mountedArchive = Mathf.Clamp(PlayerPrefs.GetInt(PrefMountedArchive, -1), -1, availableArchiveCount - 1);
+
+            if (_clearMountedArchiveOnStartup)
+            {
+                _mountedArchive = -1;
+                PlayerPrefs.SetInt(PrefMountedArchive, _mountedArchive);
+                PlayerPrefs.Save();
+            }
 
             string[] qualityNames = QualitySettings.names;
             if (qualityNames != null && qualityNames.Length > 0)

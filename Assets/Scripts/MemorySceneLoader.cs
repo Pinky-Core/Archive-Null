@@ -19,6 +19,7 @@ namespace ArchiveNull.UI
             StartCoroutine(PlayMemory(memorySceneName));
         }
 
+
         public void StartMemory(string sceneName)
         {
             if (string.IsNullOrWhiteSpace(sceneName))
