@@ -1094,6 +1094,7 @@ GameObject:
   - component: {fileID: 330585544}
   - component: {fileID: 330585547}
   - component: {fileID: 330585548}
+  - component: {fileID: 330585549}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -1240,11 +1241,38 @@ MonoBehaviour:
   _fastMoveMultiplier: 2.2
   _moveOnlyOnHorizontalPlane: 1
   _lockMovementHeight: 1
+  _enableCollision: 1
+  _collisionRadius: 4.46
+  _collisionPadding: 0.04
+  _collisionLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
   _lookSensitivity: 0.08
   _minimumPitch: -55
   _maximumPitch: 65
   _lockCursorWhileFlying: 1
   _lookRequiresRightMouse: 0
+--- !u!65 &330585549
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 330585543}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 1, y: 2.7996993, z: 1}
+  m_Center: {x: 0, y: -1.2804108, z: 0}
 --- !u!1 &346322135
 GameObject:
   m_ObjectHideFlags: 0
@@ -1608,7 +1636,7 @@ Light:
   m_Enabled: 1
   serializedVersion: 13
   m_Type: 1
-  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_Color: {r: 0, g: 0, b: 0, a: 1}
   m_Intensity: 0
   m_Range: 10
   m_SpotAngle: 30
@@ -3927,8 +3955,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ArchiveNull.UI.MemorySceneLoader
   officeDissolveTransition: {fileID: 975684150}
+  fadeToBlack: {fileID: 695866831}
+  mainMenuController: {fileID: 1527197674}
   memorySceneName: Memory_01
   loadDelay: 0
+  fadeToBlackDuration: 0.35
 --- !u!1 &1015266872
 GameObject:
   m_ObjectHideFlags: 0
@@ -4363,13 +4394,17 @@ MonoBehaviour:
   _hideHeadsetWhenEquipped: 1
   _fadeToBlack: {fileID: 695866831}
   _vrViewOverlay: {fileID: 799501764}
-  _visorFadeInDuration: 0.14
-  _visorRevealDuration: 0.42
-  _vrOverlayFadeDuration: 0.28
+  _vrOverlayVisibleAlpha: 0.42
+  _equipBlackoutDuration: 0.12
+  _equipRevealDelay: 0.45
+  _equipRevealDuration: 0.22
+  _overlayFadeDuration: 0.18
   _blinkStartPrompt: 1
   _promptBlinkSpeed: 5.5
   _promptMinAlpha: 0.22
   _promptMaxAlpha: 1
+  _autoHideStatusMessages: 1
+  _statusMessageDuration: 1.6
 --- !u!65 &1462755946
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -4685,6 +4720,7 @@ MonoBehaviour:
   - ARCHIVE_03.NULL
   - ARCHIVE_04.NULL
   _archiveSceneBuildIndices: 01000000
+  _clearMountedArchiveOnStartup: 1
   _useSceneLayout: 1
   _sceneCanvas: {fileID: 808390112}
   _sceneMonitor: {fileID: 130972486}
