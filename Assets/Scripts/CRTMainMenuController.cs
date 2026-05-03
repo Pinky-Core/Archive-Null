@@ -2728,6 +2728,24 @@ namespace ArchiveNull.UI
             }
         }
 
+        public void DisableMonitorCanvasForTransition()
+        {
+            if (_canvas != null)
+            {
+                _canvas.enabled = false;
+            }
+
+            if (_contentGroup != null)
+            {
+                _contentGroup.alpha = 0f;
+            }
+
+            if (_overlayGroup != null)
+            {
+                _overlayGroup.alpha = 0f;
+            }
+        }
+
         private static RectTransform CreatePanel(string name, RectTransform parent, Vector2 size, Color color)
         {
             Image image = CreateImage(name, parent, color, false);

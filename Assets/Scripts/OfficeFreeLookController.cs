@@ -18,6 +18,12 @@ namespace ArchiveNull.UI
         [SerializeField] private bool _moveOnlyOnHorizontalPlane = true;
         [SerializeField] private bool _lockMovementHeight = true;
 
+        [Header("Collision")]
+        [SerializeField] private bool _enableCollision = true;
+        [SerializeField] private float _collisionRadius = 0.22f;
+        [SerializeField] private float _collisionPadding = 0.04f;
+        [SerializeField] private LayerMask _collisionLayers = ~0;
+
         [Header("Look")]
         [SerializeField] private float _lookSensitivity = 0.08f;
         [SerializeField] private float _minimumPitch = -55f;
@@ -174,12 +180,36 @@ namespace ArchiveNull.UI
             }
 
             Vector3 nextPosition = _cameraRoot.position + input.normalized * (speed * Time.deltaTime);
+            if (_enableCollision)
+            {
+                nextPosition = ResolveCollision(_cameraRoot.position, nextPosition);
+            }
+
             if (_lockMovementHeight)
             {
                 nextPosition.y = _lockedHeight;
             }
 
             _cameraRoot.position = nextPosition;
+        }
+
+        private Vector3 ResolveCollision(Vector3 currentPosition, Vector3 targetPosition)
+        {
+            Vector3 movement = targetPosition - currentPosition;
+            float distance = movement.magnitude;
+            if (distance <= 0.0001f)
+            {
+                return currentPosition;
+            }
+
+            Vector3 direction = movement / distance;
+            if (Physics.SphereCast(currentPosition, _collisionRadius, direction, out RaycastHit hit, distance + _collisionPadding, _collisionLayers, QueryTriggerInteraction.Ignore))
+            {
+                float allowedDistance = Mathf.Max(0f, hit.distance - _collisionPadding);
+                return currentPosition + direction * allowedDistance;
+            }
+
+            return targetPosition;
         }
 
         private static float NormalizeAngle(float angle)

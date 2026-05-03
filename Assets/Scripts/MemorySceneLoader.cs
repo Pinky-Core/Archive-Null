@@ -1,6 +1,7 @@
 using System.Collections;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using UnityEngine.UI;
 
 namespace ArchiveNull.UI
 {
@@ -10,6 +11,7 @@ namespace ArchiveNull.UI
         [Header("References")]
         [SerializeField] private OfficeDissolveTransition officeDissolveTransition;
         [SerializeField] private CanvasGroup fadeToBlack;
+        [SerializeField] private CRTMainMenuController mainMenuController;
 
         [Header("Scene")]
         [SerializeField] private string memorySceneName = "Memory_01";
@@ -42,6 +44,8 @@ namespace ArchiveNull.UI
             }
 
             Debug.Log($"[MemorySceneLoader] Starting memory transition to scene '{sceneName}'.");
+
+            mainMenuController?.DisableMonitorCanvasForTransition();
 
             if (officeDissolveTransition != null)
             {
