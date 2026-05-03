@@ -27,6 +27,8 @@ namespace ArchiveNull.UI
         private sealed class RendererState
         {
             public Renderer Renderer;
+            public Material[] OriginalMaterials;
+            public bool UsesRuntimeDissolveMaterials;
         }
 
         private void Awake()
@@ -56,6 +58,31 @@ namespace ArchiveNull.UI
 
             ApplyDissolve(1f);
             Debug.Log("[OfficeDissolveTransition] Office dissolve completed.");
+        }
+
+        public IEnumerator PlayRebuild(bool restoreOriginalMaterials = true)
+        {
+            CacheRendererStates();
+            ApplyDissolve(1f);
+            Debug.Log("[OfficeDissolveTransition] Starting office rebuild.");
+
+            float duration = Mathf.Max(0.001f, dissolveDuration);
+            float timer = 0f;
+            while (timer < duration)
+            {
+                timer += Time.deltaTime;
+                float t = Mathf.Clamp01(timer / duration);
+                ApplyDissolve(1f - t);
+                yield return null;
+            }
+
+            ApplyDissolve(0f);
+            if (restoreOriginalMaterials)
+            {
+                RestoreOriginalMaterials();
+            }
+
+            Debug.Log("[OfficeDissolveTransition] Office rebuild completed.");
         }
 
         private void CacheRendererStates()
@@ -90,12 +117,14 @@ namespace ArchiveNull.UI
 
                 RendererState state = new()
                 {
-                    Renderer = rendererTarget
+                    Renderer = rendererTarget,
+                    OriginalMaterials = originalMaterials
                 };
 
                 if (!supportsPropertyBlock && fallbackDissolveShader != null)
                 {
                     rendererTarget.sharedMaterials = BuildRuntimeDissolveMaterials(originalMaterials);
+                    state.UsesRuntimeDissolveMaterials = true;
                 }
 
                 _rendererStates[i] = state;
@@ -120,6 +149,30 @@ namespace ArchiveNull.UI
                 state.Renderer.GetPropertyBlock(_propertyBlock);
                 _propertyBlock.SetFloat(DissolveAmountId, amount);
                 state.Renderer.SetPropertyBlock(_propertyBlock);
+            }
+        }
+
+        private void RestoreOriginalMaterials()
+        {
+            if (_rendererStates == null)
+            {
+                return;
+            }
+
+            for (int i = 0; i < _rendererStates.Length; i++)
+            {
+                RendererState state = _rendererStates[i];
+                if (state?.Renderer == null)
+                {
+                    continue;
+                }
+
+                if (state.UsesRuntimeDissolveMaterials && state.OriginalMaterials != null)
+                {
+                    state.Renderer.sharedMaterials = state.OriginalMaterials;
+                }
+
+                state.Renderer.SetPropertyBlock(null);
             }
         }
 
