@@ -1,15 +1,16 @@
 using UnityEngine;
+using UnityEngine.InputSystem;
 using UnityEngine.UI;
 
 public class InspectObject : MonoBehaviour
 {
-    public float interactionDistance = 1f; // Distancia máxima para interactuar
-    public Transform inspectPosition; // Posición donde el objeto será inspeccionado
-    public Transform player; // Referencia al objeto del jugador
-    public FirstPersonMovement movementScript; // Referencia al script de movimiento del jugador
-    public FirstPersonLook lookScript; // Referencia al script de mirada del jugador
-    public Text inspectText; // Referencia al texto de inspección
-    public float rotationSpeed = 300f; // Velocidad de rotación del objeto
+    public float interactionDistance = 1f;
+    public Transform inspectPosition;
+    public Transform player;
+    public FirstPersonMovement movementScript;
+    public FirstPersonLook lookScript;
+    public Text inspectText;
+    public float rotationSpeed = 300f;
 
     private Camera playerCamera;
     private GameObject currentObject = null;
@@ -24,46 +25,45 @@ public class InspectObject : MonoBehaviour
         playerCamera = Camera.main;
         playerRigidbody = player.GetComponent<Rigidbody>();
         originalConstraints = playerRigidbody.constraints;
-        inspectText.gameObject.SetActive(false); // Asegúrate de que el texto esté inicialmente desactivado
+        inspectText.gameObject.SetActive(false);
     }
 
     void Update()
     {
         if (isInspecting)
         {
-            if (Input.GetKeyDown(KeyCode.F)) // Presiona F para dejar de inspeccionar
+            if (Keyboard.current != null && Keyboard.current.fKey.wasPressedThisFrame)
             {
                 ReleaseObject();
             }
-            if (Input.GetMouseButton(0))
+            if (Mouse.current != null && Mouse.current.leftButton.isPressed)
             {
                 RotateObject();
             }
         }
         else
         {
-            Ray ray = playerCamera.ScreenPointToRay(Input.mousePosition);
-            RaycastHit hit;
-
-            if (Physics.Raycast(ray, out hit, interactionDistance))
+            Vector2 mousePosition = Mouse.current != null ? Mouse.current.position.ReadValue() : new Vector2(Screen.width * 0.5f, Screen.height * 0.5f);
+            Ray ray = playerCamera.ScreenPointToRay(mousePosition);
+            if (Physics.Raycast(ray, out RaycastHit hit, interactionDistance))
             {
                 if (hit.collider.gameObject.CompareTag("Inspectable"))
                 {
-                    inspectText.gameObject.SetActive(true); // Mostrar texto "Inspeccionar"
-                    inspectText.text = "(F) Inspeccionar"; // Actualizar el texto
-                    if (Input.GetKeyDown(KeyCode.F)) // Presiona F para interactuar
+                    inspectText.gameObject.SetActive(true);
+                    inspectText.text = "(F) Inspeccionar";
+                    if (Keyboard.current != null && Keyboard.current.fKey.wasPressedThisFrame)
                     {
                         TryPickObject(hit.collider.gameObject);
                     }
                 }
                 else
                 {
-                    inspectText.gameObject.SetActive(false); // Ocultar texto si no está mirando un objeto inspeccionable
+                    inspectText.gameObject.SetActive(false);
                 }
             }
             else
             {
-                inspectText.gameObject.SetActive(false); // Ocultar texto si no está mirando ningún objeto
+                inspectText.gameObject.SetActive(false);
             }
         }
     }
@@ -77,15 +77,12 @@ public class InspectObject : MonoBehaviour
         currentObject.transform.position = inspectPosition.position;
         currentObject.transform.rotation = inspectPosition.rotation;
         isInspecting = true;
-        movementScript.enabled = false; // Desactivar el movimiento del jugador
-        lookScript.enabled = false; // Desactivar la rotación de la cámara del jugador
-        Cursor.lockState = CursorLockMode.None; // Liberar el cursor para inspección
-        Cursor.visible = true; // Hacer el cursor visible
-
-        // Desactivar el movimiento y la rotación del jugador
+        movementScript.enabled = false;
+        lookScript.enabled = false;
+        Cursor.lockState = CursorLockMode.None;
+        Cursor.visible = true;
         playerRigidbody.constraints = RigidbodyConstraints.FreezeAll;
-
-        inspectText.gameObject.SetActive(false); // Ocultar texto cuando se empieza a inspeccionar
+        inspectText.gameObject.SetActive(false);
     }
 
     void ReleaseObject()
@@ -97,20 +94,19 @@ public class InspectObject : MonoBehaviour
             currentObject.transform.rotation = originalRotation;
             currentObject = null;
             isInspecting = false;
-            movementScript.enabled = true; // Reactivar el movimiento del jugador
-            lookScript.enabled = true; // Reactivar la rotación de la cámara del jugador
-            Cursor.lockState = CursorLockMode.Locked; // Bloquear el cursor de nuevo
-            Cursor.visible = false; // Ocultar el cursor
-
-            // Restaurar las restricciones originales del jugador
+            movementScript.enabled = true;
+            lookScript.enabled = true;
+            Cursor.lockState = CursorLockMode.Locked;
+            Cursor.visible = false;
             playerRigidbody.constraints = originalConstraints;
         }
     }
 
     void RotateObject()
     {
-        float rotateX = Input.GetAxis("Mouse X") * rotationSpeed * Time.deltaTime;
-        float rotateY = Input.GetAxis("Mouse Y") * rotationSpeed * Time.deltaTime;
+        Vector2 mouseDelta = Mouse.current != null ? Mouse.current.delta.ReadValue() : Vector2.zero;
+        float rotateX = mouseDelta.x * rotationSpeed * Time.deltaTime * 0.1f;
+        float rotateY = mouseDelta.y * rotationSpeed * Time.deltaTime * 0.1f;
 
         currentObject.transform.Rotate(playerCamera.transform.up, -rotateX, Space.World);
         currentObject.transform.Rotate(playerCamera.transform.right, rotateY, Space.World);

@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 public class Jump : MonoBehaviour
 {
@@ -21,7 +22,8 @@ public class Jump : MonoBehaviour
 
     void LateUpdate()
     {
-        if (Input.GetButtonDown("Jump") && (!groundCheck || groundCheck.isGrounded))
+        bool jumpPressed = Keyboard.current != null && (Keyboard.current.spaceKey.wasPressedThisFrame || Keyboard.current.enterKey.wasPressedThisFrame);
+        if (jumpPressed && (!groundCheck || groundCheck.isGrounded))
         {
             cachedRigidbody.AddForce(Vector3.up * 100 * jumpStrength);
             Jumped?.Invoke();

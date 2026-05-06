@@ -1,46 +1,44 @@
 using UnityEngine;
+using UnityEngine.InputSystem;
 using UnityEngine.UI;
 
 public class Interaction : MonoBehaviour
 {
     public float interactionDistance = 1f;
-    public Text interactionText; // Referencia al texto de interacción (Inspeccionar/Usar)
+    public Text interactionText;
     private Camera playerCamera;
 
     void Start()
     {
         playerCamera = Camera.main;
-        interactionText.gameObject.SetActive(false); // Asegúrate de que el texto esté inicialmente desactivado
+        interactionText.gameObject.SetActive(false);
     }
 
     void Update()
     {
         Ray ray = new Ray(playerCamera.transform.position, playerCamera.transform.forward);
-        RaycastHit hit;
-
-        if (Physics.Raycast(ray, out hit, interactionDistance))
+        if (Physics.Raycast(ray, out RaycastHit hit, interactionDistance))
         {
             Interactable interactable = hit.collider.GetComponent<Interactable>();
-
             if (interactable != null)
             {
-                interactionText.gameObject.SetActive(true); // Mostrar texto
-                interactionText.text = interactable.interactionText; // Actualizar el texto
+                interactionText.gameObject.SetActive(true);
+                interactionText.text = interactable.interactionText;
 
-                if (Input.GetMouseButtonUp(0)) // Presiona MB0 para interactuar
+                if (Mouse.current != null && Mouse.current.leftButton.wasReleasedThisFrame)
                 {
                     interactable.Interact();
-                    interactionText.gameObject.SetActive(false); // Ocultar texto al interactuar
+                    interactionText.gameObject.SetActive(false);
                 }
             }
             else
             {
-                interactionText.gameObject.SetActive(false); // Ocultar texto si no está mirando un objeto interactivo
+                interactionText.gameObject.SetActive(false);
             }
         }
         else
         {
-            interactionText.gameObject.SetActive(false); // Ocultar texto si no está mirando ningún objeto
+            interactionText.gameObject.SetActive(false);
         }
     }
 }

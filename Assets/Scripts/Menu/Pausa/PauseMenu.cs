@@ -1,24 +1,21 @@
 using UnityEngine;
+using UnityEngine.InputSystem;
 using UnityEngine.SceneManagement;
 
 public class PauseMenu : MonoBehaviour
 {
-
     public string mainMenuSceneName = "MainMenu";
     public string inGameSceneName = "Phsiquiatra";
 
-    public FirstPersonMovement movementScript; // Referencia al script de movimiento del jugador
-    public FirstPersonLook lookScript; // Referencia al script de mirada del jugador
-    public GameObject pauseMenuUI; // Referencia al objeto del Canvas que contiene el menú de pausa
-    public Transform player; // Referencia al objeto del jugador
+    public FirstPersonMovement movementScript;
+    public FirstPersonLook lookScript;
+    public GameObject pauseMenuUI;
+    public Transform player;
     public Camera playerCamera;
-
     public Rigidbody playerRigidbody;
 
     private bool isPaused = false;
-
     public RigidbodyConstraints originalConstraints;
-
 
     void Start()
     {
@@ -29,13 +26,13 @@ public class PauseMenu : MonoBehaviour
 
     void Update()
     {
-        if (Input.GetKeyDown(KeyCode.Escape))
+        if (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
         {
             if (isPaused)
             {
                 Resume();
-                Cursor.lockState = CursorLockMode.Locked; // Bloquear el cursor de nuevo
-                Cursor.visible = false; // Ocultar el cursor
+                Cursor.lockState = CursorLockMode.Locked;
+                Cursor.visible = false;
             }
             else
             {
@@ -47,24 +44,24 @@ public class PauseMenu : MonoBehaviour
     public void Resume()
     {
         pauseMenuUI.SetActive(false);
-        Time.timeScale = 1f; // Reanudar el tiempo normal del juego
+        Time.timeScale = 1f;
         isPaused = false;
-        movementScript.enabled = true; // Reactivar el movimiento del jugador
-        lookScript.enabled = true; // Reactivar la rotación de la cámara del jugador
-        Cursor.lockState = CursorLockMode.Locked; // Bloquear el cursor de nuevo
-        Cursor.visible = false; // Ocultar el cursor
+        movementScript.enabled = true;
+        lookScript.enabled = true;
+        Cursor.lockState = CursorLockMode.Locked;
+        Cursor.visible = false;
         playerRigidbody.constraints = originalConstraints;
     }
 
     void Pause()
     {
-        movementScript.enabled = false; // Desactivar el movimiento del jugador
-        lookScript.enabled = false; // Desactivar la rotación de la cámara del jugador
-        Cursor.lockState = CursorLockMode.None; // Liberar el cursor para inspección
-        Cursor.visible = true; // Hacer el cursor visible
+        movementScript.enabled = false;
+        lookScript.enabled = false;
+        Cursor.lockState = CursorLockMode.None;
+        Cursor.visible = true;
         playerRigidbody.constraints = RigidbodyConstraints.FreezeAll;
         pauseMenuUI.SetActive(true);
-        Time.timeScale = 0f; // Pausar el tiempo del juego
+        Time.timeScale = 0f;
         isPaused = true;
     }
 

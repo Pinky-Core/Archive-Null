@@ -1,23 +1,21 @@
-using UnityEngine;
-using UnityEngine.SceneManagement;
 using System.Collections;
+using UnityEngine;
+using UnityEngine.InputSystem;
+using UnityEngine.SceneManagement;
 
 public class MainMenu : MonoBehaviour
 {
     public string mapSceneName = "Phsiquiatra";
     public string mainMenuSceneName = "MainMenu";
-
-    public Animator fadeAnimator; // Referencia al Animator del efecto de fade out
-    public float fadeDuration = 2.0f; // Duración del fade out
-
+    public Animator fadeAnimator;
+    public float fadeDuration = 2.0f;
     public GameObject mainMenuUI;
     public GameObject optionsMenuUI;
     public GameObject quitMenuUI;
-
     public Camera menuCamera;
 
-    [SerializeField] private AudioSource playAudioSource; // Referencia al AudioSource de la puerta
-    [SerializeField] private AudioClip playSound; // Sonido de apertura de la puerta
+    [SerializeField] private AudioSource playAudioSource;
+    [SerializeField] private AudioClip playSound;
 
     void Start()
     {
@@ -25,13 +23,13 @@ public class MainMenu : MonoBehaviour
         mainMenuUI.SetActive(true);
         optionsMenuUI.SetActive(false);
         quitMenuUI.SetActive(false);
-        Cursor.lockState = CursorLockMode.None; // Liberar el cursor
-        Cursor.visible = true; // Hacer el cursor visible   
+        Cursor.lockState = CursorLockMode.None;
+        Cursor.visible = true;
     }
 
     void Update()
     {
-        if (Input.GetKeyDown(KeyCode.Escape))
+        if (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
         {
             ConfirmQuit();
         }
@@ -40,17 +38,15 @@ public class MainMenu : MonoBehaviour
     public void Play()
     {
         playAudioSource.PlayOneShot(playSound);
-
         fadeAnimator.SetBool("FadeOut", true);
-        // mainMenuUI.SetActive(false);
         Time.timeScale = 1f;
-        StartCoroutine(FadeOutAndLoadScene(mapSceneName)); // Iniciar la corrutina de fade out y carga de escena
+        StartCoroutine(FadeOutAndLoadScene(mapSceneName));
     }
 
     IEnumerator FadeOutAndLoadScene(string sceneName)
     {
-        yield return new WaitForSeconds(fadeDuration); // Esperar la duración del fade out
-        SceneManager.LoadScene(sceneName, LoadSceneMode.Single); // Cargar la escena del juego
+        yield return new WaitForSeconds(fadeDuration);
+        SceneManager.LoadScene(sceneName, LoadSceneMode.Single);
     }
 
     public void Options()
@@ -83,8 +79,6 @@ public class MainMenu : MonoBehaviour
     public void ReturnMainMenu()
     {
         Time.timeScale = 1f;
-        StartCoroutine(FadeOutAndLoadScene(mainMenuSceneName)); // Iniciar la corrutina de fade out y carga de escena
+        StartCoroutine(FadeOutAndLoadScene(mainMenuSceneName));
     }
 }
-
-

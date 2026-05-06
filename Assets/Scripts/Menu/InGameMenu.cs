@@ -1,35 +1,34 @@
 using UnityEngine;
+using UnityEngine.InputSystem;
 using TMPro;
 
 public class InGameMenu : MonoBehaviour
 {
-    public GameObject menuCanvas; // Referencia al Canvas del menú
-    public TMP_Text instructionsText; // Referencia al TextMeshPro para las instrucciones
-    public TMP_Text controlsText; // Referencia al TextMeshPro para los controles
-    public TMP_Text tipsText; // Referencia al TextMeshPro para los consejos
-    public TMP_Text objectivesText; // Referencia al TextMeshPro para los objetivos
+    public GameObject menuCanvas;
+    public TMP_Text instructionsText;
+    public TMP_Text controlsText;
+    public TMP_Text tipsText;
+    public TMP_Text objectivesText;
     private bool isMenuActive = false;
 
-    public FirstPersonMovement movementScript; // Referencia al script de movimiento del jugador
-    public FirstPersonLook lookScript; // Referencia al script de mirada del jugador
+    public FirstPersonMovement movementScript;
+    public FirstPersonLook lookScript;
     public Camera playerCamera;
-
     public Rigidbody playerRigidbody;
 
     private RigidbodyConstraints originalConstraints;
 
     void Start()
     {
-        menuCanvas.SetActive(false); // Asegúrate de que el menú esté desactivado al inicio
-        UpdateInstructions(); // Actualizar las instrucciones al inicio
-
+        menuCanvas.SetActive(false);
+        UpdateInstructions();
         playerCamera = Camera.main;
         originalConstraints = playerRigidbody.constraints;
     }
 
     void Update()
     {
-        if (Input.GetKeyDown(KeyCode.M)) // Presiona M para abrir/cerrar el menú
+        if (Keyboard.current != null && Keyboard.current.mKey.wasPressedThisFrame)
         {
             ToggleMenu();
         }
@@ -39,20 +38,20 @@ public class InGameMenu : MonoBehaviour
     {
         isMenuActive = !isMenuActive;
         menuCanvas.SetActive(isMenuActive);
-        Cursor.lockState = isMenuActive ? CursorLockMode.None : CursorLockMode.Locked; // Liberar o bloquear el cursor
-        Cursor.visible = isMenuActive; // Hacer visible o invisible el cursor
+        Cursor.lockState = isMenuActive ? CursorLockMode.None : CursorLockMode.Locked;
+        Cursor.visible = isMenuActive;
 
         if (isMenuActive)
         {
-            movementScript.enabled = false; // Desactivar el movimiento del jugador
-            lookScript.enabled = false; // Desactivar la rotación de la cámara del jugador
+            movementScript.enabled = false;
+            lookScript.enabled = false;
             playerRigidbody.constraints = RigidbodyConstraints.FreezeAll;
         }
         else
         {
-            movementScript.enabled = true; // Activar el movimiento del jugador
-            lookScript.enabled = true; // Activar la rotación de la cámara del jugador
-            playerRigidbody.constraints = originalConstraints; // Restaurar las restricciones originales del jugador
+            movementScript.enabled = true;
+            lookScript.enabled = true;
+            playerRigidbody.constraints = originalConstraints;
         }
     }
 
@@ -63,31 +62,19 @@ public class InGameMenu : MonoBehaviour
                                 "Presiona F para inspeccionar objetos.\n" +
                                 "Presiona Esc para pausar el juego.";
 
-        controlsText.text = "Controles:\n" +
-                            "\n" +
-                            "Moverse: W, A, S, D\n" +
-                            "Agacharse: Ctrl";
-
-        tipsText.text = "Consejos:\n" +
-                        "\n" +
-                        "Revisa todos los rincones para encontrar objetos útiles.\n" +
-                        "Algunos objetos pueden ser inspeccionados más de cerca.\n" +
-                        "Si te quedas atascado, revisa las pistas que has encontrado.";
-
-        objectivesText.text = "Objetivos:\n" +
-                              "Objetivo actual: Encuentra la tarjeta de acceso.\n" +
-                              "Objetivos secundarios: Explora la habitación para encontrar pistas.\n";
+        controlsText.text = "Controles:\n\nMoverse: W, A, S, D\nAgacharse: Ctrl";
+        tipsText.text = "Consejos:\n\nRevisa todos los rincones para encontrar objetos útiles.\nAlgunos objetos pueden ser inspeccionados más de cerca.\nSi te quedas atascado, revisa las pistas que has encontrado.";
+        objectivesText.text = "Objetivos:\nObjetivo actual: Encuentra la tarjeta de acceso.\nObjetivos secundarios: Explora la habitación para encontrar pistas.\n";
     }
 
-    // Método para cerrar el menú desde un botón
     public void CloseMenu()
     {
         isMenuActive = false;
         menuCanvas.SetActive(false);
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
-        movementScript.enabled = true; // Reactivar el movimiento del jugador
-        lookScript.enabled = true; // Reactivar la rotación de la cámara del jugador
-        playerRigidbody.constraints = originalConstraints; // Restaurar las restricciones originales del jugador
+        movementScript.enabled = true;
+        lookScript.enabled = true;
+        playerRigidbody.constraints = originalConstraints;
     }
 }

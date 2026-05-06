@@ -1,21 +1,20 @@
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 public class LiftableObject : Interactable
 {
-
-
-    public Transform player; // Referencia al jugador
-    public Transform carryPosition; // Posición donde el objeto será llevado
+    public Transform player;
+    public Transform carryPosition;
     private bool isBeingCarried = false;
 
     void Start()
     {
-        interactionText = "Agarrar"; // Texto específico para este objeto
+        interactionText = "Agarrar";
     }
 
     void Update()
     {
-        if (isBeingCarried && Input.GetMouseButtonUp(0)) // Soltar el objeto al soltar el botón izquierdo del ratón
+        if (isBeingCarried && Mouse.current != null && Mouse.current.leftButton.wasReleasedThisFrame)
         {
             isBeingCarried = false;
             transform.parent = null;
@@ -32,7 +31,7 @@ public class LiftableObject : Interactable
         if (!isBeingCarried)
         {
             isBeingCarried = true;
-            transform.parent = carryPosition; // Hacer que el objeto siga la posición de carryPosition
+            transform.parent = carryPosition;
         }
     }
 }
