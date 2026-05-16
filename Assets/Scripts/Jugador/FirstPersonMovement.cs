@@ -4,6 +4,8 @@ using UnityEngine.InputSystem;
 
 public class FirstPersonMovement : MonoBehaviour
 {
+    public const string PrefControlScheme = "global.pause.control.scheme";
+
     public float speed = 5;
 
     [Header("Running")]
@@ -11,6 +13,7 @@ public class FirstPersonMovement : MonoBehaviour
     public bool IsRunning { get; private set; }
     public float runSpeed = 9;
     public KeyCode runningKey = KeyCode.LeftShift;
+    public bool useArrowMovement;
 
     private Rigidbody cachedRigidbody;
     public List<System.Func<float>> speedOverrides = new List<System.Func<float>>();
@@ -18,6 +21,7 @@ public class FirstPersonMovement : MonoBehaviour
     void Awake()
     {
         cachedRigidbody = GetComponent<Rigidbody>();
+        useArrowMovement = PlayerPrefs.GetInt(PrefControlScheme, useArrowMovement ? 1 : 0) == 1;
     }
 
     void FixedUpdate()
@@ -34,10 +38,20 @@ public class FirstPersonMovement : MonoBehaviour
         float vertical = 0f;
         if (Keyboard.current != null)
         {
-            if (Keyboard.current.aKey.isPressed || Keyboard.current.leftArrowKey.isPressed) horizontal -= 1f;
-            if (Keyboard.current.dKey.isPressed || Keyboard.current.rightArrowKey.isPressed) horizontal += 1f;
-            if (Keyboard.current.sKey.isPressed || Keyboard.current.downArrowKey.isPressed) vertical -= 1f;
-            if (Keyboard.current.wKey.isPressed || Keyboard.current.upArrowKey.isPressed) vertical += 1f;
+            if (useArrowMovement)
+            {
+                if (Keyboard.current.leftArrowKey.isPressed) horizontal -= 1f;
+                if (Keyboard.current.rightArrowKey.isPressed) horizontal += 1f;
+                if (Keyboard.current.downArrowKey.isPressed) vertical -= 1f;
+                if (Keyboard.current.upArrowKey.isPressed) vertical += 1f;
+            }
+            else
+            {
+                if (Keyboard.current.aKey.isPressed) horizontal -= 1f;
+                if (Keyboard.current.dKey.isPressed) horizontal += 1f;
+                if (Keyboard.current.sKey.isPressed) vertical -= 1f;
+                if (Keyboard.current.wKey.isPressed) vertical += 1f;
+            }
         }
 
         Vector2 targetVelocity = new Vector2(horizontal * targetMovingSpeed, vertical * targetMovingSpeed);

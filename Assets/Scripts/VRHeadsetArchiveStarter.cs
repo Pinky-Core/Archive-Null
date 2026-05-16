@@ -187,7 +187,7 @@ namespace ArchiveNull.UI
 
             _equipped = true;
             _busy = false;
-            SetPromptText(_startPrompt);
+            SetPromptText(GetEquippedPrompt());
             SetPromptVisible(true);
             _promptBlinkTimer = 0f;
             SetCanvasGroup(_fadeToBlack, 0f, false);
@@ -361,6 +361,13 @@ namespace ArchiveNull.UI
             {
                 _startPromptText.text = value;
             }
+        }
+
+        private string GetEquippedPrompt()
+        {
+            return string.IsNullOrWhiteSpace(_startPrompt) || _startPrompt.Contains("QUITAR") || _startPrompt.Contains("UNEQUIP")
+                ? _startPrompt
+                : _startPrompt + "\nESC / BACKSPACE: QUITAR VR";
         }
 
         private void SetPromptVisible(bool visible)

@@ -18,8 +18,8 @@ Shader "ArchiveNull/RoomDissolve"
     {
         Tags
         {
-            "RenderType"="TransparentCutout"
-            "Queue"="AlphaTest"
+            "RenderType"="Transparent"
+            "Queue"="Transparent"
             "RenderPipeline"="UniversalPipeline"
         }
 
@@ -29,8 +29,8 @@ Shader "ArchiveNull/RoomDissolve"
             Tags { "LightMode"="UniversalForward" }
 
             Cull Back
-            ZWrite On
-            Blend One Zero
+            ZWrite Off
+            Blend SrcAlpha OneMinusSrcAlpha
             AlphaToMask Off
 
             HLSLPROGRAM
@@ -105,13 +105,13 @@ Shader "ArchiveNull/RoomDissolve"
             half4 frag(Varyings input) : SV_Target
             {
                 float noise = PixelNoise(input.worldPos);
-                clip(noise - _DissolveAmount);
-
                 half4 baseCol = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, input.uv) * _Color * _BaseColor;
-                half edge = 1.0 - smoothstep(_DissolveAmount, _DissolveAmount + _EdgeWidth, noise);
+                half alpha = smoothstep(_DissolveAmount - _EdgeWidth, _DissolveAmount + _EdgeWidth, noise);
+                alpha *= 1.0 - smoothstep(0.995, 1.0, _DissolveAmount);
+                half edge = alpha * (1.0 - smoothstep(_DissolveAmount, _DissolveAmount + _EdgeWidth, noise));
                 half3 finalColor = baseCol.rgb + (_EdgeColor.rgb * edge * _EdgeEmission);
 
-                return half4(finalColor, baseCol.a);
+                return half4(finalColor, baseCol.a * alpha);
             }
             ENDHLSL
         }

@@ -17,6 +17,10 @@ namespace ArchiveNull.UI
 
         [Header("Timing")]
         [SerializeField] private float dissolveDuration = 1.25f;
+        [SerializeField] private bool rebuildOnMainMenuReturn = true;
+        [SerializeField] private bool restoreOriginalMaterialsAfterRebuild;
+
+        public const string PendingOfficeRebuildPref = "archive.office.rebuild.pending";
 
         private MaterialPropertyBlock _propertyBlock;
         private RendererState[] _rendererStates;
@@ -40,6 +44,18 @@ namespace ArchiveNull.UI
             }
         }
 
+        private void Start()
+        {
+            if (!rebuildOnMainMenuReturn || PlayerPrefs.GetInt(PendingOfficeRebuildPref, 0) != 1)
+            {
+                return;
+            }
+
+            PlayerPrefs.SetInt(PendingOfficeRebuildPref, 0);
+            PlayerPrefs.Save();
+            StartCoroutine(PlayRebuild(restoreOriginalMaterialsAfterRebuild));
+        }
+
         public IEnumerator PlayDissolve()
         {
             CacheRendererStates();
@@ -60,7 +76,7 @@ namespace ArchiveNull.UI
             Debug.Log("[OfficeDissolveTransition] Office dissolve completed.");
         }
 
-        public IEnumerator PlayRebuild(bool restoreOriginalMaterials = true)
+        public IEnumerator PlayRebuild(bool restoreOriginalMaterials = false)
         {
             CacheRendererStates();
             ApplyDissolve(1f);

@@ -26,6 +26,11 @@ public class PauseMenu : MonoBehaviour
 
     void Update()
     {
+        if (FindObjectOfType<GlobalPauseMenu>() != null)
+        {
+            return;
+        }
+
         if (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
         {
             if (isPaused)
@@ -68,6 +73,8 @@ public class PauseMenu : MonoBehaviour
     public void MainMenu()
     {
         Time.timeScale = 1f;
+        PlayerPrefs.SetInt(ArchiveNull.UI.OfficeDissolveTransition.PendingOfficeRebuildPref, 1);
+        PlayerPrefs.Save();
         SceneManager.LoadScene(mainMenuSceneName, LoadSceneMode.Single);
     }
 }

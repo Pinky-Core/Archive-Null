@@ -121,6 +121,8 @@ namespace ArchiveNull.UI
         [SerializeField] private bool _clipContentToScreen = true;
         [Tooltip("Si esta asignado, al activar CLICK TO START primero se mueve la camara al monitor y luego se abre el menu.")]
         [SerializeField] private CRTMenuCameraFocus _cameraFocus;
+        [Tooltip("Loader usado para entrar a la memoria montada directamente desde el terminal.")]
+        [SerializeField] private MemorySceneLoader _memorySceneLoader;
 
         [Header("Monitor Light")]
         [SerializeField] private Light _monitorPowerLight;
@@ -166,6 +168,8 @@ namespace ArchiveNull.UI
         [SerializeField] private int _archiveCount = 4;
         [Tooltip("Nombres visibles de los archivos. Si faltan nombres, el script usa ARCHIVE_XX.NULL.")]
         [SerializeField] private string[] _archiveNames = { "ARCHIVE_01.NULL", "ARCHIVE_02.NULL", "ARCHIVE_03.NULL", "ARCHIVE_04.NULL" };
+        [Tooltip("Expediente al que pertenece cada memoria. Si queda vacio, todas las memorias aparecen dentro de CASE_01.")]
+        [SerializeField] private string[] _archiveCaseNames = { "CASE_01" };
         [Tooltip("Build index de cada archivo. Si queda vacio o incompleto, usa escenas 1..4.")]
         [SerializeField] private int[] _archiveSceneBuildIndices = { 1, 2, 3, 4 };
         [Tooltip("Si esta activo, al abrir la escena se borra cualquier archivo montado previamente y obliga a seleccionar una memoria de nuevo.")]
@@ -266,6 +270,8 @@ namespace ArchiveNull.UI
         private int _settingsScrollOffset;
         private int _levelIndex;
         private int _levelScrollOffset;
+        private int _selectedCaseIndex = -1;
+        private bool _levelBrowserShowingMemories;
         private int _languageIndex;
         private int _unlockedArchive = 1;
         private int _mountedArchive = -1;
@@ -299,6 +305,11 @@ namespace ArchiveNull.UI
             }
 
             ConfigureCamera();
+            if (_memorySceneLoader == null)
+            {
+                _memorySceneLoader = FindObjectOfType<MemorySceneLoader>();
+            }
+
             BuildMenus();
             ApplyRuntimeSettings();
             InitializePoweredOffState();
@@ -557,11 +568,16 @@ namespace ArchiveNull.UI
             _mainMenuItems.Add(new MenuItem
             {
                 Label = GetLocalizedMainMenuLabel(1),
-                Action = OpenSettings
+                Action = StartMountedMemoryFromTerminal
             });
             _mainMenuItems.Add(new MenuItem
             {
                 Label = GetLocalizedMainMenuLabel(2),
+                Action = OpenSettings
+            });
+            _mainMenuItems.Add(new MenuItem
+            {
+                Label = GetLocalizedMainMenuLabel(3),
                 Action = QuitGame
             });
 
@@ -574,6 +590,7 @@ namespace ArchiveNull.UI
             _mainMenuGroup.alpha = 0f;
             _settingsGroup.alpha = 0f;
             _settingsRoot.gameObject.SetActive(false);
+            RefreshMainMenuAvailability();
         }
 
         private void BuildMainMenuTextPool()
@@ -588,7 +605,6 @@ namespace ArchiveNull.UI
                         option = CreateMenuText(_mainMenuRoot, _mainMenuItems[i].Label);
                     }
 
-                    _mainMenuItems[i].Hidden = false;
                     if (!option.gameObject.activeSelf)
                     {
                         option.gameObject.SetActive(true);
@@ -953,7 +969,14 @@ namespace ArchiveNull.UI
                 if (WasBackPressed())
                 {
                     PlayUiSound(_backClip, _interfaceVolume);
-                    CloseLevelBrowser();
+                    if (_levelBrowserShowingMemories)
+                    {
+                        OpenLevelBrowser();
+                    }
+                    else
+                    {
+                        CloseLevelBrowser();
+                    }
                     return;
                 }
 
@@ -973,6 +996,7 @@ namespace ArchiveNull.UI
             _settingsGroup.alpha = 0f;
             _mainMenuRoot.gameObject.SetActive(true);
             _settingsRoot.gameObject.SetActive(false);
+            RefreshMainMenuAvailability();
             EnsureSelectableIndex(_mainMenuItems, ref _mainIndex);
             _promptText.text = string.Empty;
             _footerText.text = GetMainMenuFooter();
@@ -2188,11 +2212,12 @@ namespace ArchiveNull.UI
 
         private void RefreshLocalizedLabels()
         {
-            if (_mainMenuItems.Count >= 3)
+            if (_mainMenuItems.Count >= 4)
             {
                 _mainMenuItems[0].Label = GetLocalizedMainMenuLabel(0);
                 _mainMenuItems[1].Label = GetLocalizedMainMenuLabel(1);
                 _mainMenuItems[2].Label = GetLocalizedMainMenuLabel(2);
+                _mainMenuItems[3].Label = GetLocalizedMainMenuLabel(3);
             }
 
             RebuildSettingsPage(_settingsPage, false);
@@ -2213,14 +2238,111 @@ namespace ArchiveNull.UI
         {
             _state = MenuState.LevelSelect;
             _settingsItems.Clear();
+            _levelBrowserShowingMemories = false;
+            _selectedCaseIndex = -1;
             int availableArchiveCount = GetEffectiveArchiveCount();
+            List<string> caseNames = GetAvailableCaseNames(availableArchiveCount);
 
+            for (int i = 0; i < caseNames.Count; i++)
+            {
+                int caseIndex = i;
+                string caseName = caseNames[i];
+                int memoryCount = GetMemoryCountForCase(caseName, availableArchiveCount);
+                int unlockedCount = GetUnlockedMemoryCountForCase(caseName, availableArchiveCount);
+                bool unlocked = unlockedCount > 0;
+                string prefix = unlocked ? "[CASE]" : "[LOCK]";
+                _settingsItems.Add(new MenuItem
+                {
+                    Label = $"{prefix} {caseName} ({unlockedCount:00}/{memoryCount:00})",
+                    Enabled = unlocked,
+                    Action = () => OpenMemoryBrowser(caseIndex)
+                });
+            }
+
+            if (_settingsItems.Count == 0)
+            {
+                _settingsItems.Add(new MenuItem
+                {
+                    Label = Localize("[VACIO] NO HAY EXPEDIENTES EN BUILD SETTINGS", "[EMPTY] NO CASES IN BUILD SETTINGS"),
+                    Enabled = false
+                });
+            }
+
+            _levelIndex = 0;
+            EnsureSelectableIndex(_settingsItems, ref _levelIndex);
+            _levelScrollOffset = 0;
+            _settingsRoot.gameObject.SetActive(true);
+            _mainMenuGroup.alpha = 0f;
+            _settingsGroup.alpha = 1f;
+            _subtitleText.text = Localize("EXPEDIENTES // HISTORIAS ABIERTAS", "CASE FILES // OPEN STORIES");
+            _footerText.text = Localize("NAV: ARRIBA/ABAJO  //  ABRIR: ENTER  //  VOLVER: ATRAS", "NAV: UP/DOWN  //  OPEN: ENTER  //  BACK");
+            _diagnosticText.text = Localize($"EXPEDIENTES: {caseNames.Count:00}  //  MEMORIAS: {Mathf.Min(_unlockedArchive, availableArchiveCount):00}/{availableArchiveCount:00}", $"CASES: {caseNames.Count:00}  //  MEMORIES: {Mathf.Min(_unlockedArchive, availableArchiveCount):00}/{availableArchiveCount:00}");
+            SetStatus(Localize("SELECCIONA UN EXPEDIENTE.", "SELECT A CASE FILE."));
+            ShowMenuState(_settingsTexts, _settingsItems, _levelIndex, hideRoot: _mainMenuRoot, showRoot: _settingsRoot);
+        }
+
+        private void RefreshMainMenuAvailability()
+        {
+            if (_mainMenuItems.Count < 4)
+            {
+                return;
+            }
+
+            _mainMenuItems[1].Hidden = !HasMountedArchive;
+            _mainMenuItems[1].Enabled = HasMountedArchive;
+        }
+
+        private void StartMountedMemoryFromTerminal()
+        {
+            if (!HasMountedArchive)
+            {
+                SetStatus(Localize("NO HAY MEMORIA MONTADA.", "NO MEMORY MOUNTED."));
+                return;
+            }
+
+            string sceneName = MountedArchiveSceneName;
+            if (string.IsNullOrWhiteSpace(sceneName))
+            {
+                SetStatus(Localize("LA MEMORIA MONTADA NO TIENE ESCENA VALIDA.", "THE MOUNTED MEMORY HAS NO VALID SCENE."));
+                return;
+            }
+
+            if (_memorySceneLoader != null)
+            {
+                StartCoroutine(_memorySceneLoader.PlayMemory(sceneName));
+                return;
+            }
+
+            SceneManager.LoadScene(sceneName);
+        }
+
+        private void OpenMemoryBrowser(int caseIndex)
+        {
+            int availableArchiveCount = GetEffectiveArchiveCount();
+            List<string> caseNames = GetAvailableCaseNames(availableArchiveCount);
+            if (caseIndex < 0 || caseIndex >= caseNames.Count)
+            {
+                SetStatus(Localize("EL EXPEDIENTE SELECCIONADO NO EXISTE.", "THE SELECTED CASE DOES NOT EXIST."));
+                return;
+            }
+
+            _state = MenuState.LevelSelect;
+            _settingsItems.Clear();
+            _levelBrowserShowingMemories = true;
+            _selectedCaseIndex = caseIndex;
+
+            string selectedCaseName = caseNames[caseIndex];
             for (int i = 0; i < availableArchiveCount; i++)
             {
                 int archiveIndex = i;
+                if (!string.Equals(GetArchiveCaseName(archiveIndex), selectedCaseName, System.StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
                 bool unlocked = archiveIndex < _unlockedArchive;
                 string archiveName = GetArchiveName(archiveIndex);
-                string prefix = unlocked ? "[FILE]" : "[LOCK]";
+                string prefix = unlocked ? "[MEM]" : "[LOCK]";
                 _settingsItems.Add(new MenuItem
                 {
                     Label = $"{prefix} {archiveName}",
@@ -2233,7 +2355,7 @@ namespace ArchiveNull.UI
             {
                 _settingsItems.Add(new MenuItem
                 {
-                    Label = Localize("[VACIO] NO HAY NIVELES EN BUILD SETTINGS", "[EMPTY] NO LEVELS IN BUILD SETTINGS"),
+                    Label = Localize("[VACIO] ESTE EXPEDIENTE NO TIENE MEMORIAS", "[EMPTY] THIS CASE HAS NO MEMORIES"),
                     Enabled = false
                 });
             }
@@ -2241,13 +2363,10 @@ namespace ArchiveNull.UI
             _levelIndex = 0;
             EnsureSelectableIndex(_settingsItems, ref _levelIndex);
             _levelScrollOffset = 0;
-            _settingsRoot.gameObject.SetActive(true);
-            _mainMenuGroup.alpha = 0f;
-            _settingsGroup.alpha = 1f;
-            _subtitleText.text = Localize("ARCHIVES // ARCHIVOS DE NIVEL", "ARCHIVES // LEVEL FILES");
-            _footerText.text = Localize("NAV: ARRIBA/ABAJO  //  ABRIR: ENTER  //  CERRAR: ATRAS", "NAV: UP/DOWN  //  OPEN: ENTER  //  CLOSE: BACK");
-            _diagnosticText.text = Localize($"DESBLOQUEADOS: {Mathf.Min(_unlockedArchive, availableArchiveCount):00}/{availableArchiveCount:00}", $"UNLOCKED: {Mathf.Min(_unlockedArchive, availableArchiveCount):00}/{availableArchiveCount:00}");
-            SetStatus(Localize("SELECCIONA UN ARCHIVO PARA MONTAR.", "SELECT AN ARCHIVE TO MOUNT."));
+            _subtitleText.text = Localize($"{selectedCaseName} // MEMORIAS", $"{selectedCaseName} // MEMORIES");
+            _footerText.text = Localize("NAV: ARRIBA/ABAJO  //  MONTAR: ENTER  //  EXPEDIENTES: ATRAS", "NAV: UP/DOWN  //  MOUNT: ENTER  //  CASES: BACK");
+            _diagnosticText.text = Localize($"MEMORIAS DESBLOQUEADAS: {GetUnlockedMemoryCountForCase(selectedCaseName, availableArchiveCount):00}/{GetMemoryCountForCase(selectedCaseName, availableArchiveCount):00}", $"UNLOCKED MEMORIES: {GetUnlockedMemoryCountForCase(selectedCaseName, availableArchiveCount):00}/{GetMemoryCountForCase(selectedCaseName, availableArchiveCount):00}");
+            SetStatus(Localize("SELECCIONA UNA MEMORIA PARA MONTAR.", "SELECT A MEMORY TO MOUNT."));
             ShowMenuState(_settingsTexts, _settingsItems, _levelIndex, hideRoot: _mainMenuRoot, showRoot: _settingsRoot);
         }
 
@@ -2270,12 +2389,16 @@ namespace ArchiveNull.UI
             _mountedArchive = Mathf.Clamp(archiveIndex, 0, maxArchiveIndex);
             PlayerPrefs.SetInt(PrefMountedArchive, _mountedArchive);
             PlayerPrefs.Save();
+            RefreshMainMenuAvailability();
             CloseLevelBrowser();
         }
 
         private void CloseLevelBrowser()
         {
             _state = MenuState.MainMenu;
+            _levelBrowserShowingMemories = false;
+            _selectedCaseIndex = -1;
+            RefreshMainMenuAvailability();
             EnsureSelectableIndex(_mainMenuItems, ref _mainIndex);
             RebuildSettingsPage(SettingsPage.Categories, true, false);
             _mainMenuGroup.alpha = 1f;
@@ -2398,11 +2521,80 @@ namespace ArchiveNull.UI
         {
             return index switch
             {
-                0 => Localize("ARCHIVES", "ARCHIVES"),
-                1 => Localize("OPCIONES", "SETTINGS"),
-                2 => Localize("SALIR", "QUIT"),
+                0 => Localize("EXPEDIENTES", "CASE FILES"),
+                1 => Localize("INICIAR MEMORIA", "START MEMORY"),
+                2 => Localize("OPCIONES", "SETTINGS"),
+                3 => Localize("SALIR", "QUIT"),
                 _ => string.Empty
             };
+        }
+
+        private List<string> GetAvailableCaseNames(int availableArchiveCount)
+        {
+            List<string> caseNames = new();
+            for (int i = 0; i < availableArchiveCount; i++)
+            {
+                string caseName = GetArchiveCaseName(i);
+                bool alreadyAdded = false;
+                for (int existing = 0; existing < caseNames.Count; existing++)
+                {
+                    if (string.Equals(caseNames[existing], caseName, System.StringComparison.OrdinalIgnoreCase))
+                    {
+                        alreadyAdded = true;
+                        break;
+                    }
+                }
+
+                if (!alreadyAdded)
+                {
+                    caseNames.Add(caseName);
+                }
+            }
+
+            return caseNames;
+        }
+
+        private string GetArchiveCaseName(int archiveIndex)
+        {
+            if (_archiveCaseNames != null && archiveIndex >= 0 && archiveIndex < _archiveCaseNames.Length && !string.IsNullOrWhiteSpace(_archiveCaseNames[archiveIndex]))
+            {
+                return _archiveCaseNames[archiveIndex].ToUpperInvariant();
+            }
+
+            if (_archiveCaseNames != null && _archiveCaseNames.Length > 0 && !string.IsNullOrWhiteSpace(_archiveCaseNames[0]))
+            {
+                return _archiveCaseNames[0].ToUpperInvariant();
+            }
+
+            return "CASE_01";
+        }
+
+        private int GetMemoryCountForCase(string caseName, int availableArchiveCount)
+        {
+            int count = 0;
+            for (int i = 0; i < availableArchiveCount; i++)
+            {
+                if (string.Equals(GetArchiveCaseName(i), caseName, System.StringComparison.OrdinalIgnoreCase))
+                {
+                    count++;
+                }
+            }
+
+            return count;
+        }
+
+        private int GetUnlockedMemoryCountForCase(string caseName, int availableArchiveCount)
+        {
+            int count = 0;
+            for (int i = 0; i < availableArchiveCount; i++)
+            {
+                if (i < _unlockedArchive && string.Equals(GetArchiveCaseName(i), caseName, System.StringComparison.OrdinalIgnoreCase))
+                {
+                    count++;
+                }
+            }
+
+            return count;
         }
 
         private string GetArchiveName(int archiveIndex)
