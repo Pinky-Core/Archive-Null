@@ -15,6 +15,7 @@ namespace ArchiveNull.UI
         [SerializeField] private Transform _headsetVisual;
         [SerializeField] private Transform _equippedPose;
         [SerializeField] private TMP_Text _startPromptText;
+        [SerializeField] private TMP_Text _unequipPromptText;
         [SerializeField] private CRTMainMenuController _menuController;
         [SerializeField] private CRTMenuCameraFocus _computerFocus;
         [SerializeField] private MemorySceneLoader _memorySceneLoader;
@@ -89,6 +90,7 @@ namespace ArchiveNull.UI
 
             ResetVrUi();
             SetPromptVisible(false);
+            SetUnequipPromptVisible(false);
         }
 
         private void Update()
@@ -187,8 +189,9 @@ namespace ArchiveNull.UI
 
             _equipped = true;
             _busy = false;
-            SetPromptText(GetEquippedPrompt());
+            SetPromptText(_startPrompt);
             SetPromptVisible(true);
+            SetUnequipPromptVisible(true);
             _promptBlinkTimer = 0f;
             SetCanvasGroup(_fadeToBlack, 0f, false);
             SetCanvasGroup(_vrViewOverlay, _vrOverlayVisibleAlpha, _vrViewOverlay != null && _vrOverlayVisibleAlpha > 0.001f);
@@ -198,13 +201,13 @@ namespace ArchiveNull.UI
         {
             _busy = true;
             SetPromptVisible(false);
+            SetUnequipPromptVisible(false);
 
-            yield return FadeCanvasGroup(_fadeToBlack, 0f, 1f, _equipBlackoutDuration, true, true);
             yield return FadeCanvasGroup(_vrViewOverlay, _vrViewOverlay != null ? _vrViewOverlay.alpha : 0f, 0f, _overlayFadeDuration, true, false);
 
-            RestoreUnequippedState();
+            yield return AnimateUnequipToTable();
+            RestoreUnequippedState(false);
 
-            yield return FadeCanvasGroup(_fadeToBlack, 1f, 0f, _equipRevealDuration, true, false);
             ResetVrUi();
             _busy = false;
         }
@@ -213,6 +216,7 @@ namespace ArchiveNull.UI
         {
             _busy = true;
             SetPromptVisible(false);
+            SetUnequipPromptVisible(false);
 
             if (_menuController == null || !_menuController.HasMountedArchive)
             {
@@ -259,7 +263,48 @@ namespace ArchiveNull.UI
             }
         }
 
-        private void RestoreUnequippedState()
+        private IEnumerator AnimateUnequipToTable()
+        {
+            if (_headsetVisual == null)
+            {
+                yield break;
+            }
+
+            Transform target = _equippedPose != null ? _equippedPose : _camera.transform;
+            Vector3 startPosition = target.TransformPoint(_headOffset);
+            Quaternion startRotation = target.rotation * Quaternion.Euler(_wearRotationOffset);
+            Vector3 startScale = _headsetInitialLocalScale;
+
+            if (_headsetVisual.parent != null)
+            {
+                startScale = _headsetVisual.localScale;
+            }
+
+            _headsetVisual.gameObject.SetActive(true);
+            SetHeadsetRenderersToInitialState();
+            _headsetVisual.position = startPosition;
+            _headsetVisual.rotation = startRotation;
+            _headsetVisual.localScale = startScale;
+
+            Vector3 endPosition = _headsetVisual.parent != null ? _headsetVisual.parent.TransformPoint(_headsetInitialLocalPosition) : _headsetInitialLocalPosition;
+            Quaternion endRotation = _headsetVisual.parent != null ? _headsetVisual.parent.rotation * _headsetInitialLocalRotation : _headsetInitialLocalRotation;
+            Vector3 controlPosition = Vector3.Lerp(startPosition, endPosition, 0.45f) + target.TransformDirection(_liftOffset);
+
+            float timer = 0f;
+            while (timer < _equipDuration)
+            {
+                timer += Time.deltaTime;
+                float rawT = Mathf.Clamp01(timer / Mathf.Max(0.001f, _equipDuration));
+                float t = _equipEase.Evaluate(rawT);
+                _headsetVisual.position = QuadraticBezier(startPosition, controlPosition, endPosition, t);
+                _headsetVisual.rotation = Quaternion.Slerp(startRotation, endRotation, t);
+                float scalePulse = Mathf.Sin(rawT * Mathf.PI) * (_nearFaceScale - 1f);
+                _headsetVisual.localScale = startScale * (1f + scalePulse);
+                yield return null;
+            }
+        }
+
+        private void RestoreUnequippedState(bool restoreRenderers = true)
         {
             _equipped = false;
 
@@ -271,6 +316,19 @@ namespace ArchiveNull.UI
                 _headsetVisual.gameObject.SetActive(_headsetInitiallyActive);
             }
 
+            if (restoreRenderers)
+            {
+                SetHeadsetRenderersToInitialState();
+            }
+
+            if (_headsetClickCollider != null)
+            {
+                _headsetClickCollider.enabled = true;
+            }
+        }
+
+        private void SetHeadsetRenderersToInitialState()
+        {
             if (_headsetRenderers != null)
             {
                 for (int i = 0; i < _headsetRenderers.Length; i++)
@@ -281,11 +339,6 @@ namespace ArchiveNull.UI
                         _headsetRenderers[i].enabled = enabled;
                     }
                 }
-            }
-
-            if (_headsetClickCollider != null)
-            {
-                _headsetClickCollider.enabled = true;
             }
         }
 
@@ -363,13 +416,6 @@ namespace ArchiveNull.UI
             }
         }
 
-        private string GetEquippedPrompt()
-        {
-            return string.IsNullOrWhiteSpace(_startPrompt) || _startPrompt.Contains("QUITAR") || _startPrompt.Contains("UNEQUIP")
-                ? _startPrompt
-                : _startPrompt + "\nESC / BACKSPACE: QUITAR VR";
-        }
-
         private void SetPromptVisible(bool visible)
         {
             if (_startPromptText == null)
@@ -383,6 +429,24 @@ namespace ArchiveNull.UI
             _startPromptText.color = color;
         }
 
+        private void SetUnequipPromptVisible(bool visible)
+        {
+            if (_unequipPromptText == null)
+            {
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(_unequipPromptText.text))
+            {
+                _unequipPromptText.text = "ESC / BACKSPACE: QUITAR VR";
+            }
+
+            _unequipPromptText.gameObject.SetActive(visible);
+            Color color = _unequipPromptText.color;
+            color.a = visible ? 1f : 0f;
+            _unequipPromptText.color = color;
+        }
+
         private void ResetVrUi()
         {
             if (_statusMessageRoutine != null)
@@ -393,6 +457,7 @@ namespace ArchiveNull.UI
 
             SetCanvasGroup(_fadeToBlack, 0f, false);
             SetCanvasGroup(_vrViewOverlay, 0f, false);
+            SetUnequipPromptVisible(false);
         }
 
         private IEnumerator HidePromptAfterDelay()

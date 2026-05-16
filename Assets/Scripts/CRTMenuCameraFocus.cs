@@ -36,6 +36,8 @@ namespace ArchiveNull.UI
         [SerializeField] private bool _allowReturnWithEscape = false;
         [SerializeField] private bool _allowReturnWithRightClick = true;
         [SerializeField] private bool _allowStandExitFromFarWithEscape = true;
+        [SerializeField] private LayerMask _returnToFarFallbackLayers = ~0;
+        [SerializeField] private string[] _returnToFarFallbackNameContains = { "mesa", "table", "silla", "chair" };
         [SerializeField] private bool _releaseCameraWhenUnfocused = true;
         [SerializeField] private bool _startAtFarPose = true;
         [SerializeField] private UnityEvent _onFocusReleased;
@@ -312,19 +314,60 @@ namespace ArchiveNull.UI
 
         private bool IsClickingReturnToFarTarget()
         {
-            if (_returnToFarClickColliders == null || _returnToFarClickColliders.Length == 0 || _targetCamera == null)
+            if (_targetCamera == null || Mouse.current == null)
             {
                 return false;
             }
 
-            Ray ray = _targetCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
-            for (int i = 0; i < _returnToFarClickColliders.Length; i++)
+            Ray ray = _targetCamera.ScreenPointToRay(Mouse.current.position.ReadValue());
+            if (_returnToFarClickColliders != null && _returnToFarClickColliders.Length > 0)
             {
-                Collider target = _returnToFarClickColliders[i];
-                if (target != null && target.Raycast(ray, out _, 100f))
+                for (int i = 0; i < _returnToFarClickColliders.Length; i++)
                 {
-                    return true;
+                    Collider target = _returnToFarClickColliders[i];
+                    if (target != null && target.Raycast(ray, out _, 100f))
+                    {
+                        return true;
+                    }
                 }
+
+                return false;
+            }
+
+            if (!Physics.Raycast(ray, out RaycastHit hit, 100f, _returnToFarFallbackLayers, QueryTriggerInteraction.Collide))
+            {
+                return false;
+            }
+
+            return IsReturnFallbackTarget(hit.collider);
+        }
+
+        private bool IsReturnFallbackTarget(Collider target)
+        {
+            if (target == null)
+            {
+                return false;
+            }
+
+            if (_returnToFarFallbackNameContains == null || _returnToFarFallbackNameContains.Length == 0)
+            {
+                return false;
+            }
+
+            Transform current = target.transform;
+            while (current != null)
+            {
+                string objectName = current.name.ToLowerInvariant();
+                for (int i = 0; i < _returnToFarFallbackNameContains.Length; i++)
+                {
+                    string needle = _returnToFarFallbackNameContains[i];
+                    if (!string.IsNullOrWhiteSpace(needle) && objectName.Contains(needle.ToLowerInvariant()))
+                    {
+                        return true;
+                    }
+                }
+
+                current = current.parent;
             }
 
             return false;

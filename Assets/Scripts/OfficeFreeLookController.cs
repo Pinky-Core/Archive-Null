@@ -20,6 +20,8 @@ namespace ArchiveNull.UI
 
         [Header("Collision")]
         [SerializeField] private bool _enableCollision = true;
+        [Tooltip("BoxCollider creado y ajustado a mano para representar el volumen de la camara/freecam. Si esta vacio, usa SphereCast.")]
+        [SerializeField] private BoxCollider _movementCollider;
         [SerializeField] private float _collisionRadius = 0.22f;
         [SerializeField] private float _collisionPadding = 0.04f;
         [SerializeField] private LayerMask _collisionLayers = ~0;
@@ -46,6 +48,11 @@ namespace ArchiveNull.UI
             if (_cameraRoot == null)
             {
                 _cameraRoot = Camera.main != null ? Camera.main.transform : transform;
+            }
+
+            if (_movementCollider == null)
+            {
+                _movementCollider = _cameraRoot.GetComponent<BoxCollider>();
             }
 
             _freeFlightEnabled = !_startLockedToDesk;
@@ -203,6 +210,11 @@ namespace ArchiveNull.UI
             }
 
             Vector3 direction = movement / distance;
+            if (_movementCollider != null)
+            {
+                return ResolveBoxCollision(currentPosition, targetPosition, direction, distance);
+            }
+
             if (Physics.SphereCast(currentPosition, _collisionRadius, direction, out RaycastHit hit, distance + _collisionPadding, _collisionLayers, QueryTriggerInteraction.Ignore))
             {
                 float allowedDistance = Mathf.Max(0f, hit.distance - _collisionPadding);
@@ -210,6 +222,44 @@ namespace ArchiveNull.UI
             }
 
             return targetPosition;
+        }
+
+        private Vector3 ResolveBoxCollision(Vector3 currentPosition, Vector3 targetPosition, Vector3 direction, float distance)
+        {
+            Transform colliderTransform = _movementCollider.transform;
+            Vector3 currentCenter = GetMovementColliderWorldCenter(currentPosition);
+            Quaternion orientation = colliderTransform.rotation;
+            Vector3 halfExtents = Vector3.Scale(_movementCollider.size * 0.5f, colliderTransform.lossyScale);
+            halfExtents = new Vector3(
+                Mathf.Max(0.001f, halfExtents.x - _collisionPadding),
+                Mathf.Max(0.001f, halfExtents.y - _collisionPadding),
+                Mathf.Max(0.001f, halfExtents.z - _collisionPadding));
+
+            if (Physics.BoxCast(currentCenter, halfExtents, direction, out RaycastHit hit, orientation, distance + _collisionPadding, _collisionLayers, QueryTriggerInteraction.Ignore))
+            {
+                if (hit.collider == _movementCollider)
+                {
+                    return targetPosition;
+                }
+
+                float allowedDistance = Mathf.Max(0f, hit.distance - _collisionPadding);
+                return currentPosition + direction * allowedDistance;
+            }
+
+            return targetPosition;
+        }
+
+        private Vector3 GetMovementColliderWorldCenter(Vector3 cameraPosition)
+        {
+            if (_movementCollider == null)
+            {
+                return cameraPosition;
+            }
+
+            Transform colliderTransform = _movementCollider.transform;
+            Vector3 currentCameraPosition = _cameraRoot != null ? _cameraRoot.position : cameraPosition;
+            Vector3 centerOffset = colliderTransform.TransformPoint(_movementCollider.center) - currentCameraPosition;
+            return cameraPosition + centerOffset;
         }
 
         private static float NormalizeAngle(float angle)
