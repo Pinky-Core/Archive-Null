@@ -1,5 +1,7 @@
 using System.Collections;
 using UnityEngine;
+using UnityEngine.SceneManagement;
+using UnityEngine.UI;
 
 namespace ArchiveNull.UI
 {
@@ -18,7 +20,9 @@ namespace ArchiveNull.UI
         [Header("Timing")]
         [SerializeField] private float dissolveDuration = 1.25f;
         [SerializeField] private bool rebuildOnMainMenuReturn = true;
-        [SerializeField] private bool restoreOriginalMaterialsAfterRebuild;
+        [SerializeField] private bool restoreOriginalMaterialsAfterRebuild = true;
+        [SerializeField] private bool fadeFromBlackOnMainMenuReturn = true;
+        [SerializeField] private float returnFadeDuration = 1.1f;
 
         public const string PendingOfficeRebuildPref = "archive.office.rebuild.pending";
 
@@ -53,7 +57,25 @@ namespace ArchiveNull.UI
 
             PlayerPrefs.SetInt(PendingOfficeRebuildPref, 0);
             PlayerPrefs.Save();
-            StartCoroutine(PlayRebuild(restoreOriginalMaterialsAfterRebuild));
+            StartCoroutine(PlayPendingReturnRebuild());
+        }
+
+        private IEnumerator PlayPendingReturnRebuild()
+        {
+            CanvasGroup fadeOverlay = fadeFromBlackOnMainMenuReturn ? CreateBlackFadeOverlay() : null;
+            Coroutine fadeRoutine = fadeOverlay != null ? StartCoroutine(FadeCanvasGroup(fadeOverlay, 1f, 0f, Mathf.Max(returnFadeDuration, dissolveDuration))) : null;
+
+            yield return PlayRebuild(true);
+
+            if (fadeRoutine != null)
+            {
+                yield return fadeRoutine;
+            }
+
+            if (fadeOverlay != null)
+            {
+                Destroy(fadeOverlay.gameObject);
+            }
         }
 
         public IEnumerator PlayDissolve()
@@ -108,7 +130,7 @@ namespace ArchiveNull.UI
                 return;
             }
 
-            Renderer[] renderers = officeRoot != null ? officeRoot.GetComponentsInChildren<Renderer>(true) : System.Array.Empty<Renderer>();
+            Renderer[] renderers = CollectRenderers();
             _rendererStates = new RendererState[renderers.Length];
 
             for (int i = 0; i < renderers.Length; i++)
@@ -145,6 +167,29 @@ namespace ArchiveNull.UI
 
                 _rendererStates[i] = state;
             }
+        }
+
+        private Renderer[] CollectRenderers()
+        {
+            if (officeRoot != null)
+            {
+                return officeRoot.GetComponentsInChildren<Renderer>(true);
+            }
+
+            GameObject[] roots = SceneManager.GetActiveScene().GetRootGameObjects();
+            System.Collections.Generic.List<Renderer> renderers = new();
+            for (int i = 0; i < roots.Length; i++)
+            {
+                GameObject root = roots[i];
+                if (root == null || root == gameObject || root.transform.IsChildOf(transform))
+                {
+                    continue;
+                }
+
+                renderers.AddRange(root.GetComponentsInChildren<Renderer>(true));
+            }
+
+            return renderers.ToArray();
         }
 
         private void ApplyDissolve(float amount)
@@ -271,6 +316,61 @@ namespace ArchiveNull.UI
             }
 
             return fallback;
+        }
+
+        private static CanvasGroup CreateBlackFadeOverlay()
+        {
+            GameObject canvasObject = new("OfficeReturnFade", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster), typeof(CanvasGroup));
+            Canvas canvas = canvasObject.GetComponent<Canvas>();
+            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            canvas.sortingOrder = 10000;
+
+            CanvasScaler scaler = canvasObject.GetComponent<CanvasScaler>();
+            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            scaler.referenceResolution = new Vector2(1920f, 1080f);
+            scaler.matchWidthOrHeight = 0.5f;
+
+            GameObject imageObject = new("Black", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+            imageObject.transform.SetParent(canvasObject.transform, false);
+            Image image = imageObject.GetComponent<Image>();
+            image.color = Color.black;
+            RectTransform rect = image.rectTransform;
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.one;
+            rect.offsetMin = Vector2.zero;
+            rect.offsetMax = Vector2.zero;
+
+            CanvasGroup group = canvasObject.GetComponent<CanvasGroup>();
+            group.alpha = 1f;
+            group.interactable = false;
+            group.blocksRaycasts = true;
+            return group;
+        }
+
+        private static IEnumerator FadeCanvasGroup(CanvasGroup group, float from, float to, float duration)
+        {
+            if (group == null)
+            {
+                yield break;
+            }
+
+            group.alpha = from;
+            if (duration <= 0f)
+            {
+                group.alpha = to;
+                yield break;
+            }
+
+            float timer = 0f;
+            while (timer < duration)
+            {
+                timer += Time.deltaTime;
+                float t = Mathf.Clamp01(timer / Mathf.Max(0.001f, duration));
+                group.alpha = Mathf.Lerp(from, to, t);
+                yield return null;
+            }
+
+            group.alpha = to;
         }
     }
 }

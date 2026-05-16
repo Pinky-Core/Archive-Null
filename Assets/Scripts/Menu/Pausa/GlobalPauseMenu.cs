@@ -60,6 +60,7 @@ public sealed class GlobalPauseMenu : MonoBehaviour
     private Slider speedSlider;
     private TMP_Text controlsValueText;
     private TMP_Text qualityValueText;
+    private CanvasGroup exitFadeOverlay;
     private FirstPersonMovement movement;
     private FirstPersonLook look;
     private Rigidbody playerRigidbody;
@@ -152,11 +153,33 @@ public sealed class GlobalPauseMenu : MonoBehaviour
 
         PlayerPrefs.SetInt(OfficeDissolveTransition.PendingOfficeRebuildPref, 1);
         PlayerPrefs.Save();
+        SetVisible(false);
+
+        exitFadeOverlay = CreateFadeOverlay();
+        Coroutine fadeRoutine = StartCoroutine(FadeCanvasGroup(exitFadeOverlay, 0f, 1f, 0.45f));
 
         OfficeDissolveTransition sceneTransition = FindObjectOfType<OfficeDissolveTransition>();
+        bool destroyTemporaryTransition = false;
         if (sceneTransition != null)
         {
             yield return sceneTransition.PlayDissolve();
+        }
+        else
+        {
+            GameObject transitionHost = new("RuntimeMemoryDissolveTransition");
+            sceneTransition = transitionHost.AddComponent<OfficeDissolveTransition>();
+            destroyTemporaryTransition = true;
+            yield return sceneTransition.PlayDissolve();
+        }
+
+        if (fadeRoutine != null)
+        {
+            yield return fadeRoutine;
+        }
+
+        if (destroyTemporaryTransition && sceneTransition != null)
+        {
+            Destroy(sceneTransition.gameObject);
         }
 
         SceneManager.LoadScene(MainMenuSceneName, LoadSceneMode.Single);
@@ -500,5 +523,56 @@ public sealed class GlobalPauseMenu : MonoBehaviour
         Outline outline = target.AddComponent<Outline>();
         outline.effectColor = color;
         outline.effectDistance = new Vector2(1f, -1f);
+    }
+
+    private static CanvasGroup CreateFadeOverlay()
+    {
+        GameObject canvasObject = new("PauseExitFade", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster), typeof(CanvasGroup));
+        Canvas canvas = canvasObject.GetComponent<Canvas>();
+        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+        canvas.sortingOrder = 12000;
+
+        CanvasScaler scaler = canvasObject.GetComponent<CanvasScaler>();
+        scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+        scaler.referenceResolution = new Vector2(1920f, 1080f);
+        scaler.matchWidthOrHeight = 0.5f;
+
+        GameObject imageObject = new("Black", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+        imageObject.transform.SetParent(canvasObject.transform, false);
+        Image image = imageObject.GetComponent<Image>();
+        image.color = Color.black;
+        Stretch(image.rectTransform);
+
+        CanvasGroup group = canvasObject.GetComponent<CanvasGroup>();
+        group.alpha = 0f;
+        group.interactable = false;
+        group.blocksRaycasts = true;
+        return group;
+    }
+
+    private static IEnumerator FadeCanvasGroup(CanvasGroup group, float from, float to, float duration)
+    {
+        if (group == null)
+        {
+            yield break;
+        }
+
+        group.alpha = from;
+        if (duration <= 0f)
+        {
+            group.alpha = to;
+            yield break;
+        }
+
+        float timer = 0f;
+        while (timer < duration)
+        {
+            timer += Time.deltaTime;
+            float t = Mathf.Clamp01(timer / Mathf.Max(0.001f, duration));
+            group.alpha = Mathf.Lerp(from, to, t);
+            yield return null;
+        }
+
+        group.alpha = to;
     }
 }

@@ -14,6 +14,7 @@ namespace ArchiveNull.UI
         [SerializeField] private Collider _computerClickCollider;
         [SerializeField] private Collider[] _returnToFarClickColliders;
         [SerializeField] private CRTMainMenuController _menuController;
+        [SerializeField] private VRHeadsetArchiveStarter _vrHeadsetStarter;
 
         [Header("Focus")]
         [SerializeField] private bool _focusOnComputerClick = true;
@@ -79,6 +80,11 @@ namespace ArchiveNull.UI
                 _targetCamera = Camera.main;
             }
 
+            if (_vrHeadsetStarter == null)
+            {
+                _vrHeadsetStarter = FindObjectOfType<VRHeadsetArchiveStarter>();
+            }
+
             if (_moveEase == null || _moveEase.length == 0)
             {
                 _moveEase = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
@@ -120,7 +126,7 @@ namespace ArchiveNull.UI
                 return;
             }
 
-            if (!_isFocused && _allowStandExitFromFarWithEscape && _currentPose == CameraPose.Far && WasEscapePressedThisFrame())
+            if (!_isFocused && _allowStandExitFromFarWithEscape && _currentPose == CameraPose.Far && CanExitSeatWithEscape() && WasEscapePressedThisFrame())
             {
                 MoveToStandPose();
                 return;
@@ -145,7 +151,7 @@ namespace ArchiveNull.UI
 
             if (_allowReturnWithEscape && WasEscapePressedThisFrame())
             {
-                MoveToStandPose();
+                ReturnToFarPose();
             }
         }
 
@@ -371,6 +377,11 @@ namespace ArchiveNull.UI
             }
 
             return false;
+        }
+
+        private bool CanExitSeatWithEscape()
+        {
+            return _vrHeadsetStarter == null || !_vrHeadsetStarter.IsEquipped;
         }
 
         private static bool WasLeftClickThisFrame()
