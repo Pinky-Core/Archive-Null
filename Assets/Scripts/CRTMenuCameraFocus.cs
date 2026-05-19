@@ -28,6 +28,8 @@ namespace ArchiveNull.UI
         [SerializeField] private float _swayPositionAmount = 0.015f;
         [SerializeField] private float _swayRotationAmount = 0.7f;
         [SerializeField] private float _swaySpeed = 0.9f;
+        [Tooltip("Tiempo que tarda en entrar el sway/parallax despues de volver desde Focus a Far.")]
+        [SerializeField] private float _farMotionBlendDuration = 0.45f;
         [SerializeField] private bool _useMouseParallax = true;
         [SerializeField] private float _mousePositionAmount = 0.045f;
         [SerializeField] private float _mouseRotationAmount = 2f;
@@ -62,6 +64,7 @@ namespace ArchiveNull.UI
         private bool _pendingMenuOpen;
         private bool _pendingFocusReleasedEvent;
         private Vector2 _mouseLook;
+        private float _farMotionBlendTimer;
 
         public bool IsFocused => _isFocused;
         public bool IsInFarPose => !_isFocused && _currentPose == CameraPose.Far;
@@ -105,6 +108,7 @@ namespace ArchiveNull.UI
             }
 
             _moveTimer = _moveDuration;
+            _farMotionBlendTimer = _farMotionBlendDuration;
         }
 
         private void Update()
@@ -132,7 +136,7 @@ namespace ArchiveNull.UI
                 return;
             }
 
-            if (!_isFocused && _focusOnComputerClick && WasLeftClickThisFrame() && IsClickingComputer())
+            if (!_isFocused && _currentPose == CameraPose.Far && _focusOnComputerClick && WasLeftClickThisFrame() && IsClickingComputer())
             {
                 FocusComputer();
                 return;
@@ -190,6 +194,10 @@ namespace ArchiveNull.UI
             }
 
             float swayTime = Time.time * _swaySpeed;
+            _farMotionBlendTimer += Time.deltaTime;
+            float farMotionBlend = _farMotionBlendDuration <= 0f ? 1f : Mathf.Clamp01(_farMotionBlendTimer / _farMotionBlendDuration);
+            farMotionBlend = farMotionBlend * farMotionBlend * (3f - 2f * farMotionBlend);
+
             Vector3 basePosition = GetPosePosition(CameraPose.Far);
             Quaternion baseRotation = GetPoseRotation(CameraPose.Far);
 
@@ -197,10 +205,11 @@ namespace ArchiveNull.UI
                 Mathf.Sin(swayTime * 0.9f) * _swayPositionAmount,
                 Mathf.Sin(swayTime * 1.2f) * (_swayPositionAmount * 0.65f),
                 0f);
+            positionOffset *= farMotionBlend;
 
             Quaternion rotationOffset = Quaternion.Euler(
-                Mathf.Sin(swayTime * 1.15f) * _swayRotationAmount,
-                Mathf.Cos(swayTime * 0.85f) * _swayRotationAmount,
+                Mathf.Sin(swayTime * 1.15f) * _swayRotationAmount * farMotionBlend,
+                Mathf.Cos(swayTime * 0.85f) * _swayRotationAmount * farMotionBlend,
                 0f);
 
             Vector3 parallaxPosition = Vector3.zero;
@@ -215,11 +224,11 @@ namespace ArchiveNull.UI
                 parallaxPosition = new Vector3(
                     _mouseLook.x * _mousePositionAmount,
                     _mouseLook.y * _mousePositionAmount * 0.55f,
-                    0f);
+                    0f) * farMotionBlend;
 
                 parallaxRotation = Quaternion.Euler(
-                    -_mouseLook.y * _mouseRotationAmount,
-                    _mouseLook.x * _mouseRotationAmount,
+                    -_mouseLook.y * _mouseRotationAmount * farMotionBlend,
+                    _mouseLook.x * _mouseRotationAmount * farMotionBlend,
                     0f);
             }
 
@@ -253,6 +262,7 @@ namespace ArchiveNull.UI
             _pendingFocusReleasedEvent = false;
             _menuController?.SuspendTerminalInteraction();
             _currentPose = CameraPose.Far;
+            _farMotionBlendTimer = 0f;
             StartMove(GetPosePosition(CameraPose.Far), GetPoseRotation(CameraPose.Far));
         }
 
@@ -272,6 +282,7 @@ namespace ArchiveNull.UI
             _pendingMenuOpen = false;
             _pendingFocusReleasedEvent = false;
             _currentPose = CameraPose.Far;
+            _farMotionBlendTimer = 0f;
             StartMove(GetPosePosition(CameraPose.Far), GetPoseRotation(CameraPose.Far));
         }
 

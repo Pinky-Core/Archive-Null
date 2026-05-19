@@ -23,19 +23,27 @@ namespace ArchiveNull.UI
         [SerializeField] private bool restoreOriginalMaterialsAfterRebuild = true;
         [SerializeField] private bool fadeFromBlackOnMainMenuReturn = true;
         [SerializeField] private float returnFadeDuration = 1.1f;
+        [SerializeField] private float postRebuildBlackHold = 0.08f;
 
         public const string PendingOfficeRebuildPref = "archive.office.rebuild.pending";
 
         private MaterialPropertyBlock _propertyBlock;
         private RendererState[] _rendererStates;
+        private bool _originalMaterialsRestored;
 
         public GameObject OfficeRoot => officeRoot;
         public float DissolveDuration => dissolveDuration;
+
+        public void DisablePendingReturnRebuildCheck()
+        {
+            rebuildOnMainMenuReturn = false;
+        }
 
         private sealed class RendererState
         {
             public Renderer Renderer;
             public Material[] OriginalMaterials;
+            public Material[] RuntimeDissolveMaterials;
             public bool UsesRuntimeDissolveMaterials;
         }
 
@@ -63,17 +71,17 @@ namespace ArchiveNull.UI
         private IEnumerator PlayPendingReturnRebuild()
         {
             CanvasGroup fadeOverlay = fadeFromBlackOnMainMenuReturn ? CreateBlackFadeOverlay() : null;
-            Coroutine fadeRoutine = fadeOverlay != null ? StartCoroutine(FadeCanvasGroup(fadeOverlay, 1f, 0f, Mathf.Max(returnFadeDuration, dissolveDuration))) : null;
 
             yield return PlayRebuild(true);
 
-            if (fadeRoutine != null)
-            {
-                yield return fadeRoutine;
-            }
-
             if (fadeOverlay != null)
             {
+                if (postRebuildBlackHold > 0f)
+                {
+                    yield return new WaitForSeconds(postRebuildBlackHold);
+                }
+
+                yield return FadeCanvasGroup(fadeOverlay, 1f, 0f, returnFadeDuration);
                 Destroy(fadeOverlay.gameObject);
             }
         }
@@ -81,6 +89,7 @@ namespace ArchiveNull.UI
         public IEnumerator PlayDissolve()
         {
             CacheRendererStates();
+            EnsureDissolveMaterialsApplied();
             ApplyDissolve(0f);
             Debug.Log("[OfficeDissolveTransition] Starting office dissolve.");
 
@@ -101,6 +110,7 @@ namespace ArchiveNull.UI
         public IEnumerator PlayRebuild(bool restoreOriginalMaterials = false)
         {
             CacheRendererStates();
+            EnsureDissolveMaterialsApplied();
             ApplyDissolve(1f);
             Debug.Log("[OfficeDissolveTransition] Starting office rebuild.");
 
@@ -161,7 +171,8 @@ namespace ArchiveNull.UI
 
                 if (!supportsPropertyBlock && fallbackDissolveShader != null)
                 {
-                    rendererTarget.sharedMaterials = BuildRuntimeDissolveMaterials(originalMaterials);
+                    state.RuntimeDissolveMaterials = BuildRuntimeDissolveMaterials(originalMaterials);
+                    rendererTarget.sharedMaterials = state.RuntimeDissolveMaterials;
                     state.UsesRuntimeDissolveMaterials = true;
                 }
 
@@ -213,6 +224,27 @@ namespace ArchiveNull.UI
             }
         }
 
+        private void EnsureDissolveMaterialsApplied()
+        {
+            if (!_originalMaterialsRestored || _rendererStates == null)
+            {
+                return;
+            }
+
+            for (int i = 0; i < _rendererStates.Length; i++)
+            {
+                RendererState state = _rendererStates[i];
+                if (state?.Renderer == null || !state.UsesRuntimeDissolveMaterials || state.RuntimeDissolveMaterials == null)
+                {
+                    continue;
+                }
+
+                state.Renderer.sharedMaterials = state.RuntimeDissolveMaterials;
+            }
+
+            _originalMaterialsRestored = false;
+        }
+
         private void RestoreOriginalMaterials()
         {
             if (_rendererStates == null)
@@ -235,6 +267,8 @@ namespace ArchiveNull.UI
 
                 state.Renderer.SetPropertyBlock(null);
             }
+
+            _originalMaterialsRestored = true;
         }
 
         private Material[] BuildRuntimeDissolveMaterials(Material[] sourceMaterials)

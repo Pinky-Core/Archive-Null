@@ -156,7 +156,6 @@ public sealed class GlobalPauseMenu : MonoBehaviour
         SetVisible(false);
 
         exitFadeOverlay = CreateFadeOverlay();
-        Coroutine fadeRoutine = StartCoroutine(FadeCanvasGroup(exitFadeOverlay, 0f, 1f, 0.45f));
 
         OfficeDissolveTransition sceneTransition = FindObjectOfType<OfficeDissolveTransition>();
         bool destroyTemporaryTransition = false;
@@ -168,14 +167,12 @@ public sealed class GlobalPauseMenu : MonoBehaviour
         {
             GameObject transitionHost = new("RuntimeMemoryDissolveTransition");
             sceneTransition = transitionHost.AddComponent<OfficeDissolveTransition>();
+            sceneTransition.DisablePendingReturnRebuildCheck();
             destroyTemporaryTransition = true;
             yield return sceneTransition.PlayDissolve();
         }
 
-        if (fadeRoutine != null)
-        {
-            yield return fadeRoutine;
-        }
+        yield return FadeCanvasGroup(exitFadeOverlay, 0f, 1f, 0.45f);
 
         if (destroyTemporaryTransition && sceneTransition != null)
         {
