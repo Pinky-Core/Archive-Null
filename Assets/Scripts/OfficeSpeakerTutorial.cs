@@ -1,6 +1,7 @@
 using System.Collections;
 using TMPro;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace ArchiveNull.UI
 {
@@ -9,7 +10,7 @@ namespace ArchiveNull.UI
     {
         public const string CompletedPref = "archive.office.speaker_tutorial.completed";
 
-        private enum TutorialStep
+        public enum TutorialStep
         {
             Welcome,
             Movement,
@@ -23,7 +24,7 @@ namespace ArchiveNull.UI
         }
 
         [System.Serializable]
-        private sealed class TutorialLine
+        public sealed class TutorialLine
         {
             public TutorialStep step;
             [TextArea(2, 4)] public string subtitle;
@@ -147,7 +148,57 @@ namespace ArchiveNull.UI
                 subtitleGroup = subtitleText.GetComponentInParent<CanvasGroup>();
             }
 
+            if (subtitleText == null)
+            {
+                CreateRuntimeSubtitleUi();
+            }
+
             SetSubtitleVisible(false, true);
+        }
+
+        private void CreateRuntimeSubtitleUi()
+        {
+            GameObject canvasObject = new("OfficeSpeakerTutorialSubtitles", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster), typeof(CanvasGroup));
+            canvasObject.transform.SetParent(transform, false);
+
+            Canvas canvas = canvasObject.GetComponent<Canvas>();
+            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            canvas.sortingOrder = 9000;
+
+            CanvasScaler scaler = canvasObject.GetComponent<CanvasScaler>();
+            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            scaler.referenceResolution = new Vector2(1920f, 1080f);
+            scaler.matchWidthOrHeight = 0.5f;
+
+            GameObject panelObject = new("SubtitlePanel", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+            panelObject.transform.SetParent(canvasObject.transform, false);
+            Image panel = panelObject.GetComponent<Image>();
+            panel.color = new Color(0f, 0f, 0f, 0.58f);
+            RectTransform panelRect = panel.rectTransform;
+            panelRect.anchorMin = new Vector2(0.5f, 0f);
+            panelRect.anchorMax = new Vector2(0.5f, 0f);
+            panelRect.pivot = new Vector2(0.5f, 0f);
+            panelRect.anchoredPosition = new Vector2(0f, 78f);
+            panelRect.sizeDelta = new Vector2(1040f, 92f);
+
+            GameObject textObject = new("SubtitleText", typeof(RectTransform), typeof(CanvasRenderer), typeof(TextMeshProUGUI));
+            textObject.transform.SetParent(panelObject.transform, false);
+            subtitleText = textObject.GetComponent<TextMeshProUGUI>();
+            subtitleText.alignment = TextAlignmentOptions.Center;
+            subtitleText.fontSize = 28f;
+            subtitleText.color = new Color(0.82f, 0.96f, 0.91f, 1f);
+            subtitleText.textWrappingMode = TextWrappingModes.Normal;
+
+            RectTransform textRect = subtitleText.rectTransform;
+            textRect.anchorMin = Vector2.zero;
+            textRect.anchorMax = Vector2.one;
+            textRect.offsetMin = new Vector2(28f, 12f);
+            textRect.offsetMax = new Vector2(-28f, -12f);
+
+            subtitleGroup = canvasObject.GetComponent<CanvasGroup>();
+            subtitleGroup.alpha = 0f;
+            subtitleGroup.interactable = false;
+            subtitleGroup.blocksRaycasts = false;
         }
 
         private void Start()
