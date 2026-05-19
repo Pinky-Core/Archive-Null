@@ -43,6 +43,7 @@ namespace ArchiveNull.UI
         [SerializeField] private string[] _returnToFarFallbackNameContains = { "mesa", "table", "silla", "chair" };
         [SerializeField] private bool _releaseCameraWhenUnfocused = true;
         [SerializeField] private bool _startAtFarPose = true;
+        [SerializeField] private bool _startStandingUntilTutorialCompleted = true;
         [SerializeField] private UnityEvent _onFocusReleased;
 
         private enum CameraPose
@@ -97,9 +98,10 @@ namespace ArchiveNull.UI
             {
                 _initialCameraPosition = _targetCamera.transform.position;
                 _initialCameraRotation = _targetCamera.transform.rotation;
-                Vector3 startPosition = _startAtFarPose ? GetPosePosition(CameraPose.Far) : _initialCameraPosition;
-                Quaternion startRotation = _startAtFarPose ? GetPoseRotation(CameraPose.Far) : _initialCameraRotation;
-                _currentPose = _startAtFarPose ? CameraPose.Far : CameraPose.Stand;
+                bool startAtFarPose = ShouldStartAtFarPose();
+                Vector3 startPosition = startAtFarPose ? GetPosePosition(CameraPose.Far) : GetPosePosition(CameraPose.Stand);
+                Quaternion startRotation = startAtFarPose ? GetPoseRotation(CameraPose.Far) : GetPoseRotation(CameraPose.Stand);
+                _currentPose = startAtFarPose ? CameraPose.Far : CameraPose.Stand;
                 _targetCamera.transform.SetPositionAndRotation(startPosition, startRotation);
                 _moveStartPosition = startPosition;
                 _moveStartRotation = startRotation;
@@ -109,6 +111,21 @@ namespace ArchiveNull.UI
 
             _moveTimer = _moveDuration;
             _farMotionBlendTimer = _farMotionBlendDuration;
+        }
+
+        private bool ShouldStartAtFarPose()
+        {
+            if (!_startAtFarPose)
+            {
+                return false;
+            }
+
+            if (_startStandingUntilTutorialCompleted && PlayerPrefs.GetInt(OfficeSpeakerTutorial.CompletedPref, 0) != 1)
+            {
+                return false;
+            }
+
+            return true;
         }
 
         private void Update()
