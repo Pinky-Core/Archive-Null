@@ -1237,8 +1237,8 @@ MonoBehaviour:
   _cameraRoot: {fileID: 330585546}
   _autoSyncWithCameraPose: 1
   _startLockedToDesk: 1
-  _moveSpeed: 1
-  _fastMoveMultiplier: 2.2
+  _moveSpeed: 3
+  _fastMoveMultiplier: 1
   _moveOnlyOnHorizontalPlane: 1
   _lockMovementHeight: 1
   _enableCollision: 1
@@ -3388,6 +3388,7 @@ MonoBehaviour:
   _computerClickCollider: {fileID: 765794116}
   _returnToFarClickColliders: []
   _menuController: {fileID: 1527197674}
+  _vrHeadsetStarter: {fileID: 0}
   _focusOnComputerClick: 1
   _openMenuWhenFocused: 1
   _openMenuAfterMoveCompletes: 1
@@ -3402,6 +3403,7 @@ MonoBehaviour:
   _swayPositionAmount: 0.015
   _swayRotationAmount: 0.7
   _swaySpeed: 0.9
+  _farMotionBlendDuration: 0.45
   _useMouseParallax: 1
   _mousePositionAmount: 0.045
   _mouseRotationAmount: 2
@@ -3938,6 +3940,9 @@ MonoBehaviour:
   dissolveDuration: 1.25
   rebuildOnMainMenuReturn: 1
   restoreOriginalMaterialsAfterRebuild: 0
+  fadeFromBlackOnMainMenuReturn: 1
+  returnFadeDuration: 1.1
+  postRebuildBlackHold: 0.08
 --- !u!4 &975684151
 Transform:
   m_ObjectHideFlags: 0
@@ -5050,7 +5055,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 187, y: 0}
   m_SizeDelta: {x: 200, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &1684585804
