@@ -468,7 +468,7 @@ Transform:
   m_GameObject: {fileID: 80827349}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: 0.4839925, z: -0, w: 0.8750721}
-  m_LocalPosition: {x: -5.726, y: 1.564, z: -12.877}
+  m_LocalPosition: {x: -5.2, y: 1.67, z: -12.55}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -1699,10 +1699,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ArchiveNull.InvestigationBoard.WorldEvidencePhoto
   photoRenderer: {fileID: 1692602180}
+  photoImage: {fileID: 0}
   titleText: {fileID: 359611331}
   categoryText: {fileID: 1799801023}
   descriptionText: {fileID: 1574874651}
   interactionCollider: {fileID: 297525682}
+  normalizeFrameFacing: 1
 --- !u!65 &297525682
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -1789,14 +1791,14 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 297525680}
   serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -5.491, y: 3.111, z: -6.7282677}
+  m_LocalRotation: {x: 0, y: 1, z: 0, w: 0}
+  m_LocalPosition: {x: -5.4906774, y: 3.111, z: -6.727723}
   m_LocalScale: {x: -0.0041536004, y: 0.23600069, z: 0.22584996}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 1290126265}
   m_Father: {fileID: 482749373}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 180, z: 0}
 --- !u!1 &330585543
 GameObject:
   m_ObjectHideFlags: 0
@@ -1988,8 +1990,8 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 1, y: 2.7996993, z: 1}
-  m_Center: {x: 0, y: -1.2804108, z: 0}
+  m_Size: {x: 1, y: 1.8922688, z: 1}
+  m_Center: {x: 0, y: -0.69616896, z: 0}
 --- !u!1 &339977995
 GameObject:
   m_ObjectHideFlags: 0
@@ -5081,6 +5083,7 @@ MonoBehaviour:
   _releaseCameraWhenUnfocused: 1
   _startAtFarPose: 1
   _startStandingUntilTutorialCompleted: 1
+  _startStandingOnMemoryReturn: 1
   _firstTimeStartPose: {fileID: 80827350}
   _onFocusReleased:
     m_PersistentCalls:
@@ -7667,10 +7670,16 @@ MonoBehaviour:
   photoSpacing: {x: 0.34, y: -0.24}
   photosPerRow: 5
   surfaceOffset: -0.018
+  photoScaleMultiplier: 1.6
+  photoRotationOffset: {x: 0, y: 180, z: 0}
   photoRaycastLayers:
     serializedVersion: 2
     m_Bits: 4294967295
   clickMaxDragDistance: 0.025
+  interactionDistance: 2.75
+  createReticleIfMissing: 1
+  reticleIdleColor: {r: 0.8, g: 0.92, b: 0.94, a: 0.52}
+  reticlePhotoColor: {r: 0.15, g: 1, b: 0.92, a: 1}
 --- !u!1 &1527197673
 GameObject:
   m_ObjectHideFlags: 0
@@ -8517,13 +8526,13 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1654811638}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -0.24, y: -0.232, z: -0.4241}
+  m_LocalRotation: {x: 0, y: 1, z: 0, w: 0}
+  m_LocalPosition: {x: -0.23999643, y: -0.232, z: -0.42410004}
   m_LocalScale: {x: 1, y: 0.41741, z: 0.1341886}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 1524476360}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 180, z: 0}
 --- !u!65 &1654811640
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -8752,7 +8761,7 @@ MonoBehaviour:
   subtitleGroup: {fileID: 0}
   playOnlyFirstTime: 1
   alwaysShowInEditor: 0
-  resetTutorialOnStart: 1
+  resetTutorialOnStart: 0
   lineGap: 0.35
   subtitleFadeDuration: 0.2
   initialDelay: 0.7
@@ -8828,7 +8837,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 187, y: 0}
+  m_AnchoredPosition: {x: 177, y: 0}
   m_SizeDelta: {x: 200, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &1684585804
