@@ -7,6 +7,7 @@ using UnityEngine.InputSystem.Controls;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 using System.IO;
+using System;
 
 namespace ArchiveNull.UI
 {
@@ -288,6 +289,8 @@ namespace ArchiveNull.UI
         private MenuState _state;
         private Coroutine _menuOpenRoutine;
         private Coroutine _monitorLightRoutine;
+
+        public event Action<int, string> ArchiveMounted;
 
         private void Awake()
         {
@@ -2390,6 +2393,7 @@ namespace ArchiveNull.UI
             PlayerPrefs.SetInt(PrefMountedArchive, _mountedArchive);
             PlayerPrefs.Save();
             RefreshMainMenuAvailability();
+            ArchiveMounted?.Invoke(_mountedArchive, MountedArchiveName);
             CloseLevelBrowser();
         }
 

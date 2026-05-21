@@ -106,6 +106,8 @@ namespace ArchiveNull.UI
         private TutorialStep currentStep = TutorialStep.Welcome;
         private bool isPlayingLine;
         private bool hasFocusedTerminal;
+        private bool hasReturnedToFarAfterFocus;
+        private bool hasMountedMemory;
         private float activeTime;
         private Coroutine lineRoutine;
 
@@ -153,7 +155,54 @@ namespace ArchiveNull.UI
                 CreateRuntimeSubtitleUi();
             }
 
+            SubscribeToSceneEvents();
             SetSubtitleVisible(false, true);
+        }
+
+        private void OnDestroy()
+        {
+            UnsubscribeFromSceneEvents();
+        }
+
+        private void SubscribeToSceneEvents()
+        {
+            if (cameraFocus != null)
+            {
+                cameraFocus.ReturnedToFar -= HandleReturnedToFar;
+                cameraFocus.ReturnedToFar += HandleReturnedToFar;
+            }
+
+            if (mainMenuController != null)
+            {
+                mainMenuController.ArchiveMounted -= HandleArchiveMounted;
+                mainMenuController.ArchiveMounted += HandleArchiveMounted;
+            }
+        }
+
+        private void UnsubscribeFromSceneEvents()
+        {
+            if (cameraFocus != null)
+            {
+                cameraFocus.ReturnedToFar -= HandleReturnedToFar;
+            }
+
+            if (mainMenuController != null)
+            {
+                mainMenuController.ArchiveMounted -= HandleArchiveMounted;
+            }
+        }
+
+        private void HandleReturnedToFar()
+        {
+            if (hasFocusedTerminal)
+            {
+                hasReturnedToFarAfterFocus = true;
+            }
+        }
+
+        private void HandleArchiveMounted(int archiveIndex, string archiveName)
+        {
+            hasMountedMemory = true;
         }
 
         private void CreateRuntimeSubtitleUi()
@@ -247,13 +296,13 @@ namespace ArchiveNull.UI
                     }
                     break;
                 case TutorialStep.TerminalFocus:
-                    if (hasFocusedTerminal && cameraFocus != null && cameraFocus.IsInFarPose)
+                    if (hasFocusedTerminal && hasReturnedToFarAfterFocus)
                     {
                         PlayStep(TutorialStep.ReturnToFar);
                     }
                     break;
                 case TutorialStep.ReturnToFar:
-                    if (mainMenuController != null && mainMenuController.HasMountedArchive)
+                    if (hasMountedMemory || (mainMenuController != null && mainMenuController.HasMountedArchive))
                     {
                         PlayStep(TutorialStep.MemoryMounted);
                     }

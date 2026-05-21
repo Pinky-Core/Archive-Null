@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.Events;
+using System;
 
 namespace ArchiveNull.UI
 {
@@ -42,8 +43,12 @@ namespace ArchiveNull.UI
         [SerializeField] private LayerMask _returnToFarFallbackLayers = ~0;
         [SerializeField] private string[] _returnToFarFallbackNameContains = { "mesa", "table", "silla", "chair" };
         [SerializeField] private bool _releaseCameraWhenUnfocused = true;
+
+        [Header("Initial Pose")]
         [SerializeField] private bool _startAtFarPose = true;
         [SerializeField] private bool _startStandingUntilTutorialCompleted = true;
+        [Tooltip("Pose opcional usada solo la primera vez, antes de completar el tutorial. Si queda vacia, usa Stand Pose.")]
+        [SerializeField] private Transform _firstTimeStartPose;
         [SerializeField] private UnityEvent _onFocusReleased;
 
         private enum CameraPose
@@ -66,6 +71,8 @@ namespace ArchiveNull.UI
         private bool _pendingFocusReleasedEvent;
         private Vector2 _mouseLook;
         private float _farMotionBlendTimer;
+
+        public event Action ReturnedToFar;
 
         public bool IsFocused => _isFocused;
         public bool IsInFarPose => !_isFocused && _currentPose == CameraPose.Far;
@@ -99,8 +106,9 @@ namespace ArchiveNull.UI
                 _initialCameraPosition = _targetCamera.transform.position;
                 _initialCameraRotation = _targetCamera.transform.rotation;
                 bool startAtFarPose = ShouldStartAtFarPose();
-                Vector3 startPosition = startAtFarPose ? GetPosePosition(CameraPose.Far) : GetPosePosition(CameraPose.Stand);
-                Quaternion startRotation = startAtFarPose ? GetPoseRotation(CameraPose.Far) : GetPoseRotation(CameraPose.Stand);
+                Transform firstTimePose = !startAtFarPose && ShouldUseFirstTimeStartPose() ? _firstTimeStartPose : null;
+                Vector3 startPosition = firstTimePose != null ? firstTimePose.position : startAtFarPose ? GetPosePosition(CameraPose.Far) : GetPosePosition(CameraPose.Stand);
+                Quaternion startRotation = firstTimePose != null ? firstTimePose.rotation : startAtFarPose ? GetPoseRotation(CameraPose.Far) : GetPoseRotation(CameraPose.Stand);
                 _currentPose = startAtFarPose ? CameraPose.Far : CameraPose.Stand;
                 _targetCamera.transform.SetPositionAndRotation(startPosition, startRotation);
                 _moveStartPosition = startPosition;
@@ -126,6 +134,13 @@ namespace ArchiveNull.UI
             }
 
             return true;
+        }
+
+        private bool ShouldUseFirstTimeStartPose()
+        {
+            return _firstTimeStartPose != null &&
+                   _startStandingUntilTutorialCompleted &&
+                   PlayerPrefs.GetInt(OfficeSpeakerTutorial.CompletedPref, 0) != 1;
         }
 
         private void Update()
@@ -196,6 +211,10 @@ namespace ArchiveNull.UI
                 {
                     _pendingFocusReleasedEvent = false;
                     _onFocusReleased?.Invoke();
+                    if (_currentPose == CameraPose.Far)
+                    {
+                        ReturnedToFar?.Invoke();
+                    }
                 }
                 return;
             }
@@ -276,7 +295,7 @@ namespace ArchiveNull.UI
         {
             _isFocused = false;
             _pendingMenuOpen = false;
-            _pendingFocusReleasedEvent = false;
+            _pendingFocusReleasedEvent = true;
             _menuController?.SuspendTerminalInteraction();
             _currentPose = CameraPose.Far;
             _farMotionBlendTimer = 0f;
@@ -297,7 +316,7 @@ namespace ArchiveNull.UI
         {
             _isFocused = false;
             _pendingMenuOpen = false;
-            _pendingFocusReleasedEvent = false;
+            _pendingFocusReleasedEvent = true;
             _currentPose = CameraPose.Far;
             _farMotionBlendTimer = 0f;
             StartMove(GetPosePosition(CameraPose.Far), GetPoseRotation(CameraPose.Far));
