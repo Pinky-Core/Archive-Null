@@ -111,7 +111,7 @@ public class InspectObject : MonoBehaviour
         {
             originalKinematic = inspectedRigidbody.isKinematic;
             inspectedRigidbody.isKinematic = true;
-            inspectedRigidbody.velocity = Vector3.zero;
+            inspectedRigidbody.linearVelocity = Vector3.zero;
             inspectedRigidbody.angularVelocity = Vector3.zero;
         }
 
