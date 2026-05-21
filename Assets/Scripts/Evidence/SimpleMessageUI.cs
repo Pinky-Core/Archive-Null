@@ -33,6 +33,15 @@ namespace ArchiveNull.Evidence
 
         public void ShowMessage(string message)
         {
+            if (group != null && !group.gameObject.activeSelf)
+            {
+                group.gameObject.SetActive(true);
+            }
+            else if (!gameObject.activeSelf)
+            {
+                gameObject.SetActive(true);
+            }
+
             if (routine != null)
             {
                 StopCoroutine(routine);
