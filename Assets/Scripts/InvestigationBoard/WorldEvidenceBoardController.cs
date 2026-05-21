@@ -22,10 +22,13 @@ namespace ArchiveNull.InvestigationBoard
         [SerializeField] private Vector2 photoSpacing = new Vector2(0.34f, -0.24f);
         [SerializeField] private int photosPerRow = 5;
         [SerializeField] private float surfaceOffset = -0.018f;
+        [SerializeField] private float photoScaleMultiplier = 1.6f;
+        [SerializeField] private Vector3 photoRotationOffset = new Vector3(0f, 180f, 0f);
 
         [Header("Drag")]
         [SerializeField] private LayerMask photoRaycastLayers = ~0;
         [SerializeField] private float clickMaxDragDistance = 0.025f;
+        [SerializeField] private float interactionDistance = 2.75f;
 
         private readonly Dictionary<string, WorldEvidencePhoto> photosById = new Dictionary<string, WorldEvidencePhoto>();
         private WorldEvidencePhoto draggedPhoto;
@@ -69,8 +72,11 @@ namespace ArchiveNull.InvestigationBoard
 
         private void OnDisable()
         {
-            EvidenceInventory.Instance.OnEvidenceRegistered -= HandleEvidenceRegistered;
-            EvidenceInventory.Instance.OnInventoryChanged -= RefreshFromInventory;
+            if (EvidenceInventory.ExistingInstance != null)
+            {
+                EvidenceInventory.ExistingInstance.OnEvidenceRegistered -= HandleEvidenceRegistered;
+                EvidenceInventory.ExistingInstance.OnInventoryChanged -= RefreshFromInventory;
+            }
         }
 
         private void Update()
@@ -102,6 +108,7 @@ namespace ArchiveNull.InvestigationBoard
 
             WorldEvidencePhoto photo = Instantiate(photoPrefab, photoContainer);
             photo.Bind(data);
+            photo.transform.localScale *= photoScaleMultiplier;
             photosById.Add(data.evidenceId, photo);
 
             if (BoardSessionState.WorldPhotoPositions.TryGetValue(data.evidenceId, out Vector2 savedPosition))
@@ -140,7 +147,8 @@ namespace ArchiveNull.InvestigationBoard
             {
                 if (TryGetBoardPoint(out Vector3 boardPoint))
                 {
-                    draggedPhoto.transform.position = boardPoint + boardSurface.forward * surfaceOffset;
+                    draggedPhoto.transform.position = GetSurfaceOffsetPoint(boardPoint);
+                    ApplyPhotoRotation(draggedPhoto);
                     draggedEnough |= Vector3.Distance(dragStartPosition, draggedPhoto.transform.position) > clickMaxDragDistance;
                     SavePhotoPosition(draggedPhoto);
                 }
@@ -161,7 +169,7 @@ namespace ArchiveNull.InvestigationBoard
         private WorldEvidencePhoto RaycastPhoto()
         {
             Ray ray = interactionCamera.ScreenPointToRay(Mouse.current.position.ReadValue());
-            if (!Physics.Raycast(ray, out RaycastHit hit, 100f, photoRaycastLayers, QueryTriggerInteraction.Collide))
+            if (!Physics.Raycast(ray, out RaycastHit hit, interactionDistance, photoRaycastLayers, QueryTriggerInteraction.Collide))
             {
                 return null;
             }
@@ -172,7 +180,7 @@ namespace ArchiveNull.InvestigationBoard
         private bool TryGetBoardPoint(out Vector3 point)
         {
             Ray ray = interactionCamera.ScreenPointToRay(Mouse.current.position.ReadValue());
-            if (boardCollider != null && boardCollider.Raycast(ray, out RaycastHit hit, 100f))
+            if (boardCollider != null && boardCollider.Raycast(ray, out RaycastHit hit, interactionDistance))
             {
                 point = hit.point;
                 return true;
@@ -181,8 +189,19 @@ namespace ArchiveNull.InvestigationBoard
             Plane plane = new Plane(boardSurface.forward, boardSurface.position);
             if (plane.Raycast(ray, out float distance))
             {
+                if (distance > interactionDistance)
+                {
+                    point = default;
+                    return false;
+                }
+
                 point = ray.GetPoint(distance);
-                return true;
+                if (boardCollider != null)
+                {
+                    point = boardCollider.ClosestPoint(point);
+                }
+
+                return boardCollider == null || Vector3.Distance(point, boardCollider.ClosestPoint(point)) <= 0.001f;
             }
 
             point = default;
@@ -218,8 +237,14 @@ namespace ArchiveNull.InvestigationBoard
                 return;
             }
 
-            photo.transform.position = boardSurface.TransformPoint(new Vector3(localPosition.x, localPosition.y, surfaceOffset));
-            photo.transform.rotation = boardSurface.rotation;
+            Vector3 position = boardSurface.TransformPoint(new Vector3(localPosition.x, localPosition.y, 0f));
+            if (boardCollider != null)
+            {
+                position = boardCollider.ClosestPoint(position);
+            }
+
+            photo.transform.position = GetSurfaceOffsetPoint(position);
+            ApplyPhotoRotation(photo);
             SavePhotoPosition(photo);
         }
 
@@ -232,6 +257,19 @@ namespace ArchiveNull.InvestigationBoard
 
             Vector3 local = boardSurface.InverseTransformPoint(photo.transform.position);
             BoardSessionState.WorldPhotoPositions[photo.EvidenceId] = new Vector2(local.x, local.y);
+        }
+
+        private Vector3 GetSurfaceOffsetPoint(Vector3 point)
+        {
+            return point + boardSurface.forward * surfaceOffset;
+        }
+
+        private void ApplyPhotoRotation(WorldEvidencePhoto photo)
+        {
+            if (photo != null)
+            {
+                photo.transform.rotation = boardSurface.rotation * Quaternion.Euler(photoRotationOffset);
+            }
         }
     }
 }

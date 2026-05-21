@@ -47,6 +47,8 @@ namespace ArchiveNull.UI
         [Header("Initial Pose")]
         [SerializeField] private bool _startAtFarPose = true;
         [SerializeField] private bool _startStandingUntilTutorialCompleted = true;
+        [Tooltip("Al regresar desde una memoria, entra parado en la oficina. Desactivado vuelve a Far.")]
+        [SerializeField] private bool _startStandingOnMemoryReturn = false;
         [Tooltip("Pose opcional usada solo la primera vez, antes de completar el tutorial. Si queda vacia, usa Stand Pose.")]
         [SerializeField] private Transform _firstTimeStartPose;
         [SerializeField] private UnityEvent _onFocusReleased;
@@ -126,6 +128,12 @@ namespace ArchiveNull.UI
             if (!_startAtFarPose)
             {
                 return false;
+            }
+
+            bool returningFromMemory = PlayerPrefs.GetInt(OfficeDissolveTransition.PendingOfficeRebuildPref, 0) == 1;
+            if (returningFromMemory)
+            {
+                return !_startStandingOnMemoryReturn;
             }
 
             if (_startStandingUntilTutorialCompleted && PlayerPrefs.GetInt(OfficeSpeakerTutorial.CompletedPref, 0) != 1)

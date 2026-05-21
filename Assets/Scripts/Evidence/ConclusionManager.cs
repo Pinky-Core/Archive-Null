@@ -46,9 +46,9 @@ namespace ArchiveNull.Evidence
 
         private void OnDisable()
         {
-            if (EvidenceInventory.Instance != null)
+            if (EvidenceInventory.ExistingInstance != null)
             {
-                EvidenceInventory.Instance.OnInventoryChanged -= EvaluateConclusions;
+                EvidenceInventory.ExistingInstance.OnInventoryChanged -= EvaluateConclusions;
             }
 
             if (connectionManager != null)

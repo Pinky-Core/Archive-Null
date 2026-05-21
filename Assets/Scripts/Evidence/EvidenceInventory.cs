@@ -24,6 +24,8 @@ namespace ArchiveNull.Evidence
             }
         }
 
+        public static EvidenceInventory ExistingInstance => instance;
+
         public event Action<EvidenceData> OnEvidenceRegistered;
         public event Action OnInventoryChanged;
 

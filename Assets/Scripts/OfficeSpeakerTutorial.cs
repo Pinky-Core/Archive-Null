@@ -203,6 +203,13 @@ namespace ArchiveNull.UI
         private void HandleArchiveMounted(int archiveIndex, string archiveName)
         {
             hasMountedMemory = true;
+
+            // Once a memory is mounted, the terminal has taught its part of the flow.
+            // Prompt the player to leave focus before they already return to Far.
+            if (hasFocusedTerminal)
+            {
+                hasReturnedToFarAfterFocus = true;
+            }
         }
 
         private void CreateRuntimeSubtitleUi()

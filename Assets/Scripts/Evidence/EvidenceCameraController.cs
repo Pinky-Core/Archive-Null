@@ -43,6 +43,7 @@ namespace ArchiveNull.Evidence
         private Coroutine cameraModeRoutine;
         private Coroutine captureFeedbackRoutine;
         private float nextCaptureTime;
+        private readonly RaycastHit[] captureHits = new RaycastHit[24];
 
         private void Awake()
         {
@@ -127,21 +128,9 @@ namespace ArchiveNull.Evidence
             }
 
             Ray ray = playerCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
-            if (!Physics.Raycast(ray, out RaycastHit hit, maxCaptureDistance, ~0, QueryTriggerInteraction.Ignore))
+            if (!TryGetCaptureTarget(ray, out EvidenceTarget target, out bool blocked))
             {
-                ShowMessage("No hay evidencia en foco.");
-                return;
-            }
-
-            EvidenceTarget target = hit.collider.GetComponent<EvidenceTarget>();
-            if (target == null)
-            {
-                target = hit.collider.GetComponentInParent<EvidenceTarget>();
-            }
-
-            if (target == null)
-            {
-                ShowMessage("Objetivo no registrable.");
+                ShowMessage(blocked ? "Objetivo no registrable." : "No hay evidencia en foco.");
                 return;
             }
 
@@ -153,6 +142,63 @@ namespace ArchiveNull.Evidence
 
             bool registered = EvidenceInventory.Instance.RegisterEvidence(target.EvidenceData);
             ShowMessage(registered ? "Evidencia registrada: " + target.EvidenceData.evidenceName : "Evidencia ya registrada.");
+        }
+
+        private bool TryGetCaptureTarget(Ray ray, out EvidenceTarget target, out bool blocked)
+        {
+            target = null;
+            blocked = false;
+
+            int hitCount = Physics.RaycastNonAlloc(ray, captureHits, maxCaptureDistance, ~0, QueryTriggerInteraction.Collide);
+            if (hitCount <= 0)
+            {
+                return false;
+            }
+
+            SortHitsByDistance(captureHits, hitCount);
+            for (int i = 0; i < hitCount; i++)
+            {
+                Collider hitCollider = captureHits[i].collider;
+                if (hitCollider == null)
+                {
+                    continue;
+                }
+
+                target = hitCollider.GetComponent<EvidenceTarget>();
+                if (target == null)
+                {
+                    target = hitCollider.GetComponentInParent<EvidenceTarget>();
+                }
+
+                if (target != null)
+                {
+                    return true;
+                }
+
+                if (!hitCollider.isTrigger)
+                {
+                    blocked = true;
+                    return false;
+                }
+            }
+
+            return false;
+        }
+
+        private static void SortHitsByDistance(RaycastHit[] hits, int count)
+        {
+            for (int i = 1; i < count; i++)
+            {
+                RaycastHit current = hits[i];
+                int j = i - 1;
+                while (j >= 0 && hits[j].distance > current.distance)
+                {
+                    hits[j + 1] = hits[j];
+                    j--;
+                }
+
+                hits[j + 1] = current;
+            }
         }
 
         private void ShowMessage(string message)

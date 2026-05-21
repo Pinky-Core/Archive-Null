@@ -44,10 +44,10 @@ namespace ArchiveNull.InvestigationBoard
 
         private void OnDisable()
         {
-            if (EvidenceInventory.Instance != null)
+            if (EvidenceInventory.ExistingInstance != null)
             {
-                EvidenceInventory.Instance.OnEvidenceRegistered -= HandleEvidenceRegistered;
-                EvidenceInventory.Instance.OnInventoryChanged -= RefreshFromInventory;
+                EvidenceInventory.ExistingInstance.OnEvidenceRegistered -= HandleEvidenceRegistered;
+                EvidenceInventory.ExistingInstance.OnInventoryChanged -= RefreshFromInventory;
             }
         }
 

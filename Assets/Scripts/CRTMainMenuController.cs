@@ -570,16 +570,11 @@ namespace ArchiveNull.UI
             _mainMenuItems.Add(new MenuItem
             {
                 Label = GetLocalizedMainMenuLabel(1),
-                Action = StartMountedMemoryFromTerminal
-            });
-            _mainMenuItems.Add(new MenuItem
-            {
-                Label = GetLocalizedMainMenuLabel(2),
                 Action = OpenSettings
             });
             _mainMenuItems.Add(new MenuItem
             {
-                Label = GetLocalizedMainMenuLabel(3),
+                Label = GetLocalizedMainMenuLabel(2),
                 Action = QuitGame
             });
 
@@ -2285,37 +2280,6 @@ namespace ArchiveNull.UI
 
         private void RefreshMainMenuAvailability()
         {
-            if (_mainMenuItems.Count < 4)
-            {
-                return;
-            }
-
-            _mainMenuItems[1].Hidden = !HasMountedArchive;
-            _mainMenuItems[1].Enabled = HasMountedArchive;
-        }
-
-        private void StartMountedMemoryFromTerminal()
-        {
-            if (!HasMountedArchive)
-            {
-                SetStatus(Localize("NO HAY MEMORIA MONTADA.", "NO MEMORY MOUNTED."));
-                return;
-            }
-
-            string sceneName = MountedArchiveSceneName;
-            if (string.IsNullOrWhiteSpace(sceneName))
-            {
-                SetStatus(Localize("LA MEMORIA MONTADA NO TIENE ESCENA VALIDA.", "THE MOUNTED MEMORY HAS NO VALID SCENE."));
-                return;
-            }
-
-            if (_memorySceneLoader != null)
-            {
-                StartCoroutine(_memorySceneLoader.PlayMemory(sceneName));
-                return;
-            }
-
-            SceneManager.LoadScene(sceneName);
         }
 
         private void OpenMemoryBrowser(int caseIndex)
@@ -2525,9 +2489,8 @@ namespace ArchiveNull.UI
             return index switch
             {
                 0 => Localize("EXPEDIENTES", "CASE FILES"),
-                1 => Localize("INICIAR MEMORIA", "START MEMORY"),
-                2 => Localize("OPCIONES", "SETTINGS"),
-                3 => Localize("SALIR", "QUIT"),
+                1 => Localize("OPCIONES", "SETTINGS"),
+                2 => Localize("SALIR", "QUIT"),
                 _ => string.Empty
             };
         }

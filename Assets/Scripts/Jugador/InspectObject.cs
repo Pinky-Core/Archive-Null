@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;
+using ArchiveNull.Evidence;
 
 public class InspectObject : MonoBehaviour
 {
@@ -21,6 +22,11 @@ public class InspectObject : MonoBehaviour
     public LayerMask obstructionLayers = ~0;
     public bool disableObjectCollisionWhileInspecting = true;
 
+    [Header("Reticle")]
+    public bool createReticleIfMissing = true;
+    public Color reticleIdleColor = new Color(0.8f, 0.92f, 0.94f, 0.5f);
+    public Color reticleInteractColor = new Color(0.15f, 1f, 0.92f, 1f);
+
     private Camera playerCamera;
     private GameObject currentObject = null;
     private bool isInspecting = false;
@@ -35,6 +41,10 @@ public class InspectObject : MonoBehaviour
     private float inspectDistance;
     private float heldCollisionRadius;
     private readonly RaycastHit[] obstructionHits = new RaycastHit[16];
+    private CanvasGroup reticleGroup;
+    private RectTransform reticleRoot;
+    private Image reticleDot;
+    private Image reticleRing;
 
     public static bool IsAnyInspecting { get; private set; }
 
@@ -46,6 +56,11 @@ public class InspectObject : MonoBehaviour
         if (inspectText != null)
         {
             inspectText.gameObject.SetActive(false);
+        }
+
+        if (createReticleIfMissing)
+        {
+            CreateReticle();
         }
     }
 
@@ -69,12 +84,24 @@ public class InspectObject : MonoBehaviour
         }
         else
         {
+            if (EvidenceCameraController.IsAnyCameraModeActive)
+            {
+                SetReticleState(false, false);
+                if (inspectText != null)
+                {
+                    inspectText.gameObject.SetActive(false);
+                }
+
+                return;
+            }
+
             Vector2 mousePosition = Mouse.current != null ? Mouse.current.position.ReadValue() : new Vector2(Screen.width * 0.5f, Screen.height * 0.5f);
             Ray ray = playerCamera.ScreenPointToRay(mousePosition);
             if (Physics.Raycast(ray, out RaycastHit hit, interactionDistance))
             {
                 if (hit.collider.gameObject.CompareTag("Inspectable"))
                 {
+                    SetReticleState(true, true);
                     if (inspectText != null)
                     {
                         inspectText.gameObject.SetActive(true);
@@ -88,6 +115,7 @@ public class InspectObject : MonoBehaviour
                 }
                 else
                 {
+                    SetReticleState(true, false);
                     if (inspectText != null)
                     {
                         inspectText.gameObject.SetActive(false);
@@ -96,6 +124,7 @@ public class InspectObject : MonoBehaviour
             }
             else
             {
+                SetReticleState(true, false);
                 if (inspectText != null)
                 {
                     inspectText.gameObject.SetActive(false);
@@ -129,6 +158,7 @@ public class InspectObject : MonoBehaviour
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
         playerRigidbody.constraints = RigidbodyConstraints.FreezeAll;
+        SetReticleState(false, false);
         if (inspectText != null)
         {
             inspectText.gameObject.SetActive(false);
@@ -156,6 +186,7 @@ public class InspectObject : MonoBehaviour
             Cursor.lockState = CursorLockMode.Locked;
             Cursor.visible = false;
             playerRigidbody.constraints = originalConstraints;
+            SetReticleState(true, false);
         }
     }
 
@@ -287,5 +318,111 @@ public class InspectObject : MonoBehaviour
     static bool WasKeyPressed(Key key)
     {
         return Keyboard.current != null && Keyboard.current[key].wasPressedThisFrame;
+    }
+
+    void CreateReticle()
+    {
+        if (reticleGroup != null)
+        {
+            return;
+        }
+
+        GameObject canvasObject = new GameObject("InspectReticleCanvas", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
+        canvasObject.transform.SetParent(transform, false);
+        Canvas canvas = canvasObject.GetComponent<Canvas>();
+        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+        canvas.sortingOrder = 700;
+
+        CanvasScaler scaler = canvasObject.GetComponent<CanvasScaler>();
+        scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+        scaler.referenceResolution = new Vector2(1920f, 1080f);
+        scaler.matchWidthOrHeight = 0.5f;
+
+        GameObject root = new GameObject("Reticle", typeof(RectTransform), typeof(CanvasGroup));
+        root.transform.SetParent(canvasObject.transform, false);
+        reticleRoot = root.GetComponent<RectTransform>();
+        reticleRoot.anchorMin = new Vector2(0.5f, 0.5f);
+        reticleRoot.anchorMax = new Vector2(0.5f, 0.5f);
+        reticleRoot.pivot = new Vector2(0.5f, 0.5f);
+        reticleRoot.sizeDelta = new Vector2(28f, 28f);
+        reticleGroup = root.GetComponent<CanvasGroup>();
+        reticleGroup.interactable = false;
+        reticleGroup.blocksRaycasts = false;
+
+        reticleRing = CreateReticleImage("Ring", reticleRoot);
+        reticleRing.rectTransform.sizeDelta = new Vector2(18f, 18f);
+        reticleRing.sprite = CreateRingSprite(64);
+
+        reticleDot = CreateReticleImage("Dot", reticleRoot);
+        reticleDot.rectTransform.sizeDelta = new Vector2(4f, 4f);
+        reticleDot.sprite = CreateDotSprite(32);
+
+        SetReticleState(true, false);
+    }
+
+    Image CreateReticleImage(string name, RectTransform parent)
+    {
+        GameObject imageObject = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+        imageObject.transform.SetParent(parent, false);
+        Image image = imageObject.GetComponent<Image>();
+        image.raycastTarget = false;
+        RectTransform rect = image.rectTransform;
+        rect.anchorMin = new Vector2(0.5f, 0.5f);
+        rect.anchorMax = new Vector2(0.5f, 0.5f);
+        rect.pivot = new Vector2(0.5f, 0.5f);
+        rect.anchoredPosition = Vector2.zero;
+        return image;
+    }
+
+    void SetReticleState(bool visible, bool interactable)
+    {
+        if (reticleGroup == null)
+        {
+            return;
+        }
+
+        reticleGroup.alpha = visible ? 1f : 0f;
+        Color color = interactable ? reticleInteractColor : reticleIdleColor;
+        if (reticleDot != null) reticleDot.color = color;
+        if (reticleRing != null) reticleRing.color = color;
+        if (reticleRoot != null) reticleRoot.localScale = Vector3.one * (interactable ? 1.28f : 1f);
+    }
+
+    static Sprite CreateDotSprite(int size)
+    {
+        Texture2D texture = new Texture2D(size, size, TextureFormat.RGBA32, false);
+        Vector2 center = new Vector2(size * 0.5f, size * 0.5f);
+        float radius = size * 0.46f;
+        for (int y = 0; y < size; y++)
+        {
+            for (int x = 0; x < size; x++)
+            {
+                float alpha = Mathf.Clamp01((radius - Vector2.Distance(new Vector2(x, y), center)) * 0.4f);
+                texture.SetPixel(x, y, new Color(1f, 1f, 1f, alpha));
+            }
+        }
+
+        texture.Apply();
+        return Sprite.Create(texture, new Rect(0f, 0f, size, size), new Vector2(0.5f, 0.5f));
+    }
+
+    static Sprite CreateRingSprite(int size)
+    {
+        Texture2D texture = new Texture2D(size, size, TextureFormat.RGBA32, false);
+        Vector2 center = new Vector2(size * 0.5f, size * 0.5f);
+        float radius = size * 0.42f;
+        float thickness = size * 0.07f;
+        for (int y = 0; y < size; y++)
+        {
+            for (int x = 0; x < size; x++)
+            {
+                float delta = Mathf.Abs(Vector2.Distance(new Vector2(x, y), center) - radius);
+                float alpha = Mathf.Clamp01((thickness - delta) * 0.45f);
+                texture.SetPixel(x, y, new Color(1f, 1f, 1f, alpha));
+            }
+        }
+
+        texture.Apply();
+        return Sprite.Create(texture, new Rect(0f, 0f, size, size), new Vector2(0.5f, 0.5f));
     }
 }

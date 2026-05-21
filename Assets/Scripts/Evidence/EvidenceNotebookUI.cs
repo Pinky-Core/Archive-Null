@@ -35,7 +35,10 @@ namespace ArchiveNull.Evidence
 
         private void OnDisable()
         {
-            EvidenceInventory.Instance.OnInventoryChanged -= RefreshEvidence;
+            if (EvidenceInventory.ExistingInstance != null)
+            {
+                EvidenceInventory.ExistingInstance.OnInventoryChanged -= RefreshEvidence;
+            }
         }
 
         private void Update()
