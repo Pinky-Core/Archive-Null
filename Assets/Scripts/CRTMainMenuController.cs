@@ -7,7 +7,6 @@ using UnityEngine.InputSystem.Controls;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 using System.IO;
-using System;
 
 namespace ArchiveNull.UI
 {
@@ -290,7 +289,7 @@ namespace ArchiveNull.UI
         private Coroutine _menuOpenRoutine;
         private Coroutine _monitorLightRoutine;
 
-        public event Action<int, string> ArchiveMounted;
+        public event System.Action<int, string> ArchiveMounted;
 
         private void Awake()
         {

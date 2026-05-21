@@ -31,7 +31,7 @@ namespace ArchiveNull.InvestigationBoard
         private WorldEvidencePhoto draggedPhoto;
         private Vector3 dragStartPosition;
         private bool draggedEnough;
-
+ 
         private void Awake()
         {
             if (interactionCamera == null)
