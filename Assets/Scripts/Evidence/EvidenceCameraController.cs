@@ -11,7 +11,6 @@ namespace ArchiveNull.Evidence
         [Header("Capture")]
         [SerializeField] private Camera playerCamera;
         [SerializeField] private float maxCaptureDistance = 4f;
-        [SerializeField] private LayerMask captureLayers = ~0;
 
         [Header("Optional Custom UI")]
         [SerializeField] private SimpleMessageUI messageUI;
@@ -86,7 +85,7 @@ namespace ArchiveNull.Evidence
             }
 
             Ray ray = playerCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
-            if (!Physics.Raycast(ray, out RaycastHit hit, maxCaptureDistance, captureLayers, QueryTriggerInteraction.Ignore))
+            if (!Physics.Raycast(ray, out RaycastHit hit, maxCaptureDistance, ~0, QueryTriggerInteraction.Ignore))
             {
                 ShowMessage("No hay evidencia en foco.");
                 return;

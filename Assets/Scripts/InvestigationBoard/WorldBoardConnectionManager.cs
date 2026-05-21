@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System;
 using UnityEngine;
 
 namespace ArchiveNull.InvestigationBoard
@@ -13,6 +14,8 @@ namespace ArchiveNull.InvestigationBoard
         private readonly Dictionary<string, WorldEvidencePhoto> photosById = new Dictionary<string, WorldEvidencePhoto>();
         private readonly Dictionary<string, LineRenderer> linesByKey = new Dictionary<string, LineRenderer>();
         private WorldEvidencePhoto pendingPhoto;
+
+        public event Action OnConnectionsChanged;
 
         public void RegisterPhoto(WorldEvidencePhoto photo)
         {
@@ -62,7 +65,13 @@ namespace ArchiveNull.InvestigationBoard
             }
 
             CreateLine(key, a, b);
+            OnConnectionsChanged?.Invoke();
             return true;
+        }
+
+        public bool HasConnection(string evidenceA, string evidenceB)
+        {
+            return BoardSessionState.Connections.Contains(BoardSessionState.GetConnectionKey(evidenceA, evidenceB));
         }
 
         public void RefreshConnections()

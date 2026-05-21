@@ -17,6 +17,7 @@ public class InspectObject : MonoBehaviour
     public float minInspectDistance = 0.35f;
     public float maxInspectDistance = 1.25f;
     public float holdRadius = 0.18f;
+    public float obstructionPadding = 0.03f;
     public LayerMask obstructionLayers = ~0;
     public bool disableObjectCollisionWhileInspecting = true;
 
@@ -32,6 +33,8 @@ public class InspectObject : MonoBehaviour
     private Rigidbody inspectedRigidbody;
     private RigidbodyConstraints originalConstraints;
     private float inspectDistance;
+    private float heldCollisionRadius;
+    private readonly RaycastHit[] obstructionHits = new RaycastHit[16];
 
     public static bool IsAnyInspecting { get; private set; }
 
@@ -198,27 +201,52 @@ public class InspectObject : MonoBehaviour
         Vector3 origin = playerCamera.transform.position;
         Vector3 direction = playerCamera.transform.forward;
         float distance = Mathf.Clamp(inspectDistance, minInspectDistance, maxInspectDistance);
-
-        if (Physics.SphereCast(origin, holdRadius, direction, out RaycastHit hit, distance, obstructionLayers, QueryTriggerInteraction.Ignore))
+        float radius = Mathf.Max(holdRadius, heldCollisionRadius);
+        int hitCount = Physics.SphereCastNonAlloc(origin, radius, direction, obstructionHits, distance, obstructionLayers, QueryTriggerInteraction.Ignore);
+        float nearestDistance = distance;
+        for (int i = 0; i < hitCount; i++)
         {
-            return origin + direction * Mathf.Max(minInspectDistance, hit.distance - holdRadius);
+            Collider hitCollider = obstructionHits[i].collider;
+            if (hitCollider == null || IsIgnoredObstruction(hitCollider))
+            {
+                continue;
+            }
+
+            nearestDistance = Mathf.Min(nearestDistance, obstructionHits[i].distance);
         }
 
-        return origin + direction * distance;
+        return origin + direction * Mathf.Max(0.02f, nearestDistance - obstructionPadding);
     }
 
     void CacheAndDisableInspectedColliders()
     {
         inspectedColliders = currentObject.GetComponentsInChildren<Collider>(true);
         inspectedColliderStates = new bool[inspectedColliders.Length];
+        Bounds combinedBounds = default;
+        bool hasBounds = false;
         for (int i = 0; i < inspectedColliders.Length; i++)
         {
             inspectedColliderStates[i] = inspectedColliders[i] != null && inspectedColliders[i].enabled;
+            if (inspectedColliders[i] != null && inspectedColliderStates[i])
+            {
+                if (!hasBounds)
+                {
+                    combinedBounds = inspectedColliders[i].bounds;
+                    hasBounds = true;
+                }
+                else
+                {
+                    combinedBounds.Encapsulate(inspectedColliders[i].bounds);
+                }
+            }
+
             if (disableObjectCollisionWhileInspecting && inspectedColliders[i] != null)
             {
                 inspectedColliders[i].enabled = false;
             }
         }
+
+        heldCollisionRadius = hasBounds ? Mathf.Max(combinedBounds.extents.x, combinedBounds.extents.y, combinedBounds.extents.z) : holdRadius;
     }
 
     void RestoreInspectedColliders()
@@ -238,6 +266,22 @@ public class InspectObject : MonoBehaviour
 
         inspectedColliders = null;
         inspectedColliderStates = null;
+        heldCollisionRadius = 0f;
+    }
+
+    bool IsIgnoredObstruction(Collider candidate)
+    {
+        if (candidate == null)
+        {
+            return true;
+        }
+
+        if (currentObject != null && candidate.transform.IsChildOf(currentObject.transform))
+        {
+            return true;
+        }
+
+        return player != null && candidate.transform.IsChildOf(player);
     }
 
     static bool WasKeyPressed(Key key)

@@ -10,6 +10,7 @@ namespace ArchiveNull.Evidence
     {
         [SerializeField] private ConclusionData[] conclusions;
         [SerializeField] private BoardConnectionManager connectionManager;
+        [SerializeField] private WorldBoardConnectionManager worldConnectionManager;
         [SerializeField] private SimpleMessageUI messageUI;
 
         private readonly HashSet<string> unlocked = new HashSet<string>();
@@ -22,6 +23,11 @@ namespace ArchiveNull.Evidence
             {
                 connectionManager = FindObjectOfType<BoardConnectionManager>();
             }
+
+            if (worldConnectionManager == null)
+            {
+                worldConnectionManager = FindObjectOfType<WorldBoardConnectionManager>();
+            }
         }
 
         private void OnEnable()
@@ -30,6 +36,11 @@ namespace ArchiveNull.Evidence
             if (connectionManager != null)
             {
                 connectionManager.OnConnectionsChanged += EvaluateConclusions;
+            }
+
+            if (worldConnectionManager != null)
+            {
+                worldConnectionManager.OnConnectionsChanged += EvaluateConclusions;
             }
         }
 
@@ -43,6 +54,11 @@ namespace ArchiveNull.Evidence
             if (connectionManager != null)
             {
                 connectionManager.OnConnectionsChanged -= EvaluateConclusions;
+            }
+
+            if (worldConnectionManager != null)
+            {
+                worldConnectionManager.OnConnectionsChanged -= EvaluateConclusions;
             }
         }
 
@@ -94,14 +110,18 @@ namespace ArchiveNull.Evidence
                 }
             }
 
-            if (connectionManager == null)
+            if (connectionManager == null && worldConnectionManager == null)
             {
                 return true;
             }
 
             for (int i = 0; i < conclusion.requiredEvidenceIds.Length - 1; i++)
             {
-                if (!connectionManager.HasConnection(conclusion.requiredEvidenceIds[i], conclusion.requiredEvidenceIds[i + 1]))
+                string fromId = conclusion.requiredEvidenceIds[i];
+                string toId = conclusion.requiredEvidenceIds[i + 1];
+                bool connected = connectionManager != null && connectionManager.HasConnection(fromId, toId);
+                connected |= worldConnectionManager != null && worldConnectionManager.HasConnection(fromId, toId);
+                if (!connected)
                 {
                     return false;
                 }

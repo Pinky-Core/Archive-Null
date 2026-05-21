@@ -37,6 +37,8 @@ namespace ArchiveNull.UI
         private float _pitch;
         private float _yaw;
         private float _lockedHeight;
+        private readonly RaycastHit[] _boxCastHits = new RaycastHit[16];
+        private readonly Collider[] _overlapHits = new Collider[16];
 
         private void Reset()
         {
@@ -231,19 +233,37 @@ namespace ArchiveNull.UI
             Quaternion orientation = colliderTransform.rotation;
             Vector3 halfExtents = Vector3.Scale(_movementCollider.size * 0.5f, colliderTransform.lossyScale);
             halfExtents = new Vector3(
-                Mathf.Max(0.001f, halfExtents.x - _collisionPadding),
-                Mathf.Max(0.001f, halfExtents.y - _collisionPadding),
-                Mathf.Max(0.001f, halfExtents.z - _collisionPadding));
+                Mathf.Max(0.001f, halfExtents.x + _collisionPadding),
+                Mathf.Max(0.001f, halfExtents.y + _collisionPadding),
+                Mathf.Max(0.001f, halfExtents.z + _collisionPadding));
 
-            if (Physics.BoxCast(currentCenter, halfExtents, direction, out RaycastHit hit, orientation, distance + _collisionPadding, _collisionLayers, QueryTriggerInteraction.Ignore))
+            int hitCount = Physics.BoxCastNonAlloc(currentCenter, halfExtents, direction, _boxCastHits, orientation, distance + _collisionPadding, _collisionLayers, QueryTriggerInteraction.Ignore);
+            float nearestDistance = float.PositiveInfinity;
+            for (int i = 0; i < hitCount; i++)
             {
-                if (hit.collider == _movementCollider)
+                Collider hitCollider = _boxCastHits[i].collider;
+                if (IsMovementCollider(hitCollider))
                 {
-                    return targetPosition;
+                    continue;
                 }
 
-                float allowedDistance = Mathf.Max(0f, hit.distance - _collisionPadding);
+                nearestDistance = Mathf.Min(nearestDistance, _boxCastHits[i].distance);
+            }
+
+            if (!float.IsPositiveInfinity(nearestDistance))
+            {
+                float allowedDistance = Mathf.Max(0f, nearestDistance - _collisionPadding);
                 return currentPosition + direction * allowedDistance;
+            }
+
+            Vector3 targetCenter = GetMovementColliderWorldCenter(targetPosition);
+            int overlapCount = Physics.OverlapBoxNonAlloc(targetCenter, halfExtents, _overlapHits, orientation, _collisionLayers, QueryTriggerInteraction.Ignore);
+            for (int i = 0; i < overlapCount; i++)
+            {
+                if (!IsMovementCollider(_overlapHits[i]))
+                {
+                    return currentPosition;
+                }
             }
 
             return targetPosition;
@@ -260,6 +280,11 @@ namespace ArchiveNull.UI
             Vector3 currentCameraPosition = _cameraRoot != null ? _cameraRoot.position : cameraPosition;
             Vector3 centerOffset = colliderTransform.TransformPoint(_movementCollider.center) - currentCameraPosition;
             return cameraPosition + centerOffset;
+        }
+
+        private bool IsMovementCollider(Collider candidate)
+        {
+            return candidate == null || candidate == _movementCollider;
         }
 
         private static float NormalizeAngle(float angle)
