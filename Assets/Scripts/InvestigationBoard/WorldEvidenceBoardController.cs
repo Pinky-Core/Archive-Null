@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using ArchiveNull.Evidence;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.UI;
 
 namespace ArchiveNull.InvestigationBoard
 {
@@ -30,10 +31,19 @@ namespace ArchiveNull.InvestigationBoard
         [SerializeField] private float clickMaxDragDistance = 0.025f;
         [SerializeField] private float interactionDistance = 2.75f;
 
+        [Header("Reticle")]
+        [SerializeField] private bool createReticleIfMissing = true;
+        [SerializeField] private Color reticleIdleColor = new Color(0.8f, 0.92f, 0.94f, 0.52f);
+        [SerializeField] private Color reticlePhotoColor = new Color(0.15f, 1f, 0.92f, 1f);
+
         private readonly Dictionary<string, WorldEvidencePhoto> photosById = new Dictionary<string, WorldEvidencePhoto>();
         private WorldEvidencePhoto draggedPhoto;
         private Vector3 dragStartPosition;
         private bool draggedEnough;
+        private CanvasGroup reticleGroup;
+        private RectTransform reticleRoot;
+        private Image reticleDot;
+        private Image reticleFrame;
  
         private void Awake()
         {
@@ -61,6 +71,11 @@ namespace ArchiveNull.InvestigationBoard
             {
                 zones = GetComponentsInChildren<WorldBoardZone>(true);
             }
+
+            if (createReticleIfMissing)
+            {
+                CreateReticle();
+            }
         }
 
         private void OnEnable()
@@ -82,6 +97,7 @@ namespace ArchiveNull.InvestigationBoard
         private void Update()
         {
             HandleMouse();
+            UpdateReticle();
             connectionManager?.UpdateVisuals();
         }
 
@@ -269,6 +285,107 @@ namespace ArchiveNull.InvestigationBoard
             if (photo != null)
             {
                 photo.transform.rotation = boardSurface.rotation * Quaternion.Euler(photoRotationOffset);
+            }
+        }
+
+        private void UpdateReticle()
+        {
+            if (reticleGroup == null || interactionCamera == null)
+            {
+                return;
+            }
+
+            Ray ray = interactionCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
+            WorldEvidencePhoto photo = RaycastPhoto(ray);
+            bool photoHover = photo != null;
+            bool boardHover = boardCollider != null && boardCollider.Raycast(ray, out _, interactionDistance);
+            SetReticleState(photoHover || boardHover, photoHover);
+        }
+
+        private WorldEvidencePhoto RaycastPhoto(Ray ray)
+        {
+            if (!Physics.Raycast(ray, out RaycastHit hit, interactionDistance, photoRaycastLayers, QueryTriggerInteraction.Collide))
+            {
+                return null;
+            }
+
+            return hit.collider.GetComponentInParent<WorldEvidencePhoto>();
+        }
+
+        private void CreateReticle()
+        {
+            GameObject canvasObject = new GameObject("EvidenceBoardReticleCanvas", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
+            canvasObject.transform.SetParent(transform, false);
+            Canvas canvas = canvasObject.GetComponent<Canvas>();
+            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            canvas.sortingOrder = 710;
+
+            CanvasScaler scaler = canvasObject.GetComponent<CanvasScaler>();
+            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            scaler.referenceResolution = new Vector2(1920f, 1080f);
+            scaler.matchWidthOrHeight = 0.5f;
+
+            GameObject root = new GameObject("BoardReticle", typeof(RectTransform), typeof(CanvasGroup));
+            root.transform.SetParent(canvasObject.transform, false);
+            reticleRoot = root.GetComponent<RectTransform>();
+            reticleRoot.anchorMin = new Vector2(0.5f, 0.5f);
+            reticleRoot.anchorMax = new Vector2(0.5f, 0.5f);
+            reticleRoot.pivot = new Vector2(0.5f, 0.5f);
+            reticleRoot.sizeDelta = new Vector2(26f, 26f);
+            reticleGroup = root.GetComponent<CanvasGroup>();
+            reticleGroup.interactable = false;
+            reticleGroup.blocksRaycasts = false;
+
+            reticleFrame = CreateReticleImage("Frame", reticleRoot, new Vector2(16f, 16f));
+            Outline outline = reticleFrame.gameObject.AddComponent<Outline>();
+            outline.effectDistance = new Vector2(1.5f, -1.5f);
+            reticleFrame.color = new Color(0f, 0f, 0f, 0f);
+
+            reticleDot = CreateReticleImage("Dot", reticleRoot, new Vector2(4f, 4f));
+            SetReticleState(false, false);
+        }
+
+        private static Image CreateReticleImage(string name, RectTransform parent, Vector2 size)
+        {
+            GameObject imageObject = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+            imageObject.transform.SetParent(parent, false);
+            Image image = imageObject.GetComponent<Image>();
+            image.raycastTarget = false;
+            RectTransform rect = image.rectTransform;
+            rect.anchorMin = new Vector2(0.5f, 0.5f);
+            rect.anchorMax = new Vector2(0.5f, 0.5f);
+            rect.pivot = new Vector2(0.5f, 0.5f);
+            rect.anchoredPosition = Vector2.zero;
+            rect.sizeDelta = size;
+            return image;
+        }
+
+        private void SetReticleState(bool visible, bool photoHover)
+        {
+            if (reticleGroup == null)
+            {
+                return;
+            }
+
+            reticleGroup.alpha = visible ? 1f : 0f;
+            Color color = photoHover ? reticlePhotoColor : reticleIdleColor;
+            if (reticleDot != null)
+            {
+                reticleDot.color = color;
+            }
+
+            if (reticleFrame != null)
+            {
+                Outline outline = reticleFrame.GetComponent<Outline>();
+                if (outline != null)
+                {
+                    outline.effectColor = color;
+                }
+            }
+
+            if (reticleRoot != null)
+            {
+                reticleRoot.localScale = Vector3.one * (photoHover ? 1.25f : 1f);
             }
         }
     }
