@@ -19,10 +19,10 @@ namespace ArchiveNull.InvestigationBoard
         [SerializeField] private WorldBoardConnectionManager connectionManager;
 
         [Header("Layout")]
-        [SerializeField] private Vector2 firstPhotoLocalPosition = new Vector2(-1.1f, 0.65f);
-        [SerializeField] private Vector2 photoSpacing = new Vector2(0.34f, -0.24f);
-        [SerializeField] private int photosPerRow = 5;
-        [SerializeField] private float surfaceOffset = -0.018f;
+        [SerializeField] private Vector2 firstPhotoLocalPosition = new Vector2(-0.32f, 0.24f);
+        [SerializeField] private Vector2 photoSpacing = new Vector2(0.22f, -0.24f);
+        [SerializeField] private int photosPerRow = 4;
+        [SerializeField] private float surfaceOffset = 0.03f;
         [SerializeField] private float photoScaleMultiplier = 3f;
         [SerializeField] private Vector3 photoRotationOffset = Vector3.zero;
 
@@ -39,6 +39,7 @@ namespace ArchiveNull.InvestigationBoard
         private readonly Dictionary<string, WorldEvidencePhoto> photosById = new Dictionary<string, WorldEvidencePhoto>();
         private WorldEvidencePhoto draggedPhoto;
         private Vector3 dragStartPosition;
+        private Vector3 dragSurfaceOffset;
         private bool draggedEnough;
         private CanvasGroup reticleGroup;
         private RectTransform reticleRoot;
@@ -138,7 +139,7 @@ namespace ArchiveNull.InvestigationBoard
             {
                 int row = index / Mathf.Max(1, photosPerRow);
                 int column = index % Mathf.Max(1, photosPerRow);
-                Vector2 localPosition = firstPhotoLocalPosition + new Vector2(photoSpacing.x * column, photoSpacing.y * row);
+                Vector2 localPosition = GetInitialPhotoLocalPosition(row, column);
                 SetPhotoLocalPosition(photo, localPosition);
             }
 
@@ -159,6 +160,14 @@ namespace ArchiveNull.InvestigationBoard
                 if (draggedPhoto != null)
                 {
                     dragStartPosition = draggedPhoto.transform.position;
+                    if (TryGetBoardPoint(out Vector3 boardPoint))
+                    {
+                        dragSurfaceOffset = draggedPhoto.transform.position - GetSurfaceOffsetPoint(boardPoint);
+                    }
+                    else
+                    {
+                        dragSurfaceOffset = Vector3.zero;
+                    }
                 }
             }
 
@@ -166,7 +175,7 @@ namespace ArchiveNull.InvestigationBoard
             {
                 if (TryGetBoardPoint(out Vector3 boardPoint))
                 {
-                    SetPhotoWorldPoint(draggedPhoto, boardPoint);
+                    SetPhotoWorldPoint(draggedPhoto, boardPoint + dragSurfaceOffset);
                     ApplyPhotoRotation(draggedPhoto);
                     draggedEnough |= Vector3.Distance(dragStartPosition, draggedPhoto.transform.position) > clickMaxDragDistance;
                     SavePhotoPosition(draggedPhoto);
@@ -188,12 +197,7 @@ namespace ArchiveNull.InvestigationBoard
         private WorldEvidencePhoto RaycastPhoto()
         {
             Ray ray = interactionCamera.ScreenPointToRay(Mouse.current.position.ReadValue());
-            if (!Physics.Raycast(ray, out RaycastHit hit, interactionDistance, photoRaycastLayers, QueryTriggerInteraction.Collide))
-            {
-                return null;
-            }
-
-            return hit.collider.GetComponentInParent<WorldEvidencePhoto>();
+            return RaycastPhoto(ray);
         }
 
         private bool TryGetBoardPoint(out Vector3 point)
@@ -256,7 +260,8 @@ namespace ArchiveNull.InvestigationBoard
                 return;
             }
 
-            Vector3 position = boardSurface.TransformPoint(new Vector3(localPosition.x, localPosition.y, 0f));
+            Vector2 distributedPosition = ClampLocalBoardPosition(localPosition);
+            Vector3 position = boardSurface.TransformPoint(new Vector3(distributedPosition.x, distributedPosition.y, 0f));
             if (boardCollider != null)
             {
                 position = boardCollider.ClosestPoint(position);
@@ -334,7 +339,10 @@ namespace ArchiveNull.InvestigationBoard
                 return;
             }
 
-            Vector3 finalPoint = GetSurfaceOffsetPoint(worldPoint);
+            Vector3 localPoint = boardSurface.InverseTransformPoint(worldPoint);
+            Vector2 clamped = ClampLocalBoardPosition(new Vector2(localPoint.x, localPoint.y));
+            Vector3 clampedWorldPoint = boardSurface.TransformPoint(new Vector3(clamped.x, clamped.y, 0f));
+            Vector3 finalPoint = GetSurfaceOffsetPoint(clampedWorldPoint);
             if (photo.transform.parent == boardSurface || photo.transform.parent == runtimePhotoContainer)
             {
                 photo.transform.localPosition = photo.transform.parent.InverseTransformPoint(finalPoint);
@@ -360,12 +368,82 @@ namespace ArchiveNull.InvestigationBoard
 
         private WorldEvidencePhoto RaycastPhoto(Ray ray)
         {
-            if (!Physics.Raycast(ray, out RaycastHit hit, interactionDistance, photoRaycastLayers, QueryTriggerInteraction.Collide))
+            WorldEvidencePhoto closestPhoto = null;
+            float closestDistance = interactionDistance;
+            foreach (WorldEvidencePhoto photo in photosById.Values)
             {
-                return null;
+                if (photo == null || photo.InteractionCollider == null)
+                {
+                    continue;
+                }
+
+                if (photo.InteractionCollider.Raycast(ray, out RaycastHit hit, interactionDistance) && hit.distance <= closestDistance)
+                {
+                    closestPhoto = photo;
+                    closestDistance = hit.distance;
+                }
             }
 
-            return hit.collider.GetComponentInParent<WorldEvidencePhoto>();
+            return closestPhoto;
+        }
+
+        private Vector2 ClampLocalBoardPosition(Vector2 localPosition)
+        {
+            if (!TryGetLocalBoardRect(out Rect boardRect))
+            {
+                return localPosition;
+            }
+
+            const float margin = 0.08f;
+            return new Vector2(
+                Mathf.Clamp(localPosition.x, boardRect.xMin + margin, boardRect.xMax - margin),
+                Mathf.Clamp(localPosition.y, boardRect.yMin + margin, boardRect.yMax - margin));
+        }
+
+        private Vector2 GetInitialPhotoLocalPosition(int row, int column)
+        {
+            Vector2 spacing = new Vector2(Mathf.Abs(photoSpacing.x), -Mathf.Abs(photoSpacing.y));
+            Vector2 configuredPosition = firstPhotoLocalPosition + new Vector2(spacing.x * column, spacing.y * row);
+            return ClampLocalBoardPosition(configuredPosition);
+        }
+
+        private bool TryGetLocalBoardRect(out Rect rect)
+        {
+            rect = default;
+            if (boardCollider == null || boardSurface == null)
+            {
+                return false;
+            }
+
+            Bounds bounds = boardCollider.bounds;
+            Vector3[] corners =
+            {
+                new Vector3(bounds.min.x, bounds.min.y, bounds.min.z),
+                new Vector3(bounds.min.x, bounds.max.y, bounds.min.z),
+                new Vector3(bounds.max.x, bounds.min.y, bounds.min.z),
+                new Vector3(bounds.max.x, bounds.max.y, bounds.min.z),
+                new Vector3(bounds.min.x, bounds.min.y, bounds.max.z),
+                new Vector3(bounds.min.x, bounds.max.y, bounds.max.z),
+                new Vector3(bounds.max.x, bounds.min.y, bounds.max.z),
+                new Vector3(bounds.max.x, bounds.max.y, bounds.max.z)
+            };
+
+            Vector3 first = boardSurface.InverseTransformPoint(corners[0]);
+            float minX = first.x;
+            float maxX = first.x;
+            float minY = first.y;
+            float maxY = first.y;
+            for (int i = 1; i < corners.Length; i++)
+            {
+                Vector3 local = boardSurface.InverseTransformPoint(corners[i]);
+                minX = Mathf.Min(minX, local.x);
+                maxX = Mathf.Max(maxX, local.x);
+                minY = Mathf.Min(minY, local.y);
+                maxY = Mathf.Max(maxY, local.y);
+            }
+
+            rect = Rect.MinMaxRect(minX, minY, maxX, maxY);
+            return rect.width > 0.001f && rect.height > 0.001f;
         }
 
         private void CreateReticle()

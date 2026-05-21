@@ -10127,6 +10127,9 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 4294967295
   disableObjectCollisionWhileInspecting: 1
+  createReticleIfMissing: 1
+  reticleIdleColor: {r: 0.8, g: 0.92, b: 0.94, a: 0.5}
+  reticleInteractColor: {r: 0.15, g: 1, b: 0.92, a: 1}
 --- !u!212 &876170500
 SpriteRenderer:
   serializedVersion: 2
@@ -14694,6 +14697,7 @@ GameObject:
   - component: {fileID: 1302670785}
   - component: {fileID: 1302670784}
   - component: {fileID: 1302670783}
+  - component: {fileID: 1302670788}
   m_Layer: 0
   m_Name: Hoja 2
   m_TagString: Inspectable
@@ -14823,6 +14827,26 @@ Transform:
   - {fileID: 1685622914}
   m_Father: {fileID: 107571215}
   m_LocalEulerAnglesHint: {x: 0, y: -79.795, z: 180}
+--- !u!114 &1302670788
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1302670782}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b62fe6ec23862894e9b41e1961484434, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ArchiveNull.Evidence.EvidenceTarget
+  evidenceData: {fileID: 0}
+  evidenceId: lvl1_escaperoom_hoja_2
+  evidenceName: Hoja 2
+  description: 
+  category: 1
+  photoSprite: {fileID: 0}
+  validEvidence: 1
+  invalidMessage: No hay evidencia util en este objetivo.
 --- !u!1001 &1311711938
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -23816,6 +23840,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ArchiveNull.Evidence.EvidenceCameraController
   playerCamera: {fileID: 20437471513793055}
   maxCaptureDistance: 1
+  capturedPhotoWidth: 1024
+  createNotebookIfMissing: 1
+  notebookToggleKey: 3
   messageUI: {fileID: 0}
   cameraModeUI: {fileID: 0}
   audioSource: {fileID: 0}
