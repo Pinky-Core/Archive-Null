@@ -81,6 +81,11 @@ namespace ArchiveNull.Evidence
                 return;
             }
 
+            if (global::InspectObject.IsAnyInspecting)
+            {
+                return;
+            }
+
             if (Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame)
             {
                 TryCapture();
