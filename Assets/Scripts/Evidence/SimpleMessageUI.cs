@@ -24,6 +24,13 @@ namespace ArchiveNull.Evidence
             SetVisible(false, true);
         }
 
+        public void Configure(TMP_Text text, CanvasGroup canvasGroup)
+        {
+            messageText = text;
+            group = canvasGroup;
+            SetVisible(false, true);
+        }
+
         public void ShowMessage(string message)
         {
             if (routine != null)
