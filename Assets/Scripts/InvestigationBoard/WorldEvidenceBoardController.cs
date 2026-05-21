@@ -23,8 +23,8 @@ namespace ArchiveNull.InvestigationBoard
         [SerializeField] private Vector2 photoSpacing = new Vector2(0.34f, -0.24f);
         [SerializeField] private int photosPerRow = 5;
         [SerializeField] private float surfaceOffset = -0.018f;
-        [SerializeField] private float photoScaleMultiplier = 1.6f;
-        [SerializeField] private Vector3 photoRotationOffset = new Vector3(0f, 180f, 0f);
+        [SerializeField] private float photoScaleMultiplier = 3f;
+        [SerializeField] private Vector3 photoRotationOffset = Vector3.zero;
 
         [Header("Drag")]
         [SerializeField] private LayerMask photoRaycastLayers = ~0;
@@ -44,6 +44,7 @@ namespace ArchiveNull.InvestigationBoard
         private RectTransform reticleRoot;
         private Image reticleDot;
         private Image reticleFrame;
+        private Transform runtimePhotoContainer;
  
         private void Awake()
         {
@@ -57,9 +58,9 @@ namespace ArchiveNull.InvestigationBoard
                 boardSurface = transform;
             }
 
-            if (photoContainer == null)
+            if (photoContainer == null || photoContainer == photoPrefab?.transform)
             {
-                photoContainer = transform;
+                photoContainer = GetRuntimePhotoContainer();
             }
 
             if (connectionManager == null)
@@ -122,9 +123,11 @@ namespace ArchiveNull.InvestigationBoard
                 return;
             }
 
-            WorldEvidencePhoto photo = Instantiate(photoPrefab, photoContainer);
+            Transform spawnParent = photoContainer == photoPrefab.transform ? GetRuntimePhotoContainer() : photoContainer;
+            WorldEvidencePhoto photo = Instantiate(photoPrefab);
+            photo.transform.SetParent(spawnParent, true);
             photo.Bind(data);
-            photo.transform.localScale *= photoScaleMultiplier;
+            NormalizePhotoScale(photo);
             photosById.Add(data.evidenceId, photo);
 
             if (BoardSessionState.WorldPhotoPositions.TryGetValue(data.evidenceId, out Vector2 savedPosition))
@@ -286,6 +289,38 @@ namespace ArchiveNull.InvestigationBoard
             {
                 photo.transform.rotation = boardSurface.rotation * Quaternion.Euler(photoRotationOffset);
             }
+        }
+
+        private Transform GetRuntimePhotoContainer()
+        {
+            if (runtimePhotoContainer != null)
+            {
+                return runtimePhotoContainer;
+            }
+
+            Transform existing = transform.Find("SpawnedEvidencePhotos");
+            if (existing != null)
+            {
+                runtimePhotoContainer = existing;
+                return runtimePhotoContainer;
+            }
+
+            GameObject container = new GameObject("SpawnedEvidencePhotos");
+            container.transform.SetParent(transform, false);
+            runtimePhotoContainer = container.transform;
+            return runtimePhotoContainer;
+        }
+
+        private void NormalizePhotoScale(WorldEvidencePhoto photo)
+        {
+            if (photo == null)
+            {
+                return;
+            }
+
+            Vector3 scale = photo.transform.localScale;
+            scale = new Vector3(Mathf.Abs(scale.x), Mathf.Abs(scale.y), Mathf.Abs(scale.z));
+            photo.transform.localScale = scale * Mathf.Max(0.01f, photoScaleMultiplier);
         }
 
         private void UpdateReticle()
