@@ -17,6 +17,7 @@ namespace ArchiveNull.Evidence
         [TextArea(3, 8)]
         [SerializeField] private string description;
         [SerializeField] private EvidenceCategory category = EvidenceCategory.Other;
+        [Tooltip("Fallback opcional. La camara reemplaza esto por la foto real capturada en la sesion.")]
         [SerializeField] private Sprite photoSprite;
         [SerializeField] private bool validEvidence = true;
         [SerializeField] private string invalidMessage = "No hay evidencia util en este objetivo.";
@@ -49,6 +50,25 @@ namespace ArchiveNull.Evidence
 
             message = string.Empty;
             return true;
+        }
+
+        public EvidenceData CreateCapturedEvidence(Sprite capturedPhoto)
+        {
+            EvidenceData source = EvidenceData;
+            if (source == null)
+            {
+                return null;
+            }
+
+            EvidenceData captured = ScriptableObject.CreateInstance<EvidenceData>();
+            captured.name = source.evidenceId + "_CapturedEvidence";
+            captured.evidenceId = source.evidenceId;
+            captured.evidenceName = source.evidenceName;
+            captured.description = source.description;
+            captured.category = source.category;
+            captured.photoSprite = capturedPhoto != null ? capturedPhoto : source.photoSprite;
+            captured.sourceSceneName = source.sourceSceneName;
+            return captured;
         }
 
         private void OnValidate()

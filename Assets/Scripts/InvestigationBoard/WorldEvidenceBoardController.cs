@@ -166,7 +166,7 @@ namespace ArchiveNull.InvestigationBoard
             {
                 if (TryGetBoardPoint(out Vector3 boardPoint))
                 {
-                    draggedPhoto.transform.position = GetSurfaceOffsetPoint(boardPoint);
+                    SetPhotoWorldPoint(draggedPhoto, boardPoint);
                     ApplyPhotoRotation(draggedPhoto);
                     draggedEnough |= Vector3.Distance(dragStartPosition, draggedPhoto.transform.position) > clickMaxDragDistance;
                     SavePhotoPosition(draggedPhoto);
@@ -262,7 +262,7 @@ namespace ArchiveNull.InvestigationBoard
                 position = boardCollider.ClosestPoint(position);
             }
 
-            photo.transform.position = GetSurfaceOffsetPoint(position);
+            SetPhotoWorldPoint(photo, position);
             ApplyPhotoRotation(photo);
             SavePhotoPosition(photo);
         }
@@ -287,7 +287,7 @@ namespace ArchiveNull.InvestigationBoard
         {
             if (photo != null)
             {
-                photo.transform.rotation = boardSurface.rotation * Quaternion.Euler(photoRotationOffset);
+                photo.transform.localRotation = Quaternion.Euler(photoRotationOffset);
             }
         }
 
@@ -298,7 +298,8 @@ namespace ArchiveNull.InvestigationBoard
                 return runtimePhotoContainer;
             }
 
-            Transform existing = transform.Find("SpawnedEvidencePhotos");
+            Transform containerParent = boardSurface != null ? boardSurface : transform;
+            Transform existing = containerParent.Find("SpawnedEvidencePhotos");
             if (existing != null)
             {
                 runtimePhotoContainer = existing;
@@ -306,7 +307,10 @@ namespace ArchiveNull.InvestigationBoard
             }
 
             GameObject container = new GameObject("SpawnedEvidencePhotos");
-            container.transform.SetParent(transform, false);
+            container.transform.SetParent(containerParent, false);
+            container.transform.localPosition = Vector3.zero;
+            container.transform.localRotation = Quaternion.identity;
+            container.transform.localScale = Vector3.one;
             runtimePhotoContainer = container.transform;
             return runtimePhotoContainer;
         }
@@ -321,6 +325,23 @@ namespace ArchiveNull.InvestigationBoard
             Vector3 scale = photo.transform.localScale;
             scale = new Vector3(Mathf.Abs(scale.x), Mathf.Abs(scale.y), Mathf.Abs(scale.z));
             photo.transform.localScale = scale * Mathf.Max(0.01f, photoScaleMultiplier);
+        }
+
+        private void SetPhotoWorldPoint(WorldEvidencePhoto photo, Vector3 worldPoint)
+        {
+            if (photo == null)
+            {
+                return;
+            }
+
+            Vector3 finalPoint = GetSurfaceOffsetPoint(worldPoint);
+            if (photo.transform.parent == boardSurface || photo.transform.parent == runtimePhotoContainer)
+            {
+                photo.transform.localPosition = photo.transform.parent.InverseTransformPoint(finalPoint);
+                return;
+            }
+
+            photo.transform.position = finalPoint;
         }
 
         private void UpdateReticle()

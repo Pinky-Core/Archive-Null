@@ -12,6 +12,9 @@ namespace ArchiveNull.Evidence
         [Header("Capture")]
         [SerializeField] private Camera playerCamera;
         [SerializeField] private float maxCaptureDistance = 4f;
+        [SerializeField] private int capturedPhotoWidth = 1024;
+        [SerializeField] private bool createNotebookIfMissing = true;
+        [SerializeField] private Key notebookToggleKey = Key.Tab;
 
         [Header("Optional Custom UI")]
         [SerializeField] private SimpleMessageUI messageUI;
@@ -59,6 +62,7 @@ namespace ArchiveNull.Evidence
 
             EnsureAudio();
             EnsureHudAnimationReferences();
+            EnsureNotebook();
             SetCameraModeImmediate(false);
         }
 
@@ -78,6 +82,11 @@ namespace ArchiveNull.Evidence
             }
 
             if (!IsCameraModeActive)
+            {
+                return;
+            }
+
+            if (EvidenceNotebookUI.IsAnyNotebookOpen)
             {
                 return;
             }
@@ -140,8 +149,10 @@ namespace ArchiveNull.Evidence
                 return;
             }
 
-            bool registered = EvidenceInventory.Instance.RegisterEvidence(target.EvidenceData);
-            ShowMessage(registered ? "Evidencia registrada: " + target.EvidenceData.evidenceName : "Evidencia ya registrada.");
+            Sprite capturedPhoto = CaptureCameraPhoto();
+            EvidenceData capturedEvidence = target.CreateCapturedEvidence(capturedPhoto);
+            bool registered = EvidenceInventory.Instance.RegisterEvidence(capturedEvidence);
+            ShowMessage(registered ? "Evidencia registrada: " + capturedEvidence.evidenceName : "Evidencia ya registrada.");
         }
 
         private bool TryGetCaptureTarget(Ray ray, out EvidenceTarget target, out bool blocked)
@@ -211,6 +222,56 @@ namespace ArchiveNull.Evidence
             {
                 Debug.Log("[EvidenceCamera] " + message);
             }
+        }
+
+        private void EnsureNotebook()
+        {
+            EvidenceNotebookUI notebook = GetComponent<EvidenceNotebookUI>();
+            if (notebook != null)
+            {
+                notebook.SetToggleKey(notebookToggleKey);
+                return;
+            }
+
+            if (createNotebookIfMissing)
+            {
+                notebook = gameObject.AddComponent<EvidenceNotebookUI>();
+                notebook.SetToggleKey(notebookToggleKey);
+            }
+        }
+
+        private Sprite CaptureCameraPhoto()
+        {
+            if (playerCamera == null)
+            {
+                return null;
+            }
+
+            int width = Mathf.Clamp(capturedPhotoWidth, 256, 4096);
+            float aspect = playerCamera.aspect > 0.01f ? playerCamera.aspect : (float)Screen.width / Mathf.Max(1, Screen.height);
+            int height = Mathf.Clamp(Mathf.RoundToInt(width / Mathf.Max(0.01f, aspect)), 144, 4096);
+
+            RenderTexture previousTarget = playerCamera.targetTexture;
+            RenderTexture previousActive = RenderTexture.active;
+            RenderTexture renderTexture = RenderTexture.GetTemporary(width, height, 24, RenderTextureFormat.ARGB32);
+            Texture2D texture = new Texture2D(width, height, TextureFormat.RGB24, false);
+
+            playerCamera.targetTexture = renderTexture;
+            RenderTexture.active = renderTexture;
+            playerCamera.Render();
+            texture.ReadPixels(new Rect(0f, 0f, width, height), 0, 0);
+            texture.Apply();
+
+            playerCamera.targetTexture = previousTarget;
+            RenderTexture.active = previousActive;
+            RenderTexture.ReleaseTemporary(renderTexture);
+
+            texture.name = "CapturedEvidencePhoto";
+            texture.wrapMode = TextureWrapMode.Clamp;
+            texture.filterMode = FilterMode.Bilinear;
+            Sprite sprite = Sprite.Create(texture, new Rect(0f, 0f, width, height), new Vector2(0.5f, 0.5f), 100f);
+            sprite.name = "CapturedEvidencePhotoSprite";
+            return sprite;
         }
 
         private void CreateRuntimeUi()

@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
+using ArchiveNull.Evidence;
 
 public class FirstPersonLook : MonoBehaviour
 {
@@ -22,6 +23,12 @@ public class FirstPersonLook : MonoBehaviour
 
     void Update()
     {
+        if (EvidenceNotebookUI.IsAnyNotebookOpen)
+        {
+            frameVelocity = Vector2.zero;
+            return;
+        }
+
         Vector2 mouseDelta = Mouse.current != null ? Mouse.current.delta.ReadValue() : Vector2.zero;
         Vector2 rawFrameVelocity = Vector2.Scale(mouseDelta, Vector2.one * sensitivity * 0.1f);
         frameVelocity = Vector2.Lerp(frameVelocity, rawFrameVelocity, 1 / smoothing);

@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using ArchiveNull.Evidence;
 
 public class FirstPersonMovement : MonoBehaviour
 {
@@ -26,6 +27,13 @@ public class FirstPersonMovement : MonoBehaviour
 
     void FixedUpdate()
     {
+        if (EvidenceNotebookUI.IsAnyNotebookOpen)
+        {
+            IsRunning = false;
+            cachedRigidbody.linearVelocity = new Vector3(0f, cachedRigidbody.linearVelocity.y, 0f);
+            return;
+        }
+
         IsRunning = canRun && Keyboard.current != null && (runningKey == KeyCode.LeftShift ? Keyboard.current.leftShiftKey.isPressed : Keyboard.current.rightShiftKey.isPressed);
 
         float targetMovingSpeed = IsRunning ? runSpeed : speed;

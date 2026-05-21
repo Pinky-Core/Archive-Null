@@ -9,6 +9,7 @@ namespace ArchiveNull.Evidence
         private static EvidenceInventory instance;
         private readonly List<EvidenceData> registeredEvidence = new List<EvidenceData>();
         private readonly HashSet<string> registeredIds = new HashSet<string>();
+        private readonly Dictionary<string, string> notesByEvidenceId = new Dictionary<string, string>();
 
         public static EvidenceInventory Instance
         {
@@ -68,6 +69,21 @@ namespace ArchiveNull.Evidence
         public IReadOnlyList<EvidenceData> GetAllEvidence()
         {
             return registeredEvidence;
+        }
+
+        public string GetNote(string evidenceId)
+        {
+            return !string.IsNullOrWhiteSpace(evidenceId) && notesByEvidenceId.TryGetValue(evidenceId, out string note) ? note : string.Empty;
+        }
+
+        public void SetNote(string evidenceId, string note)
+        {
+            if (string.IsNullOrWhiteSpace(evidenceId))
+            {
+                return;
+            }
+
+            notesByEvidenceId[evidenceId] = note ?? string.Empty;
         }
     }
 }
