@@ -776,6 +776,7 @@ MonoBehaviour:
   lineMaterial: {fileID: 0}
   lineWidth: 0.018
   lineOffset: {x: 0, y: 0, z: -0.012}
+  deleteLineHitRadius: 0.045
 --- !u!65 &148816192
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -5069,7 +5070,7 @@ MonoBehaviour:
   _mousePositionAmount: 0.045
   _mouseRotationAmount: 2
   _mouseFollowSpeed: 4
-  _allowReturnWithEscape: 1
+  _allowReturnWithEscape: 0
   _allowReturnWithRightClick: 1
   _allowStandExitFromFarWithEscape: 1
   _returnToFarFallbackLayers:
@@ -5083,7 +5084,7 @@ MonoBehaviour:
   _releaseCameraWhenUnfocused: 1
   _startAtFarPose: 1
   _startStandingUntilTutorialCompleted: 1
-  _startStandingOnMemoryReturn: 1
+  _startStandingOnMemoryReturn: 0
   _firstTimeStartPose: {fileID: 80827350}
   _onFocusReleased:
     m_PersistentCalls:
@@ -5785,6 +5786,9 @@ MonoBehaviour:
   fadeFromBlackOnMainMenuReturn: 1
   returnFadeDuration: 1.1
   postRebuildBlackHold: 0.08
+  smoothMaterialRestore: 1
+  materialRestoreBlendDuration: 0.28
+  materialRestoreOverlayAlpha: 0.16
 --- !u!4 &975684151
 Transform:
   m_ObjectHideFlags: 0
