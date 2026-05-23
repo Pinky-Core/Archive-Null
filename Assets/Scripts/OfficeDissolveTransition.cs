@@ -12,6 +12,15 @@ namespace ArchiveNull.UI
         private static readonly int ColorId = Shader.PropertyToID("_Color");
         private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
         private static readonly int MainTexId = Shader.PropertyToID("_MainTex");
+        private static readonly int BaseMapId = Shader.PropertyToID("_BaseMap");
+        private static readonly int EmissionColorId = Shader.PropertyToID("_EmissionColor");
+        private static readonly int EmissionMapId = Shader.PropertyToID("_EmissionMap");
+        private static readonly int BumpMapId = Shader.PropertyToID("_BumpMap");
+        private static readonly int MetallicGlossMapId = Shader.PropertyToID("_MetallicGlossMap");
+        private static readonly int OcclusionMapId = Shader.PropertyToID("_OcclusionMap");
+        private static readonly int MetallicId = Shader.PropertyToID("_Metallic");
+        private static readonly int GlossinessId = Shader.PropertyToID("_Glossiness");
+        private static readonly int SmoothnessId = Shader.PropertyToID("_Smoothness");
 
         [Header("References")]
         [SerializeField] private GameObject officeRoot;
@@ -24,6 +33,9 @@ namespace ArchiveNull.UI
         [SerializeField] private bool fadeFromBlackOnMainMenuReturn = true;
         [SerializeField] private float returnFadeDuration = 1.1f;
         [SerializeField] private float postRebuildBlackHold = 0.08f;
+        [SerializeField] private bool smoothMaterialRestore = true;
+        [SerializeField] private float materialRestoreBlendDuration = 0.28f;
+        [SerializeField] private float materialRestoreOverlayAlpha = 0.16f;
 
         public const string PendingOfficeRebuildPref = "archive.office.rebuild.pending";
 
@@ -49,6 +61,7 @@ namespace ArchiveNull.UI
 
         private void Awake()
         {
+            restoreOriginalMaterialsAfterRebuild = true;
             _propertyBlock = new MaterialPropertyBlock();
             if (fallbackDissolveShader == null)
             {
@@ -71,8 +84,7 @@ namespace ArchiveNull.UI
         private IEnumerator PlayPendingReturnRebuild()
         {
             CanvasGroup fadeOverlay = fadeFromBlackOnMainMenuReturn ? CreateBlackFadeOverlay() : null;
-
-            yield return PlayRebuild(true);
+            PrepareRebuildStart();
 
             if (fadeOverlay != null)
             {
@@ -84,6 +96,8 @@ namespace ArchiveNull.UI
                 yield return FadeCanvasGroup(fadeOverlay, 1f, 0f, returnFadeDuration);
                 Destroy(fadeOverlay.gameObject);
             }
+
+            yield return PlayRebuild(restoreOriginalMaterialsAfterRebuild);
         }
 
         public IEnumerator PlayDissolve()
@@ -127,10 +141,24 @@ namespace ArchiveNull.UI
             ApplyDissolve(0f);
             if (restoreOriginalMaterials)
             {
-                RestoreOriginalMaterials();
+                if (smoothMaterialRestore)
+                {
+                    yield return SmoothRestoreOriginalMaterials();
+                }
+                else
+                {
+                    RestoreOriginalMaterials();
+                }
             }
 
             Debug.Log("[OfficeDissolveTransition] Office rebuild completed.");
+        }
+
+        public void PrepareRebuildStart()
+        {
+            CacheRendererStates();
+            EnsureDissolveMaterialsApplied();
+            ApplyDissolve(1f);
         }
 
         private void CacheRendererStates()
@@ -260,7 +288,7 @@ namespace ArchiveNull.UI
                     continue;
                 }
 
-                if (state.UsesRuntimeDissolveMaterials && state.OriginalMaterials != null)
+                if (state.OriginalMaterials != null)
                 {
                     state.Renderer.sharedMaterials = state.OriginalMaterials;
                 }
@@ -269,6 +297,23 @@ namespace ArchiveNull.UI
             }
 
             _originalMaterialsRestored = true;
+        }
+
+        private IEnumerator SmoothRestoreOriginalMaterials()
+        {
+            CanvasGroup overlay = CreateMaterialRestoreOverlay();
+            float halfDuration = Mathf.Max(0.01f, materialRestoreBlendDuration * 0.5f);
+            float alpha = Mathf.Clamp01(materialRestoreOverlayAlpha);
+
+            yield return FadeCanvasGroup(overlay, 0f, alpha, halfDuration);
+            RestoreOriginalMaterials();
+            yield return null;
+            yield return FadeCanvasGroup(overlay, alpha, 0f, halfDuration);
+
+            if (overlay != null)
+            {
+                Destroy(overlay.gameObject);
+            }
         }
 
         private Material[] BuildRuntimeDissolveMaterials(Material[] sourceMaterials)
@@ -299,23 +344,90 @@ namespace ArchiveNull.UI
             Texture mainTexture = GetFirstTexture(source, "_BaseMap", "_MainTex", "_BaseColorMap");
             if (mainTexture != null)
             {
-                target.SetTexture(MainTexId, mainTexture);
+                SetTextureIfTargetHas(target, MainTexId, mainTexture);
+                SetTextureIfTargetHas(target, BaseMapId, mainTexture);
             }
 
             Color color = GetFirstColor(source, Color.white, "_BaseColor", "_Color", "_TintColor");
-            target.SetColor(ColorId, color);
-            target.SetColor(BaseColorId, Color.white);
+            SetColorIfTargetHas(target, ColorId, color);
+            SetColorIfTargetHas(target, BaseColorId, color);
+
+            CopyTextureIfPresent(source, target, "_EmissionMap", EmissionMapId);
+            CopyTextureIfPresent(source, target, "_BumpMap", BumpMapId);
+            CopyTextureIfPresent(source, target, "_MetallicGlossMap", MetallicGlossMapId);
+            CopyTextureIfPresent(source, target, "_OcclusionMap", OcclusionMapId);
+            CopyColorIfPresent(source, target, "_EmissionColor", EmissionColorId);
+            CopyFloatIfPresent(source, target, "_Metallic", MetallicId);
+            CopyFloatIfPresent(source, target, "_Glossiness", GlossinessId);
+            CopyFloatIfPresent(source, target, "_Smoothness", SmoothnessId);
 
             if (source.HasProperty("_MainTex"))
             {
-                target.SetTextureScale(MainTexId, source.GetTextureScale("_MainTex"));
-                target.SetTextureOffset(MainTexId, source.GetTextureOffset("_MainTex"));
+                SetTextureTransformIfTargetHas(target, MainTexId, source.GetTextureScale("_MainTex"), source.GetTextureOffset("_MainTex"));
+                SetTextureTransformIfTargetHas(target, BaseMapId, source.GetTextureScale("_MainTex"), source.GetTextureOffset("_MainTex"));
             }
             else if (source.HasProperty("_BaseMap"))
             {
-                target.SetTextureScale(MainTexId, source.GetTextureScale("_BaseMap"));
-                target.SetTextureOffset(MainTexId, source.GetTextureOffset("_BaseMap"));
+                SetTextureTransformIfTargetHas(target, MainTexId, source.GetTextureScale("_BaseMap"), source.GetTextureOffset("_BaseMap"));
+                SetTextureTransformIfTargetHas(target, BaseMapId, source.GetTextureScale("_BaseMap"), source.GetTextureOffset("_BaseMap"));
             }
+        }
+
+        private static void CopyTextureIfPresent(Material source, Material target, string sourceProperty, int targetProperty)
+        {
+            if (source.HasProperty(sourceProperty) && target.HasProperty(targetProperty))
+            {
+                Texture texture = source.GetTexture(sourceProperty);
+                if (texture != null)
+                {
+                    target.SetTexture(targetProperty, texture);
+                    target.SetTextureScale(targetProperty, source.GetTextureScale(sourceProperty));
+                    target.SetTextureOffset(targetProperty, source.GetTextureOffset(sourceProperty));
+                }
+            }
+        }
+
+        private static void CopyColorIfPresent(Material source, Material target, string sourceProperty, int targetProperty)
+        {
+            if (source.HasProperty(sourceProperty) && target.HasProperty(targetProperty))
+            {
+                target.SetColor(targetProperty, source.GetColor(sourceProperty));
+            }
+        }
+
+        private static void CopyFloatIfPresent(Material source, Material target, string sourceProperty, int targetProperty)
+        {
+            if (source.HasProperty(sourceProperty) && target.HasProperty(targetProperty))
+            {
+                target.SetFloat(targetProperty, source.GetFloat(sourceProperty));
+            }
+        }
+
+        private static void SetTextureIfTargetHas(Material target, int propertyId, Texture texture)
+        {
+            if (target.HasProperty(propertyId))
+            {
+                target.SetTexture(propertyId, texture);
+            }
+        }
+
+        private static void SetColorIfTargetHas(Material target, int propertyId, Color color)
+        {
+            if (target.HasProperty(propertyId))
+            {
+                target.SetColor(propertyId, color);
+            }
+        }
+
+        private static void SetTextureTransformIfTargetHas(Material target, int propertyId, Vector2 scale, Vector2 offset)
+        {
+            if (!target.HasProperty(propertyId))
+            {
+                return;
+            }
+
+            target.SetTextureScale(propertyId, scale);
+            target.SetTextureOffset(propertyId, offset);
         }
 
         private static Texture GetFirstTexture(Material material, params string[] propertyNames)
@@ -378,6 +490,35 @@ namespace ArchiveNull.UI
             group.alpha = 1f;
             group.interactable = false;
             group.blocksRaycasts = true;
+            return group;
+        }
+
+        private static CanvasGroup CreateMaterialRestoreOverlay()
+        {
+            GameObject canvasObject = new("MaterialRestoreBlend", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster), typeof(CanvasGroup));
+            Canvas canvas = canvasObject.GetComponent<Canvas>();
+            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            canvas.sortingOrder = 9500;
+
+            CanvasScaler scaler = canvasObject.GetComponent<CanvasScaler>();
+            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            scaler.referenceResolution = new Vector2(1920f, 1080f);
+            scaler.matchWidthOrHeight = 0.5f;
+
+            GameObject imageObject = new("Blend", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+            imageObject.transform.SetParent(canvasObject.transform, false);
+            Image image = imageObject.GetComponent<Image>();
+            image.color = new Color(0.015f, 0.045f, 0.04f, 1f);
+            RectTransform rect = image.rectTransform;
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.one;
+            rect.offsetMin = Vector2.zero;
+            rect.offsetMax = Vector2.zero;
+
+            CanvasGroup group = canvasObject.GetComponent<CanvasGroup>();
+            group.alpha = 0f;
+            group.interactable = false;
+            group.blocksRaycasts = false;
             return group;
         }
 

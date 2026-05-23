@@ -27,6 +27,8 @@ namespace ArchiveNull.Evidence
         [SerializeField] private TMP_InputField noteInput;
 
         private readonly List<EvidenceData> evidence = new List<EvidenceData>();
+        private readonly List<FirstPersonLook> disabledLooks = new List<FirstPersonLook>();
+        private readonly List<FirstPersonMovement> disabledMovements = new List<FirstPersonMovement>();
         private int currentIndex;
         private bool visible;
         private bool updatingNote;
@@ -55,6 +57,8 @@ namespace ArchiveNull.Evidence
             {
                 CreateRuntimeUi();
             }
+
+            EnsureEventSystem();
 
             if (noteInput != null)
             {
@@ -105,7 +109,7 @@ namespace ArchiveNull.Evidence
                 return;
             }
 
-            if (WasPressed(toggleKey))
+            if (GlobalInputBindings.WasPressed(GameInputAction.Notebook))
             {
                 SetVisible(!visible);
                 return;
@@ -116,11 +120,11 @@ namespace ArchiveNull.Evidence
                 return;
             }
 
-            if (WasPressed(previousKey) || Keyboard.current.leftArrowKey.wasPressedThisFrame)
+            if (GlobalInputBindings.WasPressed(GameInputAction.NotebookPrevious) || Keyboard.current.leftArrowKey.wasPressedThisFrame)
             {
                 Select(currentIndex - 1);
             }
-            else if (WasPressed(nextKey) || Keyboard.current.rightArrowKey.wasPressedThisFrame)
+            else if (GlobalInputBindings.WasPressed(GameInputAction.NotebookNext) || Keyboard.current.rightArrowKey.wasPressedThisFrame)
             {
                 Select(currentIndex + 1);
             }
@@ -181,20 +185,20 @@ namespace ArchiveNull.Evidence
             if (noteInput != null)
             {
                 updatingNote = true;
-                noteInput.text = data != null ? EvidenceInventory.Instance.GetNote(data.evidenceId) : string.Empty;
-                noteInput.interactable = data != null;
+                noteInput.text = EvidenceInventory.Instance.GetOperatorNotes();
+                noteInput.interactable = true;
                 updatingNote = false;
             }
         }
 
         private void HandleNoteChanged(string value)
         {
-            if (updatingNote || evidence.Count == 0)
+            if (updatingNote)
             {
                 return;
             }
 
-            EvidenceInventory.Instance.SetNote(evidence[currentIndex].evidenceId, value);
+            EvidenceInventory.Instance.SetOperatorNotes(value);
         }
 
         private void SetVisible(bool value)
@@ -262,13 +266,41 @@ namespace ArchiveNull.Evidence
 
         private void DisablePlayerControls()
         {
-            if (firstPersonLook != null)
+            disabledLooks.Clear();
+            disabledMovements.Clear();
+
+            FirstPersonLook[] looks = FindObjectsOfType<FirstPersonLook>();
+            for (int i = 0; i < looks.Length; i++)
+            {
+                if (looks[i] != null && looks[i].enabled)
+                {
+                    disabledLooks.Add(looks[i]);
+                    looks[i].enabled = false;
+                }
+            }
+
+            FirstPersonMovement[] movements = FindObjectsOfType<FirstPersonMovement>();
+            for (int i = 0; i < movements.Length; i++)
+            {
+                if (movements[i] != null && movements[i].enabled)
+                {
+                    disabledMovements.Add(movements[i]);
+                    movements[i].enabled = false;
+                    Rigidbody body = movements[i].GetComponent<Rigidbody>();
+                    if (body != null)
+                    {
+                        body.linearVelocity = new Vector3(0f, body.linearVelocity.y, 0f);
+                    }
+                }
+            }
+
+            if (firstPersonLook != null && !disabledLooks.Contains(firstPersonLook))
             {
                 lookWasEnabled = firstPersonLook.enabled;
                 firstPersonLook.enabled = false;
             }
 
-            if (firstPersonMovement != null)
+            if (firstPersonMovement != null && !disabledMovements.Contains(firstPersonMovement))
             {
                 movementWasEnabled = firstPersonMovement.enabled;
                 firstPersonMovement.enabled = false;
@@ -282,15 +314,25 @@ namespace ArchiveNull.Evidence
 
         private void RestorePlayerControls()
         {
-            if (firstPersonLook != null)
+            for (int i = 0; i < disabledLooks.Count; i++)
             {
-                firstPersonLook.enabled = lookWasEnabled;
+                if (disabledLooks[i] != null)
+                {
+                    disabledLooks[i].enabled = true;
+                }
             }
 
-            if (firstPersonMovement != null)
+            for (int i = 0; i < disabledMovements.Count; i++)
             {
-                firstPersonMovement.enabled = movementWasEnabled;
+                if (disabledMovements[i] != null)
+                {
+                    disabledMovements[i].enabled = true;
+                }
             }
+
+            disabledLooks.Clear();
+            disabledMovements.Clear();
+
         }
 
         private bool IsEditingNote()
@@ -348,7 +390,7 @@ namespace ArchiveNull.Evidence
             descriptionText = CreateText("Description", panelRect, string.Empty, 22f, TextAlignmentOptions.TopLeft);
             SetPointRect(descriptionText.rectTransform, new Vector2(0f, 0f), new Vector2(780f, 472f), new Vector2(420f, 132f));
 
-            TMP_Text noteLabel = CreateText("NoteLabel", panelRect, "ANOTACIONES", 18f, TextAlignmentOptions.TopLeft);
+            TMP_Text noteLabel = CreateText("NoteLabel", panelRect, "NOTEPAD DEL OPERADOR", 18f, TextAlignmentOptions.TopLeft);
             noteLabel.color = categoryText.color;
             SetPointRect(noteLabel.rectTransform, new Vector2(0f, 0f), new Vector2(780f, 382f), new Vector2(420f, 30f));
             noteInput = CreateNoteInput(panelRect);
@@ -384,6 +426,17 @@ namespace ArchiveNull.Evidence
             input.lineType = TMP_InputField.LineType.MultiLineNewline;
             input.textViewport = fieldRect;
             return input;
+        }
+
+        private static void EnsureEventSystem()
+        {
+            if (EventSystem.current != null)
+            {
+                return;
+            }
+
+            GameObject eventSystem = new GameObject("EventSystem", typeof(EventSystem), typeof(UnityEngine.InputSystem.UI.InputSystemUIInputModule));
+            DontDestroyOnLoad(eventSystem);
         }
 
         private void CreateButton(string name, RectTransform parent, string label, Vector2 size, Vector2 position, UnityEngine.Events.UnityAction action)

@@ -42,6 +42,7 @@ namespace ArchiveNull.UI
             bool rebuildCompleted = officeDissolveTransition == null;
             if (officeDissolveTransition != null)
             {
+                officeDissolveTransition.PrepareRebuildStart();
                 StartCoroutine(PlayRebuildRoutine(() => rebuildCompleted = true));
             }
 

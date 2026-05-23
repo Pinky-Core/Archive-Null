@@ -16,6 +16,11 @@ namespace ArchiveNull.Evidence
         [SerializeField] private bool createNotebookIfMissing = true;
         [SerializeField] private Key notebookToggleKey = Key.Tab;
 
+        [Header("Zoom")]
+        [SerializeField] private float minZoomFov = 24f;
+        [SerializeField] private float zoomSpeed = 5.5f;
+        [SerializeField] private float zoomReturnSpeed = 10f;
+
         [Header("Optional Custom UI")]
         [SerializeField] private SimpleMessageUI messageUI;
         [SerializeField] private GameObject cameraModeUI;
@@ -46,6 +51,9 @@ namespace ArchiveNull.Evidence
         private Coroutine cameraModeRoutine;
         private Coroutine captureFeedbackRoutine;
         private float nextCaptureTime;
+        private float defaultFov;
+        private float targetFov;
+        private TMP_Text zoomText;
         private readonly RaycastHit[] captureHits = new RaycastHit[24];
 
         private void Awake()
@@ -53,6 +61,12 @@ namespace ArchiveNull.Evidence
             if (playerCamera == null)
             {
                 playerCamera = Camera.main;
+            }
+
+            if (playerCamera != null)
+            {
+                defaultFov = playerCamera.fieldOfView;
+                targetFov = defaultFov;
             }
 
             if (createUiIfMissing && (messageUI == null || cameraModeUI == null))
@@ -76,18 +90,20 @@ namespace ArchiveNull.Evidence
 
         private void Update()
         {
-            if (Keyboard.current != null && Keyboard.current.fKey.wasPressedThisFrame && !global::InspectObject.IsAnyInspecting)
+            if (EvidenceNotebookUI.IsAnyNotebookOpen || global::Keypad.IsAnyOpen)
+            {
+                RestoreCameraFov();
+                return;
+            }
+
+            if (GlobalInputBindings.WasPressed(GameInputAction.Camera) && !global::InspectObject.IsAnyInspecting)
             {
                 SetCameraMode(!IsCameraModeActive);
             }
 
             if (!IsCameraModeActive)
             {
-                return;
-            }
-
-            if (EvidenceNotebookUI.IsAnyNotebookOpen)
-            {
+                RestoreCameraFov();
                 return;
             }
 
@@ -95,6 +111,8 @@ namespace ArchiveNull.Evidence
             {
                 return;
             }
+
+            UpdateCameraZoom();
 
             if (Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame)
             {
@@ -345,6 +363,10 @@ namespace ArchiveNull.Evidence
             hint.color = hudColor;
             SetRect(hint.rectTransform, new Vector2(0f, 0f), new Vector2(1f, 0f), new Vector2(1f, 0f), new Vector2(70f, 18f), new Vector2(-70f, 54f));
 
+            zoomText = CreateText("ZoomValue", rootRect, "ZOOM 1.0X", 18f, TextAlignmentOptions.BottomLeft);
+            zoomText.color = hudColor;
+            SetRect(zoomText.rectTransform, new Vector2(0f, 0f), new Vector2(1f, 0f), new Vector2(0f, 0f), new Vector2(70f, 18f), new Vector2(-70f, 54f));
+
             captureFlash = CreateImage("CaptureFlash", rootRect, Color.white);
             Stretch(captureFlash.rectTransform);
             captureFlash.raycastTarget = false;
@@ -465,6 +487,11 @@ namespace ArchiveNull.Evidence
                 cameraModeUI.SetActive(active);
             }
 
+            if (!active)
+            {
+                RestoreCameraFov(true);
+            }
+
             if (hudGroup != null)
             {
                 hudGroup.alpha = active ? 1f : 0f;
@@ -537,6 +564,7 @@ namespace ArchiveNull.Evidence
             if (!active)
             {
                 cameraModeUI.SetActive(false);
+                RestoreCameraFov(true);
                 if (hudAnimatedRoot != null)
                 {
                     hudAnimatedRoot.localScale = Vector3.one;
@@ -590,6 +618,46 @@ namespace ArchiveNull.Evidence
             }
 
             captureFeedbackRoutine = null;
+        }
+
+        private void UpdateCameraZoom()
+        {
+            if (playerCamera == null || Mouse.current == null)
+            {
+                return;
+            }
+
+            float scroll = Mouse.current.scroll.ReadValue().y;
+            if (Mathf.Abs(scroll) > 0.001f)
+            {
+                targetFov = Mathf.Clamp(targetFov - scroll * zoomSpeed * 0.01f, minZoomFov, defaultFov);
+            }
+
+            playerCamera.fieldOfView = Mathf.Lerp(playerCamera.fieldOfView, targetFov, Time.unscaledDeltaTime * zoomReturnSpeed);
+            RefreshZoomText();
+        }
+
+        private void RestoreCameraFov(bool immediate = false)
+        {
+            if (playerCamera == null || defaultFov <= 0f)
+            {
+                return;
+            }
+
+            targetFov = defaultFov;
+            playerCamera.fieldOfView = immediate ? defaultFov : Mathf.Lerp(playerCamera.fieldOfView, defaultFov, Time.unscaledDeltaTime * zoomReturnSpeed);
+            RefreshZoomText();
+        }
+
+        private void RefreshZoomText()
+        {
+            if (zoomText == null || defaultFov <= 0f || playerCamera == null)
+            {
+                return;
+            }
+
+            float zoom = Mathf.Clamp(defaultFov / Mathf.Max(1f, playerCamera.fieldOfView), 1f, 9.9f);
+            zoomText.text = $"ZOOM {zoom:0.0}X";
         }
 
         private void PlaySound(AudioClip clip)

@@ -16,6 +16,16 @@ public class PlayerInteraction : MonoBehaviour
 
     void Update()
     {
+        if (Keypad.IsAnyOpen)
+        {
+            if (interactionText != null)
+            {
+                interactionText.gameObject.SetActive(false);
+            }
+
+            return;
+        }
+
         Ray ray = new Ray(transform.position, transform.forward);
         if (Physics.Raycast(ray, out RaycastHit hit, interactionDistance))
         {
@@ -25,7 +35,7 @@ public class PlayerInteraction : MonoBehaviour
                 interactionText.gameObject.SetActive(true);
                 interactionText.text = "(E) Usar";
 
-                if (Keyboard.current != null && Keyboard.current.eKey.wasPressedThisFrame)
+                if (GlobalInputBindings.WasPressed(GameInputAction.Interact))
                 {
                     keypad.ShowKeypad();
                     interactionText.gameObject.SetActive(false);

@@ -11,12 +11,11 @@ public class InspectObject : MonoBehaviour
     public FirstPersonMovement movementScript;
     public FirstPersonLook lookScript;
     public Text inspectText;
-    public Key inspectKey = Key.E;
-    public Key releaseKey = Key.E;
     public float rotationSpeed = 300f;
     public float zoomSpeed = 0.35f;
     public float minInspectDistance = 0.35f;
     public float maxInspectDistance = 1.25f;
+    public float cameraClipPadding = 0.12f;
     public float holdRadius = 0.18f;
     public float obstructionPadding = 0.03f;
     public LayerMask obstructionLayers = ~0;
@@ -70,7 +69,13 @@ public class InspectObject : MonoBehaviour
         {
             UpdateHeldObjectPosition();
 
-            if (WasKeyPressed(releaseKey))
+            if (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
+            {
+                ReleaseObject();
+                return;
+            }
+
+            if (GlobalInputBindings.WasPressed(GameInputAction.ReleaseInspect))
             {
                 ReleaseObject();
             }
@@ -105,10 +110,10 @@ public class InspectObject : MonoBehaviour
                     if (inspectText != null)
                     {
                         inspectText.gameObject.SetActive(true);
-                        inspectText.text = "(" + inspectKey.ToString().ToUpperInvariant() + ") Inspeccionar";
+                        inspectText.text = "(" + GlobalInputBindings.GetDisplayName(GameInputAction.Inspect) + ") Inspeccionar";
                     }
 
-                    if (WasKeyPressed(inspectKey))
+                    if (GlobalInputBindings.WasPressed(GameInputAction.Inspect))
                     {
                         TryPickObject(hit.collider.gameObject);
                     }
@@ -213,7 +218,7 @@ public class InspectObject : MonoBehaviour
             return;
         }
 
-        inspectDistance = Mathf.Clamp(inspectDistance + scroll * zoomSpeed * 0.01f, minInspectDistance, maxInspectDistance);
+        inspectDistance = Mathf.Clamp(inspectDistance - scroll * zoomSpeed * 0.01f, GetMinimumSafeInspectDistance(), maxInspectDistance);
         UpdateHeldObjectPosition();
     }
 
@@ -231,7 +236,7 @@ public class InspectObject : MonoBehaviour
     {
         Vector3 origin = playerCamera.transform.position;
         Vector3 direction = playerCamera.transform.forward;
-        float distance = Mathf.Clamp(inspectDistance, minInspectDistance, maxInspectDistance);
+        float distance = Mathf.Clamp(inspectDistance, GetMinimumSafeInspectDistance(), maxInspectDistance);
         float radius = Mathf.Max(holdRadius, heldCollisionRadius);
         int hitCount = Physics.SphereCastNonAlloc(origin, radius, direction, obstructionHits, distance, obstructionLayers, QueryTriggerInteraction.Ignore);
         float nearestDistance = distance;
@@ -247,6 +252,12 @@ public class InspectObject : MonoBehaviour
         }
 
         return origin + direction * Mathf.Max(0.02f, nearestDistance - obstructionPadding);
+    }
+
+    float GetMinimumSafeInspectDistance()
+    {
+        float cameraNear = playerCamera != null ? playerCamera.nearClipPlane : 0.03f;
+        return Mathf.Max(minInspectDistance, cameraNear + heldCollisionRadius + cameraClipPadding);
     }
 
     void CacheAndDisableInspectedColliders()
@@ -313,11 +324,6 @@ public class InspectObject : MonoBehaviour
         }
 
         return player != null && candidate.transform.IsChildOf(player);
-    }
-
-    static bool WasKeyPressed(Key key)
-    {
-        return Keyboard.current != null && Keyboard.current[key].wasPressedThisFrame;
     }
 
     void CreateReticle()

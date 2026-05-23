@@ -68,7 +68,17 @@ namespace ArchiveNull.UI
             Left,
             Right,
             Submit,
-            Back
+            Back,
+            MoveForward,
+            MoveBackward,
+            MoveLeft,
+            MoveRight,
+            Run,
+            Interact,
+            Inspect,
+            Camera,
+            Notebook,
+            Pause
         }
 
         private sealed class MenuItem
@@ -1597,7 +1607,6 @@ namespace ArchiveNull.UI
                     _settingsItems.Add(new MenuItem { Label = BuildScanlinesLabel(), Action = ToggleScanlines });
                     _settingsItems.Add(new MenuItem { Label = BuildChromaticLabel(), Action = ToggleChromatic });
                     _settingsItems.Add(new MenuItem { Label = BuildFlickerLabel(), Action = CycleFlicker });
-                    _settingsItems.Add(new MenuItem { Label = Localize("POWER CYCLE DISPLAY", "POWER CYCLE DISPLAY"), Action = () => StartCoroutine(PowerCycleFromSettings()) });
                     _settingsItems.Add(new MenuItem { Label = Localize("VOLVER A CATEGORIAS", "BACK TO CATEGORIES"), Action = OpenSettingsCategoriesFromSubPage });
                     break;
 
@@ -1608,6 +1617,16 @@ namespace ArchiveNull.UI
                     _settingsItems.Add(new MenuItem { Label = BuildControlLabel(Localize("AJUSTAR DER", "ADJUST RIGHT"), _navRightKey), Action = () => BeginRebind(RebindTarget.Right) });
                     _settingsItems.Add(new MenuItem { Label = BuildControlLabel(Localize("ACEPTAR", "ACCEPT"), _submitKey), Action = () => BeginRebind(RebindTarget.Submit) });
                     _settingsItems.Add(new MenuItem { Label = BuildControlLabel(Localize("ATRAS", "BACK"), _backKey), Action = () => BeginRebind(RebindTarget.Back) });
+                    _settingsItems.Add(new MenuItem { Label = BuildControlLabel(Localize("AVANZAR", "MOVE FORWARD"), GlobalInputBindings.GetKey(GameInputAction.MoveForward)), Action = () => BeginRebind(RebindTarget.MoveForward) });
+                    _settingsItems.Add(new MenuItem { Label = BuildControlLabel(Localize("RETROCEDER", "MOVE BACKWARD"), GlobalInputBindings.GetKey(GameInputAction.MoveBackward)), Action = () => BeginRebind(RebindTarget.MoveBackward) });
+                    _settingsItems.Add(new MenuItem { Label = BuildControlLabel(Localize("MOVER IZQ", "MOVE LEFT"), GlobalInputBindings.GetKey(GameInputAction.MoveLeft)), Action = () => BeginRebind(RebindTarget.MoveLeft) });
+                    _settingsItems.Add(new MenuItem { Label = BuildControlLabel(Localize("MOVER DER", "MOVE RIGHT"), GlobalInputBindings.GetKey(GameInputAction.MoveRight)), Action = () => BeginRebind(RebindTarget.MoveRight) });
+                    _settingsItems.Add(new MenuItem { Label = BuildControlLabel(Localize("CORRER", "RUN"), GlobalInputBindings.GetKey(GameInputAction.Run)), Action = () => BeginRebind(RebindTarget.Run) });
+                    _settingsItems.Add(new MenuItem { Label = BuildControlLabel(Localize("INTERACTUAR", "INTERACT"), GlobalInputBindings.GetKey(GameInputAction.Interact)), Action = () => BeginRebind(RebindTarget.Interact) });
+                    _settingsItems.Add(new MenuItem { Label = BuildControlLabel(Localize("INSPECCIONAR", "INSPECT"), GlobalInputBindings.GetKey(GameInputAction.Inspect)), Action = () => BeginRebind(RebindTarget.Inspect) });
+                    _settingsItems.Add(new MenuItem { Label = BuildControlLabel(Localize("CAMARA", "CAMERA"), GlobalInputBindings.GetKey(GameInputAction.Camera)), Action = () => BeginRebind(RebindTarget.Camera) });
+                    _settingsItems.Add(new MenuItem { Label = BuildControlLabel(Localize("LIBRETA", "NOTEBOOK"), GlobalInputBindings.GetKey(GameInputAction.Notebook)), Action = () => BeginRebind(RebindTarget.Notebook) });
+                    _settingsItems.Add(new MenuItem { Label = BuildControlLabel(Localize("PAUSA", "PAUSE"), GlobalInputBindings.GetKey(GameInputAction.Pause)), Action = () => BeginRebind(RebindTarget.Pause) });
                     _settingsItems.Add(new MenuItem { Label = Localize("VOLVER A CATEGORIAS", "BACK TO CATEGORIES"), Action = OpenSettingsCategoriesFromSubPage });
                     break;
             }
@@ -1875,6 +1894,19 @@ namespace ArchiveNull.UI
                 case RebindTarget.Right: _navRightKey = key; PlayerPrefs.SetInt(PrefBindRight, (int)key); break;
                 case RebindTarget.Submit: _submitKey = key; PlayerPrefs.SetInt(PrefBindSubmit, (int)key); break;
                 case RebindTarget.Back: _backKey = key; PlayerPrefs.SetInt(PrefBindBack, (int)key); break;
+                case RebindTarget.MoveForward: GlobalInputBindings.SetKey(GameInputAction.MoveForward, key); break;
+                case RebindTarget.MoveBackward: GlobalInputBindings.SetKey(GameInputAction.MoveBackward, key); break;
+                case RebindTarget.MoveLeft: GlobalInputBindings.SetKey(GameInputAction.MoveLeft, key); break;
+                case RebindTarget.MoveRight: GlobalInputBindings.SetKey(GameInputAction.MoveRight, key); break;
+                case RebindTarget.Run: GlobalInputBindings.SetKey(GameInputAction.Run, key); break;
+                case RebindTarget.Interact: GlobalInputBindings.SetKey(GameInputAction.Interact, key); break;
+                case RebindTarget.Inspect:
+                    GlobalInputBindings.SetKey(GameInputAction.Inspect, key);
+                    GlobalInputBindings.SetKey(GameInputAction.ReleaseInspect, key);
+                    break;
+                case RebindTarget.Camera: GlobalInputBindings.SetKey(GameInputAction.Camera, key); break;
+                case RebindTarget.Notebook: GlobalInputBindings.SetKey(GameInputAction.Notebook, key); break;
+                case RebindTarget.Pause: GlobalInputBindings.SetKey(GameInputAction.Pause, key); break;
             }
 
             PlayerPrefs.Save();
@@ -2129,6 +2161,7 @@ namespace ArchiveNull.UI
             }
 
             QualitySettings.SetQualityLevel(nextIndex, true);
+            PlayerPrefs.SetInt("global.pause.quality", nextIndex);
             SavePreferences();
             RebuildSettingsPage(_settingsPage, false);
             SetStatus(Localize($"CALIDAD CAMBIADA A {GetQualityLabel()}.", $"QUALITY SET TO {GetQualityLabel()}."));

@@ -10,6 +10,7 @@ namespace ArchiveNull.Evidence
         private readonly List<EvidenceData> registeredEvidence = new List<EvidenceData>();
         private readonly HashSet<string> registeredIds = new HashSet<string>();
         private readonly Dictionary<string, string> notesByEvidenceId = new Dictionary<string, string>();
+        private string operatorNotes = string.Empty;
 
         public static EvidenceInventory Instance
         {
@@ -84,6 +85,16 @@ namespace ArchiveNull.Evidence
             }
 
             notesByEvidenceId[evidenceId] = note ?? string.Empty;
+        }
+
+        public string GetOperatorNotes()
+        {
+            return operatorNotes;
+        }
+
+        public void SetOperatorNotes(string notes)
+        {
+            operatorNotes = notes ?? string.Empty;
         }
     }
 }

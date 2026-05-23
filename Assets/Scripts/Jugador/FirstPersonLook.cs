@@ -23,7 +23,7 @@ public class FirstPersonLook : MonoBehaviour
 
     void Update()
     {
-        if (EvidenceNotebookUI.IsAnyNotebookOpen)
+        if (EvidenceNotebookUI.IsAnyNotebookOpen || Keypad.IsAnyOpen)
         {
             frameVelocity = Vector2.zero;
             return;

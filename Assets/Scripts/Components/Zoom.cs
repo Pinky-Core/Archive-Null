@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
+using ArchiveNull.Evidence;
 
 [ExecuteInEditMode]
 public class Zoom : MonoBehaviour
@@ -13,6 +14,7 @@ public class Zoom : MonoBehaviour
     public float currentZoom;
 
     public float sensitivity = 1f;
+    public bool disabledByEvidenceCameraSystem = true;
 
     private void Awake()
     {
@@ -27,6 +29,13 @@ public class Zoom : MonoBehaviour
     {
         if (cameraComponent == null)
         {
+            return;
+        }
+
+        if (disabledByEvidenceCameraSystem || EvidenceCameraController.IsAnyCameraModeActive)
+        {
+            currentZoom = 0f;
+            cameraComponent.fieldOfView = defaultFOV;
             return;
         }
 

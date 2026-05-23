@@ -125,15 +125,15 @@ namespace ArchiveNull.UI
 
         private bool ShouldStartAtFarPose()
         {
-            if (!_startAtFarPose)
-            {
-                return false;
-            }
-
             bool returningFromMemory = PlayerPrefs.GetInt(OfficeDissolveTransition.PendingOfficeRebuildPref, 0) == 1;
             if (returningFromMemory)
             {
                 return !_startStandingOnMemoryReturn;
+            }
+
+            if (!_startAtFarPose)
+            {
+                return false;
             }
 
             if (_startStandingUntilTutorialCompleted && PlayerPrefs.GetInt(OfficeSpeakerTutorial.CompletedPref, 0) != 1)
