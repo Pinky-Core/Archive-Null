@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.Events;
 using System;
+using ArchiveNull.Evidence;
 
 namespace ArchiveNull.UI
 {
@@ -237,6 +238,11 @@ namespace ArchiveNull.UI
                 return;
             }
 
+            if (EvidenceCameraController.IsAnyRadialMenuOpen)
+            {
+                return;
+            }
+
             float swayTime = Time.time * _swaySpeed;
             _farMotionBlendTimer += Time.deltaTime;
             float farMotionBlend = _farMotionBlendDuration <= 0f ? 1f : Mathf.Clamp01(_farMotionBlendTimer / _farMotionBlendDuration);
@@ -365,6 +371,11 @@ namespace ArchiveNull.UI
         private bool IsClickingComputer()
         {
             if (_computerClickCollider == null || _targetCamera == null || Mouse.current == null)
+            {
+                return false;
+            }
+
+            if (_vrHeadsetStarter != null && _vrHeadsetStarter.IsEquipped)
             {
                 return false;
             }

@@ -11,6 +11,7 @@ namespace ArchiveNull.InvestigationBoard
         [SerializeField] private float lineWidth = 0.018f;
         [SerializeField] private Vector3 lineOffset = new Vector3(0f, 0f, -0.012f);
         [SerializeField] private float deleteLineHitRadius = 0.045f;
+        [SerializeField] private Color lineColor = new Color(0.8f, 0.08f, 0.08f, 0.95f);
 
         private readonly Dictionary<string, WorldEvidencePhoto> photosById = new Dictionary<string, WorldEvidencePhoto>();
         private readonly Dictionary<string, LineRenderer> linesByKey = new Dictionary<string, LineRenderer>();
@@ -159,12 +160,25 @@ namespace ArchiveNull.InvestigationBoard
             line.endWidth = lineWidth;
             line.numCapVertices = 4;
             line.material = lineMaterial;
-            if (line.material == null)
+            if (line.material == null || line.material.shader == null || !line.material.shader.isSupported)
             {
-                line.material = new Material(Shader.Find("Sprites/Default"));
+                Shader fallback = Shader.Find("Unlit/Color");
+                if (fallback == null || !fallback.isSupported)
+                {
+                    fallback = Shader.Find("Sprites/Default");
+                }
+
+                line.material = fallback != null ? new Material(fallback) : new Material(Shader.Find("Hidden/Internal-Colored"));
             }
 
-            line.startColor = new Color(0.8f, 0.08f, 0.08f, 0.95f);
+            if (line.material.HasProperty("_Color"))
+            {
+                line.material.color = lineColor;
+            }
+
+            line.textureMode = LineTextureMode.Stretch;
+            line.alignment = LineAlignment.View;
+            line.startColor = lineColor;
             line.endColor = line.startColor;
             linesByKey[key] = line;
             UpdateVisuals();

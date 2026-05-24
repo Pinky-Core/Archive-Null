@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
+using ArchiveNull.Evidence;
 
 namespace ArchiveNull.UI
 {
@@ -20,8 +21,8 @@ namespace ArchiveNull.UI
 
         [Header("Collision")]
         [SerializeField] private bool _enableCollision = true;
-        [Tooltip("BoxCollider creado y ajustado a mano para representar el volumen de la camara/freecam. Si esta vacio, usa SphereCast.")]
-        [SerializeField] private BoxCollider _movementCollider;
+        [Tooltip("CapsuleCollider creado y ajustado a mano para representar el volumen de la camara/freecam. Si esta vacio, usa SphereCast.")]
+        [SerializeField] private CapsuleCollider _movementCollider;
         [SerializeField] private float _collisionRadius = 0.22f;
         [SerializeField] private float _collisionPadding = 0.04f;
         [SerializeField] private LayerMask _collisionLayers = ~0;
@@ -37,7 +38,7 @@ namespace ArchiveNull.UI
         private float _pitch;
         private float _yaw;
         private float _lockedHeight;
-        private readonly RaycastHit[] _boxCastHits = new RaycastHit[16];
+        private readonly RaycastHit[] _capsuleCastHits = new RaycastHit[16];
         private readonly Collider[] _overlapHits = new Collider[16];
 
         private void Reset()
@@ -54,7 +55,7 @@ namespace ArchiveNull.UI
 
             if (_movementCollider == null)
             {
-                _movementCollider = _cameraRoot.GetComponent<BoxCollider>();
+                _movementCollider = _cameraRoot.GetComponent<CapsuleCollider>();
             }
 
             _freeFlightEnabled = !_startLockedToDesk;
@@ -68,7 +69,7 @@ namespace ArchiveNull.UI
         {
             SyncFlightState();
 
-            if (_cameraRoot == null || IsComputerFocused() || !_freeFlightEnabled || !CanMoveFreely())
+            if (_cameraRoot == null || IsComputerFocused() || !_freeFlightEnabled || !CanMoveFreely() || IsUiBlockingLook())
             {
                 ReleaseCursor();
                 return;
@@ -101,6 +102,11 @@ namespace ArchiveNull.UI
         private bool CanMoveFreely()
         {
             return _computerFocus == null || _computerFocus.IsInStandPose;
+        }
+
+        private static bool IsUiBlockingLook()
+        {
+            return EvidenceNotebookUI.IsAnyNotebookOpen || EvidenceCameraController.IsAnyRadialMenuOpen;
         }
 
         private void SyncFlightState()
@@ -214,7 +220,7 @@ namespace ArchiveNull.UI
             Vector3 direction = movement / distance;
             if (_movementCollider != null)
             {
-                return ResolveBoxCollision(currentPosition, targetPosition, direction, distance);
+                return ResolveCapsuleCollision(currentPosition, targetPosition, direction, distance);
             }
 
             if (Physics.SphereCast(currentPosition, _collisionRadius, direction, out RaycastHit hit, distance + _collisionPadding, _collisionLayers, QueryTriggerInteraction.Ignore))
@@ -226,28 +232,24 @@ namespace ArchiveNull.UI
             return targetPosition;
         }
 
-        private Vector3 ResolveBoxCollision(Vector3 currentPosition, Vector3 targetPosition, Vector3 direction, float distance)
+        private Vector3 ResolveCapsuleCollision(Vector3 currentPosition, Vector3 targetPosition, Vector3 direction, float distance)
         {
             Transform colliderTransform = _movementCollider.transform;
-            Vector3 currentCenter = GetMovementColliderWorldCenter(currentPosition);
+            GetCapsulePoints(currentPosition, out Vector3 pointA, out Vector3 pointB, out float radius);
             Quaternion orientation = colliderTransform.rotation;
-            Vector3 halfExtents = Vector3.Scale(_movementCollider.size * 0.5f, colliderTransform.lossyScale);
-            halfExtents = new Vector3(
-                Mathf.Max(0.001f, halfExtents.x + _collisionPadding),
-                Mathf.Max(0.001f, halfExtents.y + _collisionPadding),
-                Mathf.Max(0.001f, halfExtents.z + _collisionPadding));
+            radius = Mathf.Max(0.001f, radius + _collisionPadding);
 
-            int hitCount = Physics.BoxCastNonAlloc(currentCenter, halfExtents, direction, _boxCastHits, orientation, distance + _collisionPadding, _collisionLayers, QueryTriggerInteraction.Ignore);
+            int hitCount = Physics.CapsuleCastNonAlloc(pointA, pointB, radius, direction, _capsuleCastHits, distance + _collisionPadding, _collisionLayers, QueryTriggerInteraction.Ignore);
             float nearestDistance = float.PositiveInfinity;
             for (int i = 0; i < hitCount; i++)
             {
-                Collider hitCollider = _boxCastHits[i].collider;
+                Collider hitCollider = _capsuleCastHits[i].collider;
                 if (IsMovementCollider(hitCollider))
                 {
                     continue;
                 }
 
-                nearestDistance = Mathf.Min(nearestDistance, _boxCastHits[i].distance);
+                nearestDistance = Mathf.Min(nearestDistance, _capsuleCastHits[i].distance);
             }
 
             if (!float.IsPositiveInfinity(nearestDistance))
@@ -256,8 +258,9 @@ namespace ArchiveNull.UI
                 return currentPosition + direction * allowedDistance;
             }
 
-            Vector3 targetCenter = GetMovementColliderWorldCenter(targetPosition);
-            int overlapCount = Physics.OverlapBoxNonAlloc(targetCenter, halfExtents, _overlapHits, orientation, _collisionLayers, QueryTriggerInteraction.Ignore);
+            GetCapsulePoints(targetPosition, out Vector3 targetA, out Vector3 targetB, out float targetRadius);
+            targetRadius = Mathf.Max(0.001f, targetRadius + _collisionPadding);
+            int overlapCount = Physics.OverlapCapsuleNonAlloc(targetA, targetB, targetRadius, _overlapHits, _collisionLayers, QueryTriggerInteraction.Ignore);
             for (int i = 0; i < overlapCount; i++)
             {
                 if (!IsMovementCollider(_overlapHits[i]))
@@ -269,17 +272,34 @@ namespace ArchiveNull.UI
             return targetPosition;
         }
 
-        private Vector3 GetMovementColliderWorldCenter(Vector3 cameraPosition)
+        private void GetCapsulePoints(Vector3 cameraPosition, out Vector3 pointA, out Vector3 pointB, out float radius)
         {
+            pointA = cameraPosition;
+            pointB = cameraPosition;
+            radius = _collisionRadius;
+
             if (_movementCollider == null)
             {
-                return cameraPosition;
+                return;
             }
 
             Transform colliderTransform = _movementCollider.transform;
             Vector3 currentCameraPosition = _cameraRoot != null ? _cameraRoot.position : cameraPosition;
             Vector3 centerOffset = colliderTransform.TransformPoint(_movementCollider.center) - currentCameraPosition;
-            return cameraPosition + centerOffset;
+            Vector3 center = cameraPosition + centerOffset;
+            Vector3 lossy = colliderTransform.lossyScale;
+
+            int axis = Mathf.Clamp(_movementCollider.direction, 0, 2);
+            float heightScale = axis == 0 ? Mathf.Abs(lossy.x) : axis == 1 ? Mathf.Abs(lossy.y) : Mathf.Abs(lossy.z);
+            float radiusScaleA = axis == 0 ? Mathf.Abs(lossy.y) : Mathf.Abs(lossy.x);
+            float radiusScaleB = axis == 2 ? Mathf.Abs(lossy.y) : Mathf.Abs(lossy.z);
+            radius = Mathf.Max(0.001f, _movementCollider.radius * Mathf.Max(radiusScaleA, radiusScaleB));
+            float halfHeight = Mathf.Max(radius, (_movementCollider.height * heightScale) * 0.5f);
+            float segmentOffset = Mathf.Max(0f, halfHeight - radius);
+
+            Vector3 axisDir = axis == 0 ? colliderTransform.right : axis == 1 ? colliderTransform.up : colliderTransform.forward;
+            pointA = center + axisDir * segmentOffset;
+            pointB = center - axisDir * segmentOffset;
         }
 
         private bool IsMovementCollider(Collider candidate)

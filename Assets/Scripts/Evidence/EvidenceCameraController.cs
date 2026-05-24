@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -15,11 +16,15 @@ namespace ArchiveNull.Evidence
         [SerializeField] private int capturedPhotoWidth = 1024;
         [SerializeField] private bool createNotebookIfMissing = true;
         [SerializeField] private Key notebookToggleKey = Key.Tab;
+        [SerializeField] private Key inventoryWheelKey = Key.G;
 
         [Header("Zoom")]
         [SerializeField] private float minZoomFov = 24f;
-        [SerializeField] private float zoomSpeed = 5.5f;
-        [SerializeField] private float zoomReturnSpeed = 10f;
+        [SerializeField] private float zoomStepPerScroll = 2.2f;
+        [SerializeField] private float zoomLerpTime = 0.18f;
+        [SerializeField] private float zoomIdleReturnSpeed = 3.2f;
+        [SerializeField] private float zoomBlurMaxAlpha = 0.38f;
+        [SerializeField] private float zoomBlurDecaySpeed = 5.4f;
 
         [Header("Optional Custom UI")]
         [SerializeField] private SimpleMessageUI messageUI;
@@ -39,11 +44,15 @@ namespace ArchiveNull.Evidence
         [Header("Generated UI")]
         [SerializeField] private bool createUiIfMissing = true;
         [SerializeField] private string cameraModeLabel = "CAMARA DE EVIDENCIA";
-        [SerializeField] private string captureHint = "CLICK: FOTO  //  F: CERRAR";
+        [SerializeField] private string captureHint = "CLICK: FOTO  //  F: ABRIR/CERRAR";
         [SerializeField] private Color hudColor = new Color(0.78f, 0.96f, 0.92f, 1f);
+        [SerializeField] private Sprite cameraWheelIcon;
+        [SerializeField] private Sprite uvWheelIcon;
+        [SerializeField] private Sprite analyzerWheelIcon;
 
         public bool IsCameraModeActive { get; private set; }
         public static bool IsAnyCameraModeActive { get; private set; }
+        public static bool IsAnyRadialMenuOpen { get; private set; }
 
         private CanvasGroup hudGroup;
         private RectTransform hudAnimatedRoot;
@@ -53,8 +62,42 @@ namespace ArchiveNull.Evidence
         private float nextCaptureTime;
         private float defaultFov;
         private float targetFov;
+        private float zoomVelocity;
+        private float zoomBlurAlpha;
+        private float lastZoomInputTime;
+        private bool radialMenuOpen;
         private TMP_Text zoomText;
+        private TMP_Text focusStateText;
+        private TMP_Text toolStateText;
+        private Image zoomBarFill;
+        private TMP_Text recordingText;
+        private Image transitionBlackOverlay;
+        private Image zoomBlurOverlay;
+        private CanvasGroup inventoryWheelGroup;
+        private RectTransform inventoryWheelRoot;
+        private Image wheelBackdrop;
+        private readonly List<WheelSegmentVisual> wheelSegments = new List<WheelSegmentVisual>(3);
+        private ToolSlot equippedTool = ToolSlot.None;
+        private ToolSlot hoveredTool = ToolSlot.None;
         private readonly RaycastHit[] captureHits = new RaycastHit[24];
+
+        private enum ToolSlot
+        {
+            None,
+            Camera,
+            UvLight,
+            Analyzer
+        }
+
+        private sealed class WheelSegmentVisual
+        {
+            public ToolSlot Tool;
+            public Image Arc;
+            public Image ActiveBorder;
+            public Image IconImage;
+            public float CenterAngle;
+            public float HalfWidth;
+        }
 
         private void Awake()
         {
@@ -82,6 +125,7 @@ namespace ArchiveNull.Evidence
 
         private void OnDisable()
         {
+            IsAnyRadialMenuOpen = false;
             if (IsCameraModeActive)
             {
                 SetCameraModeImmediate(false);
@@ -92,11 +136,37 @@ namespace ArchiveNull.Evidence
         {
             if (EvidenceNotebookUI.IsAnyNotebookOpen || global::Keypad.IsAnyOpen)
             {
+                if (radialMenuOpen)
+                {
+                    SetInventoryWheel(false);
+                }
+
                 RestoreCameraFov();
                 return;
             }
 
-            if (GlobalInputBindings.WasPressed(GameInputAction.Camera) && !global::InspectObject.IsAnyInspecting)
+            bool wheelHold = IsHeld(inventoryWheelKey);
+            if (wheelHold && !radialMenuOpen && !IsCameraModeActive && !global::InspectObject.IsAnyInspecting)
+            {
+                SetInventoryWheel(true);
+            }
+
+            if (radialMenuOpen)
+            {
+                UpdateInventoryWheelSelection();
+                if (Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame)
+                {
+                    EquipHoveredTool(true);
+                }
+                else if (!wheelHold)
+                {
+                    EquipHoveredTool(true);
+                }
+
+                return;
+            }
+
+            if (equippedTool == ToolSlot.Camera && GlobalInputBindings.WasPressed(GameInputAction.Camera) && !global::InspectObject.IsAnyInspecting)
             {
                 SetCameraMode(!IsCameraModeActive);
             }
@@ -122,6 +192,11 @@ namespace ArchiveNull.Evidence
 
         private void SetCameraMode(bool active)
         {
+            if (equippedTool != ToolSlot.Camera)
+            {
+                return;
+            }
+
             if (IsCameraModeActive == active)
             {
                 return;
@@ -135,6 +210,160 @@ namespace ArchiveNull.Evidence
             }
 
             cameraModeRoutine = StartCoroutine(AnimateCameraMode(active));
+        }
+
+        private void SetInventoryWheel(bool active)
+        {
+            radialMenuOpen = active;
+            IsAnyRadialMenuOpen = active;
+            if (inventoryWheelGroup != null)
+            {
+                inventoryWheelGroup.alpha = active ? 1f : 0f;
+                inventoryWheelGroup.interactable = active;
+                inventoryWheelGroup.blocksRaycasts = active;
+            }
+            if (wheelBackdrop != null)
+            {
+                wheelBackdrop.enabled = active;
+            }
+
+            if (active)
+            {
+                hoveredTool = equippedTool != ToolSlot.None ? equippedTool : ToolSlot.Camera;
+                Cursor.lockState = CursorLockMode.None;
+                Cursor.visible = true;
+                SetCameraMode(false);
+            }
+            else if (!EvidenceNotebookUI.IsAnyNotebookOpen)
+            {
+                Cursor.lockState = CursorLockMode.Locked;
+                Cursor.visible = false;
+            }
+
+            UpdateWheelVisuals();
+        }
+
+        private void UpdateInventoryWheelSelection()
+        {
+            if (Mouse.current == null || inventoryWheelRoot == null)
+            {
+                return;
+            }
+
+            Vector2 center = RectTransformUtility.WorldToScreenPoint(null, inventoryWheelRoot.position);
+            Vector2 delta = Mouse.current.position.ReadValue() - center;
+            if (delta.sqrMagnitude < 2500f)
+            {
+                hoveredTool = equippedTool != ToolSlot.None ? equippedTool : ToolSlot.Camera;
+                UpdateWheelVisuals();
+                return;
+            }
+
+            float angle = Mathf.Atan2(delta.y, delta.x) * Mathf.Rad2Deg;
+            hoveredTool = GetToolFromAngle(angle);
+            UpdateWheelVisuals();
+        }
+
+        private ToolSlot GetToolFromAngle(float angle)
+        {
+            if (wheelSegments.Count == 0)
+            {
+                return ToolSlot.Camera;
+            }
+
+            float wrapped = NormalizeAngle180(angle);
+            float bestDelta = float.MaxValue;
+            ToolSlot best = ToolSlot.Camera;
+            for (int i = 0; i < wheelSegments.Count; i++)
+            {
+                WheelSegmentVisual segment = wheelSegments[i];
+                float delta = Mathf.Abs(Mathf.DeltaAngle(wrapped, segment.CenterAngle));
+                if (delta <= segment.HalfWidth && delta < bestDelta)
+                {
+                    bestDelta = delta;
+                    best = segment.Tool;
+                }
+            }
+
+            return best;
+        }
+
+        private void UpdateWheelVisuals()
+        {
+            if (inventoryWheelRoot == null)
+            {
+                return;
+            }
+
+            for (int i = 0; i < wheelSegments.Count; i++)
+            {
+                WheelSegmentVisual segment = wheelSegments[i];
+                bool isHovered = segment.Tool == hoveredTool;
+                if (segment.Arc != null)
+                {
+                    segment.Arc.color = isHovered ? new Color(0.92f, 0.97f, 0.96f, 0.25f) : new Color(0.04f, 0.08f, 0.08f, 0.82f);
+                }
+                if (segment.ActiveBorder != null)
+                {
+                    float pulse = 0.5f + 0.5f * Mathf.Sin(Time.unscaledTime * 8.5f);
+                    float alpha = isHovered ? Mathf.Lerp(0.55f, 0.95f, pulse) : 0f;
+                    segment.ActiveBorder.color = new Color(1f, 1f, 1f, alpha);
+                }
+
+                if (segment.IconImage != null)
+                {
+                    segment.IconImage.color = isHovered ? Color.white : new Color(0.82f, 0.92f, 0.9f, 0.9f);
+                    segment.IconImage.rectTransform.sizeDelta = isHovered ? new Vector2(64f, 64f) : new Vector2(58f, 58f);
+                }
+            }
+        }
+
+        private void EquipHoveredTool(bool closeWheel)
+        {
+            equippedTool = hoveredTool;
+            if (closeWheel)
+            {
+                SetInventoryWheel(false);
+            }
+
+            ShowMessage("Herramienta equipada: " + GetToolLabel(equippedTool));
+            if (toolStateText != null)
+            {
+                toolStateText.text = "HERRAMIENTA: " + GetToolLabel(equippedTool);
+            }
+        }
+
+        private static string GetToolLabel(ToolSlot tool)
+        {
+            return tool switch
+            {
+                ToolSlot.Camera => "CAMARA",
+                ToolSlot.UvLight => "LUZ UV",
+                ToolSlot.Analyzer => "ANALIZADOR",
+                _ => "NINGUNA"
+            };
+        }
+
+        private Sprite GetToolIconSprite(ToolSlot tool)
+        {
+            return tool switch
+            {
+                ToolSlot.Camera => cameraWheelIcon,
+                ToolSlot.UvLight => uvWheelIcon,
+                ToolSlot.Analyzer => analyzerWheelIcon,
+                _ => null
+            };
+        }
+
+        private static string GetToolIcon(ToolSlot tool)
+        {
+            return tool switch
+            {
+                ToolSlot.Camera => "⌖",
+                ToolSlot.UvLight => "✷",
+                ToolSlot.Analyzer => "◈",
+                _ => "○"
+            };
         }
 
         private void TryCapture()
@@ -236,10 +465,6 @@ namespace ArchiveNull.Evidence
             {
                 messageUI.ShowMessage(message);
             }
-            else
-            {
-                Debug.Log("[EvidenceCamera] " + message);
-            }
         }
 
         private void EnsureNotebook()
@@ -265,19 +490,17 @@ namespace ArchiveNull.Evidence
                 return null;
             }
 
-            int width = Mathf.Clamp(capturedPhotoWidth, 256, 4096);
-            float aspect = playerCamera.aspect > 0.01f ? playerCamera.aspect : (float)Screen.width / Mathf.Max(1, Screen.height);
-            int height = Mathf.Clamp(Mathf.RoundToInt(width / Mathf.Max(0.01f, aspect)), 144, 4096);
+            int side = Mathf.Clamp(capturedPhotoWidth, 256, 4096);
 
             RenderTexture previousTarget = playerCamera.targetTexture;
             RenderTexture previousActive = RenderTexture.active;
-            RenderTexture renderTexture = RenderTexture.GetTemporary(width, height, 24, RenderTextureFormat.ARGB32);
-            Texture2D texture = new Texture2D(width, height, TextureFormat.RGB24, false);
+            RenderTexture renderTexture = RenderTexture.GetTemporary(side, side, 24, RenderTextureFormat.ARGB32);
+            Texture2D texture = new Texture2D(side, side, TextureFormat.RGB24, false);
 
             playerCamera.targetTexture = renderTexture;
             RenderTexture.active = renderTexture;
             playerCamera.Render();
-            texture.ReadPixels(new Rect(0f, 0f, width, height), 0, 0);
+            texture.ReadPixels(new Rect(0f, 0f, side, side), 0, 0);
             texture.Apply();
 
             playerCamera.targetTexture = previousTarget;
@@ -287,7 +510,7 @@ namespace ArchiveNull.Evidence
             texture.name = "CapturedEvidencePhoto";
             texture.wrapMode = TextureWrapMode.Clamp;
             texture.filterMode = FilterMode.Bilinear;
-            Sprite sprite = Sprite.Create(texture, new Rect(0f, 0f, width, height), new Vector2(0.5f, 0.5f), 100f);
+            Sprite sprite = Sprite.Create(texture, new Rect(0f, 0f, side, side), new Vector2(0.5f, 0.5f), 100f);
             sprite.name = "CapturedEvidencePhotoSprite";
             return sprite;
         }
@@ -313,6 +536,8 @@ namespace ArchiveNull.Evidence
             {
                 cameraModeUI = CreateCameraHud(canvasRect);
             }
+
+            CreateInventoryWheel(canvasRect);
 
             if (messageUI == null)
             {
@@ -367,13 +592,143 @@ namespace ArchiveNull.Evidence
             zoomText.color = hudColor;
             SetRect(zoomText.rectTransform, new Vector2(0f, 0f), new Vector2(1f, 0f), new Vector2(0f, 0f), new Vector2(70f, 18f), new Vector2(-70f, 54f));
 
+            toolStateText = CreateText("ToolState", rootRect, "HERRAMIENTA: CAMARA", 18f, TextAlignmentOptions.TopRight);
+            toolStateText.color = hudColor;
+            SetRect(toolStateText.rectTransform, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(70f, -90f), new Vector2(-70f, -62f));
+
+            recordingText = CreateText("RecText", rootRect, "REC", 22f, TextAlignmentOptions.TopRight);
+            recordingText.color = new Color(1f, 0.24f, 0.24f, 0.95f);
+            SetRect(recordingText.rectTransform, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(70f, -52f), new Vector2(-70f, -22f));
+
+            focusStateText = CreateText("FocusState", rootRect, "ENFOCADO", 17f, TextAlignmentOptions.Bottom);
+            focusStateText.color = new Color(hudColor.r, hudColor.g, hudColor.b, 0.84f);
+            SetRect(focusStateText.rectTransform, new Vector2(0f, 0f), new Vector2(1f, 0f), new Vector2(0.5f, 0f), new Vector2(650f, 18f), new Vector2(1260f, 56f));
+
             captureFlash = CreateImage("CaptureFlash", rootRect, Color.white);
             Stretch(captureFlash.rectTransform);
             captureFlash.raycastTarget = false;
             SetImageAlpha(captureFlash, 0f);
+
+            zoomBlurOverlay = CreateImage("ZoomBlurOverlay", rootRect, new Color(0.08f, 0.16f, 0.16f, 0f));
+            Stretch(zoomBlurOverlay.rectTransform);
+            zoomBlurOverlay.raycastTarget = false;
+
+            RectTransform zoomBarRoot = CreateRectObject("ZoomBarRoot", rootRect).GetComponent<RectTransform>();
+            zoomBarRoot.anchorMin = new Vector2(0.5f, 0f);
+            zoomBarRoot.anchorMax = new Vector2(0.5f, 0f);
+            zoomBarRoot.pivot = new Vector2(0.5f, 0f);
+            zoomBarRoot.anchoredPosition = new Vector2(0f, 76f);
+            zoomBarRoot.sizeDelta = new Vector2(300f, 14f);
+            Image zoomBarBg = CreateImage("ZoomBarBg", zoomBarRoot, new Color(0.05f, 0.11f, 0.1f, 0.9f));
+            Stretch(zoomBarBg.rectTransform);
+            RectTransform fillRect = CreateRectObject("ZoomBarFill", zoomBarRoot).GetComponent<RectTransform>();
+            fillRect.anchorMin = new Vector2(0f, 0f);
+            fillRect.anchorMax = new Vector2(0f, 1f);
+            fillRect.pivot = new Vector2(0f, 0.5f);
+            fillRect.anchoredPosition = Vector2.zero;
+            fillRect.sizeDelta = new Vector2(12f, 0f);
+            zoomBarFill = fillRect.gameObject.AddComponent<Image>();
+            zoomBarFill.color = new Color(0.78f, 0.96f, 0.92f, 0.95f);
+
+            transitionBlackOverlay = CreateImage("TransitionBlack", rootRect, new Color(0f, 0f, 0f, 0f));
+            Stretch(transitionBlackOverlay.rectTransform);
+            transitionBlackOverlay.raycastTarget = false;
+            transitionBlackOverlay.transform.SetAsLastSibling();
             captureFlash.transform.SetAsLastSibling();
 
             return root;
+        }
+
+        private void CreateInventoryWheel(RectTransform parent)
+        {
+            wheelSegments.Clear();
+
+            RectTransform blurLayer = CreateRectObject("WheelBackdrop", parent).GetComponent<RectTransform>();
+            Stretch(blurLayer);
+            wheelBackdrop = blurLayer.gameObject.AddComponent<Image>();
+            wheelBackdrop.color = new Color(0f, 0f, 0f, 0.45f);
+            wheelBackdrop.raycastTarget = true;
+            wheelBackdrop.enabled = false;
+
+            GameObject root = CreateRectObject("InvestigationWheel", parent);
+            RectTransform rootRect = root.GetComponent<RectTransform>();
+            rootRect.anchorMin = new Vector2(0.5f, 0.5f);
+            rootRect.anchorMax = new Vector2(0.5f, 0.5f);
+            rootRect.pivot = new Vector2(0.5f, 0.5f);
+            rootRect.sizeDelta = new Vector2(620f, 620f);
+            inventoryWheelRoot = rootRect;
+            inventoryWheelGroup = root.AddComponent<CanvasGroup>();
+            inventoryWheelGroup.alpha = 0f;
+            inventoryWheelGroup.interactable = false;
+            inventoryWheelGroup.blocksRaycasts = false;
+
+            Image outerRing = CreateImage("OuterRing", rootRect, new Color(0.03f, 0.06f, 0.06f, 0.88f));
+            Stretch(outerRing.rectTransform);
+            outerRing.sprite = CreateRingSprite(512, 0.48f, 0.2f);
+
+            CreateWheelSegment(rootRect, ToolSlot.Camera, 90f, 60f);
+            CreateWheelSegment(rootRect, ToolSlot.UvLight, 210f, 60f);
+            CreateWheelSegment(rootRect, ToolSlot.Analyzer, 330f, 60f);
+
+            RectTransform centerDisk = CreateRectObject("CenterDisk", rootRect).GetComponent<RectTransform>();
+            centerDisk.anchorMin = new Vector2(0.5f, 0.5f);
+            centerDisk.anchorMax = new Vector2(0.5f, 0.5f);
+            centerDisk.pivot = new Vector2(0.5f, 0.5f);
+            centerDisk.sizeDelta = new Vector2(255f, 255f);
+            Image centerBg = centerDisk.gameObject.AddComponent<Image>();
+            centerBg.color = new Color(0.05f, 0.09f, 0.09f, 0.94f);
+            centerBg.sprite = CreateCircleSprite(256);
+
+            centerDisk.gameObject.SetActive(false);
+        }
+
+        private void CreateWheelSegment(RectTransform parent, ToolSlot slot, float centerAngle, float halfWidth)
+        {
+            RectTransform segmentRoot = CreateRectObject(slot + "Segment", parent).GetComponent<RectTransform>();
+            Stretch(segmentRoot);
+
+            Image segmentArc = CreateImage("Arc", segmentRoot, new Color(0.04f, 0.08f, 0.08f, 0.82f));
+            Stretch(segmentArc.rectTransform);
+            segmentArc.sprite = CreateRingSegmentSprite(768, centerAngle, halfWidth, 0.48f, 0.2f);
+
+            Image borderArc = CreateImage("ActiveBorder", segmentRoot, new Color(1f, 1f, 1f, 0f));
+            Stretch(borderArc.rectTransform);
+            borderArc.sprite = CreateRingSegmentSprite(768, centerAngle, halfWidth, 0.485f, 0.46f);
+
+            RectTransform iconRect = CreateRectObject("IconRoot", segmentRoot).GetComponent<RectTransform>();
+            iconRect.anchorMin = new Vector2(0.5f, 0.5f);
+            iconRect.anchorMax = new Vector2(0.5f, 0.5f);
+            iconRect.pivot = new Vector2(0.5f, 0.5f);
+            iconRect.anchoredPosition = DegreeToCircle(centerAngle, 195f);
+            iconRect.sizeDelta = new Vector2(90f, 90f);
+            Sprite iconSprite = GetToolIconSprite(slot);
+            Image iconImage = null;
+            if (iconSprite != null)
+            {
+                iconImage = CreateImage("IconImage", iconRect, new Color(0.82f, 0.92f, 0.9f, 0.9f));
+                iconImage.sprite = iconSprite;
+                iconImage.preserveAspect = true;
+                iconImage.rectTransform.sizeDelta = new Vector2(58f, 58f);
+                Center(iconImage.rectTransform);
+            }
+            else
+            {
+                iconImage = CreateImage("IconFallbackDot", iconRect, new Color(0.82f, 0.92f, 0.9f, 0.9f));
+                iconImage.sprite = CreateCircleSprite(64);
+                iconImage.preserveAspect = true;
+                iconImage.rectTransform.sizeDelta = new Vector2(18f, 18f);
+                Center(iconImage.rectTransform);
+            }
+
+            wheelSegments.Add(new WheelSegmentVisual
+            {
+                Tool = slot,
+                Arc = segmentArc,
+                ActiveBorder = borderArc,
+                IconImage = iconImage,
+                CenterAngle = NormalizeAngle180(centerAngle),
+                HalfWidth = halfWidth
+            });
         }
 
         private SimpleMessageUI CreateMessageUi(RectTransform parent)
@@ -525,6 +880,10 @@ namespace ArchiveNull.Evidence
             {
                 cameraModeUI.SetActive(true);
                 PlaySound(cameraOpenClip);
+                if (transitionBlackOverlay != null)
+                {
+                    SetImageAlpha(transitionBlackOverlay, 1f);
+                }
             }
             else
             {
@@ -551,6 +910,10 @@ namespace ArchiveNull.Evidence
                 {
                     hudAnimatedRoot.localScale = Vector3.Lerp(fromScale, toScale, t);
                 }
+                if (active && transitionBlackOverlay != null)
+                {
+                    SetImageAlpha(transitionBlackOverlay, 1f - t);
+                }
 
                 yield return null;
             }
@@ -563,6 +926,10 @@ namespace ArchiveNull.Evidence
 
             if (!active)
             {
+                if (transitionBlackOverlay != null)
+                {
+                    SetImageAlpha(transitionBlackOverlay, 0f);
+                }
                 cameraModeUI.SetActive(false);
                 RestoreCameraFov(true);
                 if (hudAnimatedRoot != null)
@@ -630,10 +997,19 @@ namespace ArchiveNull.Evidence
             float scroll = Mouse.current.scroll.ReadValue().y;
             if (Mathf.Abs(scroll) > 0.001f)
             {
-                targetFov = Mathf.Clamp(targetFov - scroll * zoomSpeed * 0.01f, minZoomFov, defaultFov);
+                float normalizedStep = Mathf.Clamp(scroll / 120f, -1.5f, 1.5f);
+                if (Mathf.Abs(normalizedStep) < 0.05f)
+                {
+                    normalizedStep = Mathf.Sign(scroll) * 0.1f;
+                }
+
+                targetFov = Mathf.Clamp(targetFov - normalizedStep * zoomStepPerScroll, minZoomFov, defaultFov);
+                zoomBlurAlpha = zoomBlurMaxAlpha;
+                lastZoomInputTime = Time.unscaledTime;
             }
 
-            playerCamera.fieldOfView = Mathf.Lerp(playerCamera.fieldOfView, targetFov, Time.unscaledDeltaTime * zoomReturnSpeed);
+            playerCamera.fieldOfView = Mathf.SmoothDamp(playerCamera.fieldOfView, targetFov, ref zoomVelocity, zoomLerpTime, Mathf.Infinity, Time.unscaledDeltaTime);
+            UpdateZoomFocusFeedback();
             RefreshZoomText();
         }
 
@@ -645,7 +1021,10 @@ namespace ArchiveNull.Evidence
             }
 
             targetFov = defaultFov;
-            playerCamera.fieldOfView = immediate ? defaultFov : Mathf.Lerp(playerCamera.fieldOfView, defaultFov, Time.unscaledDeltaTime * zoomReturnSpeed);
+            zoomVelocity = 0f;
+            playerCamera.fieldOfView = immediate ? defaultFov : Mathf.Lerp(playerCamera.fieldOfView, defaultFov, Time.unscaledDeltaTime * zoomIdleReturnSpeed);
+            zoomBlurAlpha = Mathf.Max(0f, zoomBlurAlpha - zoomBlurDecaySpeed * Time.unscaledDeltaTime);
+            UpdateZoomFocusFeedback();
             RefreshZoomText();
         }
 
@@ -658,6 +1037,30 @@ namespace ArchiveNull.Evidence
 
             float zoom = Mathf.Clamp(defaultFov / Mathf.Max(1f, playerCamera.fieldOfView), 1f, 9.9f);
             zoomText.text = $"ZOOM {zoom:0.0}X";
+            if (zoomBarFill != null)
+            {
+                float t = Mathf.InverseLerp(defaultFov, minZoomFov, playerCamera.fieldOfView);
+                RectTransform fillRect = zoomBarFill.rectTransform;
+                fillRect.sizeDelta = new Vector2(Mathf.Lerp(12f, 300f, t), fillRect.sizeDelta.y);
+            }
+        }
+
+        private void UpdateZoomFocusFeedback()
+        {
+            if (zoomBlurOverlay != null)
+            {
+                zoomBlurAlpha = Mathf.Max(0f, zoomBlurAlpha - zoomBlurDecaySpeed * Time.unscaledDeltaTime);
+                SetImageAlpha(zoomBlurOverlay, zoomBlurAlpha);
+            }
+
+            if (focusStateText != null)
+            {
+                bool focusing = Time.unscaledTime - lastZoomInputTime < 0.22f || zoomBlurAlpha > 0.03f;
+                focusStateText.text = focusing ? "ENFOCANDO..." : "ENFOCADO";
+                focusStateText.color = focusing
+                    ? new Color(hudColor.r, hudColor.g, hudColor.b, 0.72f)
+                    : new Color(hudColor.r, hudColor.g, hudColor.b, 0.92f);
+            }
         }
 
         private void PlaySound(AudioClip clip)
@@ -780,6 +1183,107 @@ namespace ArchiveNull.Evidence
             AudioClip clip = AudioClip.Create("EvidenceCameraShutter", sampleCount, 1, sampleRate, false);
             clip.SetData(samples, 0);
             return clip;
+        }
+
+        private static Sprite CreateRingSprite(int size, float outerRadiusRatio, float innerRadiusRatio)
+        {
+            Texture2D texture = new Texture2D(size, size, TextureFormat.RGBA32, false);
+            Vector2 center = new Vector2(size * 0.5f, size * 0.5f);
+            float outer = size * Mathf.Clamp(outerRadiusRatio, 0.05f, 0.5f);
+            float inner = size * Mathf.Clamp(innerRadiusRatio, 0f, outerRadiusRatio - 0.02f);
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    float dist = Vector2.Distance(new Vector2(x, y), center);
+                    float alpha = dist <= outer && dist >= inner ? 1f : 0f;
+                    texture.SetPixel(x, y, new Color(1f, 1f, 1f, alpha));
+                }
+            }
+
+            texture.Apply();
+            return Sprite.Create(texture, new Rect(0f, 0f, size, size), new Vector2(0.5f, 0.5f));
+        }
+
+        private static Sprite CreateCircleSprite(int size)
+        {
+            Texture2D texture = new Texture2D(size, size, TextureFormat.RGBA32, false);
+            Vector2 center = new Vector2(size * 0.5f, size * 0.5f);
+            float radius = size * 0.5f;
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    float dist = Vector2.Distance(new Vector2(x, y), center);
+                    texture.SetPixel(x, y, new Color(1f, 1f, 1f, dist <= radius ? 1f : 0f));
+                }
+            }
+
+            texture.Apply();
+            return Sprite.Create(texture, new Rect(0f, 0f, size, size), new Vector2(0.5f, 0.5f));
+        }
+
+        private static Sprite CreateRingSegmentSprite(int size, float centerAngle, float halfWidth, float outerRadiusRatio, float innerRadiusRatio)
+        {
+            Texture2D texture = new Texture2D(size, size, TextureFormat.RGBA32, false);
+            Vector2 center = new Vector2(size * 0.5f, size * 0.5f);
+            float outer = size * Mathf.Clamp(outerRadiusRatio, 0.05f, 0.5f);
+            float inner = size * Mathf.Clamp(innerRadiusRatio, 0f, outerRadiusRatio - 0.02f);
+            float normalizedCenter = NormalizeAngle180(centerAngle);
+            float clampedHalfWidth = Mathf.Clamp(halfWidth, 1f, 179f);
+
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    Vector2 point = new Vector2(x, y);
+                    Vector2 toPoint = point - center;
+                    float dist = toPoint.magnitude;
+                    if (dist < inner || dist > outer)
+                    {
+                        texture.SetPixel(x, y, Color.clear);
+                        continue;
+                    }
+
+                    float angle = Mathf.Atan2(toPoint.y, toPoint.x) * Mathf.Rad2Deg;
+                    float delta = Mathf.Abs(Mathf.DeltaAngle(normalizedCenter, NormalizeAngle180(angle)));
+                    texture.SetPixel(x, y, delta <= clampedHalfWidth ? Color.white : Color.clear);
+                }
+            }
+
+            texture.Apply();
+            return Sprite.Create(texture, new Rect(0f, 0f, size, size), new Vector2(0.5f, 0.5f));
+        }
+
+        private static Vector2 DegreeToCircle(float angle, float radius)
+        {
+            float rad = angle * Mathf.Deg2Rad;
+            return new Vector2(Mathf.Cos(rad), Mathf.Sin(rad)) * radius;
+        }
+
+        private static float NormalizeAngle180(float angle)
+        {
+            float value = angle % 360f;
+            if (value > 180f)
+            {
+                value -= 360f;
+            }
+            else if (value < -180f)
+            {
+                value += 360f;
+            }
+
+            return value;
+        }
+
+        private static bool WasPressed(Key key)
+        {
+            return key != Key.None && Keyboard.current != null && Keyboard.current[key].wasPressedThisFrame;
+        }
+
+        private static bool IsHeld(Key key)
+        {
+            return key != Key.None && Keyboard.current != null && Keyboard.current[key].isPressed;
         }
     }
 }

@@ -10115,12 +10115,11 @@ MonoBehaviour:
   movementScript: {fileID: 114963310857537177}
   lookScript: {fileID: 114657889654365651}
   inspectText: {fileID: 1074466288}
-  inspectKey: 19
-  releaseKey: 19
   rotationSpeed: 300
   zoomSpeed: 0.35
   minInspectDistance: 0.35
   maxInspectDistance: 1.25
+  cameraClipPadding: 0.12
   holdRadius: 0.18
   obstructionPadding: 0.03
   obstructionLayers:
@@ -16560,6 +16559,9 @@ MonoBehaviour:
   fadeFromBlackOnMainMenuReturn: 1
   returnFadeDuration: 1.1
   postRebuildBlackHold: 0.08
+  smoothMaterialRestore: 1
+  materialRestoreBlendDuration: 0.28
+  materialRestoreOverlayAlpha: 0.16
 --- !u!114 &1552597208
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -23682,6 +23684,7 @@ MonoBehaviour:
   maxZoomFOV: 15
   currentZoom: 0
   sensitivity: 1
+  disabledByEvidenceCameraSystem: 1
 --- !u!114 &114497867058053985
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -23732,7 +23735,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1773622055593733}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 27b67ddb3d23b8340b125aede56d7e8c, type: 3}
   m_Name: 
@@ -23758,8 +23761,6 @@ MonoBehaviour:
   speed: 3
   canRun: 0
   runSpeed: 9
-  runningKey: 304
-  useArrowMovement: 0
 --- !u!124 &124991111691552953
 Behaviour:
   m_ObjectHideFlags: 0
@@ -23843,6 +23844,13 @@ MonoBehaviour:
   capturedPhotoWidth: 1024
   createNotebookIfMissing: 1
   notebookToggleKey: 3
+  inventoryWheelKey: 21
+  minZoomFov: 24
+  zoomSpeed: 5.5
+  zoomLerpTime: 0.18
+  zoomIdleReturnSpeed: 3.2
+  zoomBlurMaxAlpha: 0.38
+  zoomBlurDecaySpeed: 5.4
   messageUI: {fileID: 0}
   cameraModeUI: {fileID: 0}
   audioSource: {fileID: 0}

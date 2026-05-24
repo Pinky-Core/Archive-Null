@@ -15,7 +15,6 @@ namespace ArchiveNull.InvestigationBoard
         [SerializeField] private Transform boardSurface;
         [SerializeField] private Transform photoContainer;
         [SerializeField] private WorldEvidencePhoto photoPrefab;
-        [SerializeField] private WorldBoardZone[] zones;
         [SerializeField] private WorldBoardConnectionManager connectionManager;
 
         [Header("Layout")]
@@ -67,11 +66,6 @@ namespace ArchiveNull.InvestigationBoard
             if (connectionManager == null)
             {
                 connectionManager = GetComponentInChildren<WorldBoardConnectionManager>(true);
-            }
-
-            if (zones == null || zones.Length == 0)
-            {
-                zones = GetComponentsInChildren<WorldBoardZone>(true);
             }
 
             if (createReticleIfMissing)
@@ -190,7 +184,6 @@ namespace ArchiveNull.InvestigationBoard
 
             if (draggedPhoto != null && Mouse.current.leftButton.wasReleasedThisFrame)
             {
-                AssignZone(draggedPhoto);
                 if (!draggedEnough)
                 {
                     connectionManager?.HandlePhotoClicked(draggedPhoto);
@@ -235,28 +228,6 @@ namespace ArchiveNull.InvestigationBoard
 
             point = default;
             return false;
-        }
-
-        private void AssignZone(WorldEvidencePhoto photo)
-        {
-            if (photo == null || photo.EvidenceData == null || zones == null)
-            {
-                return;
-            }
-
-            for (int i = 0; i < zones.Length; i++)
-            {
-                zones[i]?.RemoveEvidence(photo.EvidenceId);
-            }
-
-            for (int i = 0; i < zones.Length; i++)
-            {
-                if (zones[i] != null && zones[i].ContainsPoint(photo.transform.position))
-                {
-                    zones[i].AddEvidence(photo.EvidenceData);
-                    return;
-                }
-            }
         }
 
         private void SetPhotoLocalPosition(WorldEvidencePhoto photo, Vector2 localPosition)
