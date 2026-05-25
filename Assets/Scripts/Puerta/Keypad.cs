@@ -22,7 +22,7 @@ public class Keypad : MonoBehaviour
     private string Answer = "229571";
     private Rigidbody playerRigidbody;
     private bool isOpen;
-    private GraphicRaycaster keypadRaycaster;
+    private GraphicRaycaster[] keypadRaycasters;
     private readonly List<RaycastResult> uiHits = new List<RaycastResult>(16);
 
     public static bool IsAnyOpen { get; private set; }
@@ -39,7 +39,7 @@ public class Keypad : MonoBehaviour
         if (keypadCanvas != null)
         {
             keypadCanvas.SetActive(false);
-            keypadRaycaster = keypadCanvas.GetComponentInChildren<GraphicRaycaster>(true);
+            keypadRaycasters = keypadCanvas.GetComponentsInChildren<GraphicRaycaster>(true);
         }
 
         if (player != null)
@@ -65,6 +65,12 @@ public class Keypad : MonoBehaviour
         }
 
         if (Keyboard.current.escapeKey.wasPressedThisFrame)
+        {
+            HideKeypad();
+            return;
+        }
+
+        if (GlobalInputBindings.WasPressed(GameInputAction.Interact))
         {
             HideKeypad();
             return;
@@ -155,9 +161,17 @@ public class Keypad : MonoBehaviour
         IsAnyOpen = true;
         EnsureEventSystem();
         if (keypadCanvas != null) keypadCanvas.SetActive(true);
-        if (keypadRaycaster == null && keypadCanvas != null)
+        if ((keypadRaycasters == null || keypadRaycasters.Length == 0) && keypadCanvas != null)
         {
-            keypadRaycaster = keypadCanvas.GetComponentInChildren<GraphicRaycaster>(true);
+            keypadRaycasters = keypadCanvas.GetComponentsInChildren<GraphicRaycaster>(true);
+        }
+
+        CanvasGroup group = keypadCanvas != null ? keypadCanvas.GetComponent<CanvasGroup>() : null;
+        if (group != null)
+        {
+            group.alpha = 1f;
+            group.interactable = true;
+            group.blocksRaycasts = true;
         }
         if (Ans != null) Ans.text = "";
         Cursor.lockState = CursorLockMode.None;
@@ -215,7 +229,7 @@ public class Keypad : MonoBehaviour
 
     private void TryHandleUiClick()
     {
-        if (EventSystem.current == null || keypadRaycaster == null || Mouse.current == null)
+        if (EventSystem.current == null || keypadRaycasters == null || keypadRaycasters.Length == 0 || Mouse.current == null)
         {
             return;
         }
@@ -226,20 +240,31 @@ public class Keypad : MonoBehaviour
         };
 
         uiHits.Clear();
-        keypadRaycaster.Raycast(pointer, uiHits);
-        for (int i = 0; i < uiHits.Count; i++)
+        for (int r = 0; r < keypadRaycasters.Length; r++)
         {
-            GameObject go = uiHits[i].gameObject;
-            if (go == null)
+            GraphicRaycaster raycaster = keypadRaycasters[r];
+            if (raycaster == null || !raycaster.isActiveAndEnabled)
             {
                 continue;
             }
 
-            Button button = go.GetComponentInParent<Button>();
-            if (button != null && button.interactable)
+            uiHits.Clear();
+            raycaster.Raycast(pointer, uiHits);
+            for (int i = 0; i < uiHits.Count; i++)
             {
-                button.onClick.Invoke();
-                return;
+                GameObject go = uiHits[i].gameObject;
+                if (go == null)
+                {
+                    continue;
+                }
+
+                Button button = go.GetComponentInParent<Button>();
+                if (button != null && button.interactable)
+                {
+                    button.onClick.Invoke();
+                    EventSystem.current.SetSelectedGameObject(button.gameObject);
+                    return;
+                }
             }
         }
     }

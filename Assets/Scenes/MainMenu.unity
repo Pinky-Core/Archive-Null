@@ -6911,7 +6911,7 @@ MonoBehaviour:
   - chair
   _releaseCameraWhenUnfocused: 1
   _startAtFarPose: 0
-  _startStandingUntilTutorialCompleted: 0
+  _startStandingUntilTutorialCompleted: 1
   _startStandingOnMemoryReturn: 0
   _firstTimeStartPose: {fileID: 80827350}
   _onFocusReleased:
