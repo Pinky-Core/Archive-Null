@@ -11,11 +11,23 @@ public class PlayerInteraction : MonoBehaviour
     void Start()
     {
         playerCamera = Camera.main;
-        interactionText.gameObject.SetActive(false);
+        if (interactionText != null)
+        {
+            interactionText.gameObject.SetActive(false);
+        }
     }
 
     void Update()
     {
+        if (playerCamera == null)
+        {
+            playerCamera = Camera.main;
+            if (playerCamera == null)
+            {
+                return;
+            }
+        }
+
         if (Keypad.IsAnyOpen)
         {
             if (interactionText != null)
@@ -26,29 +38,46 @@ public class PlayerInteraction : MonoBehaviour
             return;
         }
 
-        Ray ray = new Ray(transform.position, transform.forward);
+        Ray ray = playerCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
         if (Physics.Raycast(ray, out RaycastHit hit, interactionDistance))
         {
             Keypad keypad = hit.collider.GetComponent<Keypad>();
+            if (keypad == null)
+            {
+                keypad = hit.collider.GetComponentInParent<Keypad>();
+            }
+
             if (keypad != null)
             {
-                interactionText.gameObject.SetActive(true);
-                interactionText.text = "(E) Usar";
+                if (interactionText != null)
+                {
+                    interactionText.gameObject.SetActive(true);
+                    interactionText.text = "(" + GlobalInputBindings.GetDisplayName(GameInputAction.Interact) + ") Usar";
+                }
 
                 if (GlobalInputBindings.WasPressed(GameInputAction.Interact))
                 {
                     keypad.ShowKeypad();
-                    interactionText.gameObject.SetActive(false);
+                    if (interactionText != null)
+                    {
+                        interactionText.gameObject.SetActive(false);
+                    }
                 }
             }
             else
             {
-                interactionText.gameObject.SetActive(false);
+                if (interactionText != null)
+                {
+                    interactionText.gameObject.SetActive(false);
+                }
             }
         }
         else
         {
-            interactionText.gameObject.SetActive(false);
+            if (interactionText != null)
+            {
+                interactionText.gameObject.SetActive(false);
+            }
         }
     }
 }

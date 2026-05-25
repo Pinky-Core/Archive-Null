@@ -14,8 +14,19 @@ public sealed class CrimeSceneTutorial : MonoBehaviour
 
     private CanvasGroup rootGroup;
     private TMP_Text text;
+    private TMP_Text inspectWaypointLabel;
+    private TMP_Text evidenceWaypointLabel;
+    private Image inspectWaypointDot;
+    private Image evidenceWaypointDot;
+    private Camera mainCamera;
+    private Transform inspectWaypointTarget;
+    private Transform evidenceWaypointTarget;
     private int step;
     private bool evidenceRegistered;
+
+    [Header("Debug")]
+    [SerializeField] private bool alwaysShowInEditor = true;
+    [SerializeField] private bool resetOnPlayInEditor = false;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     private static void Install()
@@ -32,7 +43,13 @@ public sealed class CrimeSceneTutorial : MonoBehaviour
             return;
         }
 
-        if (PlayerPrefs.GetInt(CompletedPref, 0) == 1)
+#if UNITY_EDITOR
+        bool skipByCompletion = false;
+#else
+        bool skipByCompletion = true;
+#endif
+
+        if (skipByCompletion && PlayerPrefs.GetInt(CompletedPref, 0) == 1)
         {
             return;
         }
@@ -48,7 +65,16 @@ public sealed class CrimeSceneTutorial : MonoBehaviour
 
     private void Awake()
     {
+#if UNITY_EDITOR
+        if (resetOnPlayInEditor)
+        {
+            PlayerPrefs.DeleteKey(CompletedPref);
+        }
+#endif
+
+        mainCamera = Camera.main;
         BuildUi();
+        CacheWaypointTargets();
         SetVisible(true);
         RefreshText();
     }
@@ -68,10 +94,21 @@ public sealed class CrimeSceneTutorial : MonoBehaviour
 
     private void Update()
     {
+#if UNITY_EDITOR
+        if (!alwaysShowInEditor && PlayerPrefs.GetInt(CompletedPref, 0) == 1)
+        {
+            StartCoroutine(FadeOutAndDestroy());
+            enabled = false;
+            return;
+        }
+#endif
+
         if (Keyboard.current == null)
         {
             return;
         }
+
+        UpdateWaypointVisuals();
 
         switch (step)
         {
@@ -85,13 +122,13 @@ public sealed class CrimeSceneTutorial : MonoBehaviour
                 }
                 break;
             case 1:
-                if (GlobalInputBindings.WasPressed(GameInputAction.Inspect))
+                if (InspectObject.IsAnyInspecting)
                 {
                     Advance();
                 }
                 break;
             case 2:
-                if (GlobalInputBindings.WasPressed(GameInputAction.Camera))
+                if (EvidenceCameraController.IsAnyCameraModeActive)
                 {
                     Advance();
                 }
@@ -138,13 +175,154 @@ public sealed class CrimeSceneTutorial : MonoBehaviour
 
         text.text = step switch
         {
-            0 => $"MEMORIA ACTIVA\nMuévete con {GlobalInputBindings.GetDisplayName(GameInputAction.MoveForward)}/{GlobalInputBindings.GetDisplayName(GameInputAction.MoveLeft)}/{GlobalInputBindings.GetDisplayName(GameInputAction.MoveBackward)}/{GlobalInputBindings.GetDisplayName(GameInputAction.MoveRight)}.",
-            1 => $"INSPECCIÓN\nMira un objeto marcado y pulsa {GlobalInputBindings.GetDisplayName(GameInputAction.Inspect)}. Mantén click para girarlo y usa la rueda para acercarlo.",
-            2 => $"CÁMARA DE EVIDENCIA\nPulsa {GlobalInputBindings.GetDisplayName(GameInputAction.Camera)} para abrir o cerrar la cámara. La rueda controla el zoom.",
-            3 => "REGISTRO\nEnfoca una evidencia válida y toma una foto con click izquierdo.",
-            4 => $"LIBRETA\nPulsa {GlobalInputBindings.GetDisplayName(GameInputAction.Notebook)} para revisar fotos y escribir notas del operador.",
+            0 => $"MEMORIA ACTIVA\nMuevete con {GlobalInputBindings.GetDisplayName(GameInputAction.MoveForward)}/{GlobalInputBindings.GetDisplayName(GameInputAction.MoveLeft)}/{GlobalInputBindings.GetDisplayName(GameInputAction.MoveBackward)}/{GlobalInputBindings.GetDisplayName(GameInputAction.MoveRight)}.",
+            1 => $"INSPECCION\nMira el objetivo marcado y pulsa {GlobalInputBindings.GetDisplayName(GameInputAction.Inspect)}. Manten click para girarlo y usa rueda para zoom.",
+            2 => $"CAMARA DE EVIDENCIA\nManten G para abrir inventario radial, equipa CAMARA y luego pulsa {GlobalInputBindings.GetDisplayName(GameInputAction.Camera)} para abrirla.",
+            3 => "REGISTRO\nEnfoca la evidencia marcada y toma una foto con click izquierdo.",
+            4 => $"LIBRETA\nPulsa {GlobalInputBindings.GetDisplayName(GameInputAction.Notebook)} para revisar fotos y escribir notas.",
             _ => string.Empty
         };
+    }
+
+    private void CacheWaypointTargets()
+    {
+        inspectWaypointTarget = FindNearestInspectableTarget();
+        evidenceWaypointTarget = FindNearestEvidenceTarget();
+    }
+
+    private void UpdateWaypointVisuals()
+    {
+        if (mainCamera == null)
+        {
+            mainCamera = Camera.main;
+            if (mainCamera == null)
+            {
+                return;
+            }
+        }
+
+        if (step == 1)
+        {
+            inspectWaypointTarget = FindNearestInspectableTarget();
+        }
+        else if (step == 3)
+        {
+            evidenceWaypointTarget = FindNearestEvidenceTarget();
+        }
+
+        bool showInspect = step == 1 && inspectWaypointTarget != null;
+        bool showEvidence = step == 3 && evidenceWaypointTarget != null;
+        SetWaypointVisible(inspectWaypointDot, inspectWaypointLabel, showInspect);
+        SetWaypointVisible(evidenceWaypointDot, evidenceWaypointLabel, showEvidence);
+        if (showInspect)
+        {
+            UpdateWaypointPosition(inspectWaypointTarget, inspectWaypointDot.rectTransform, inspectWaypointLabel.rectTransform, "INSPECCIONAR");
+        }
+
+        if (showEvidence)
+        {
+            UpdateWaypointPosition(evidenceWaypointTarget, evidenceWaypointDot.rectTransform, evidenceWaypointLabel.rectTransform, "EVIDENCIA");
+        }
+    }
+
+    private Transform FindNearestInspectableTarget()
+    {
+        GameObject[] candidates = GameObject.FindGameObjectsWithTag("Inspectable");
+        if (candidates == null || candidates.Length == 0)
+        {
+            return null;
+        }
+
+        Vector3 origin = mainCamera != null ? mainCamera.transform.position : Vector3.zero;
+        float bestSqrDistance = float.PositiveInfinity;
+        Transform best = null;
+        for (int i = 0; i < candidates.Length; i++)
+        {
+            GameObject candidate = candidates[i];
+            if (candidate == null || !candidate.activeInHierarchy)
+            {
+                continue;
+            }
+
+            float sqrDistance = (candidate.transform.position - origin).sqrMagnitude;
+            if (sqrDistance < bestSqrDistance)
+            {
+                bestSqrDistance = sqrDistance;
+                best = candidate.transform;
+            }
+        }
+
+        return best;
+    }
+
+    private Transform FindNearestEvidenceTarget()
+    {
+        EvidenceTarget[] candidates = FindObjectsOfType<EvidenceTarget>(true);
+        if (candidates == null || candidates.Length == 0)
+        {
+            return null;
+        }
+
+        Vector3 origin = mainCamera != null ? mainCamera.transform.position : Vector3.zero;
+        float bestSqrDistance = float.PositiveInfinity;
+        Transform best = null;
+        for (int i = 0; i < candidates.Length; i++)
+        {
+            EvidenceTarget candidate = candidates[i];
+            if (candidate == null || !candidate.gameObject.activeInHierarchy)
+            {
+                continue;
+            }
+
+            float sqrDistance = (candidate.transform.position - origin).sqrMagnitude;
+            if (sqrDistance < bestSqrDistance)
+            {
+                bestSqrDistance = sqrDistance;
+                best = candidate.transform;
+            }
+        }
+
+        return best;
+    }
+
+    private static void SetWaypointVisible(Image dot, TMP_Text label, bool visible)
+    {
+        if (dot != null)
+        {
+            dot.enabled = visible;
+        }
+
+        if (label != null)
+        {
+            label.enabled = visible;
+        }
+    }
+
+    private void UpdateWaypointPosition(Transform target, RectTransform dot, RectTransform label, string labelText)
+    {
+        if (target == null || dot == null || label == null || mainCamera == null)
+        {
+            return;
+        }
+
+        Vector3 worldPoint = target.position + Vector3.up * 0.45f;
+        Vector3 screenPoint = mainCamera.WorldToScreenPoint(worldPoint);
+        bool inFront = screenPoint.z > 0f;
+        bool onScreen = inFront && screenPoint.x >= 0f && screenPoint.x <= Screen.width && screenPoint.y >= 0f && screenPoint.y <= Screen.height;
+        dot.gameObject.SetActive(onScreen);
+        label.gameObject.SetActive(onScreen);
+        if (!onScreen)
+        {
+            return;
+        }
+
+        dot.position = screenPoint;
+        label.position = screenPoint + new Vector3(0f, 26f, 0f);
+        TMP_Text labelTmp = label.GetComponent<TMP_Text>();
+        if (labelTmp != null)
+        {
+            labelTmp.text = labelText;
+        }
     }
 
     private void BuildUi()
@@ -170,12 +348,30 @@ public sealed class CrimeSceneTutorial : MonoBehaviour
         panelRect.anchorMax = new Vector2(0f, 0f);
         panelRect.pivot = new Vector2(0f, 0f);
         panelRect.anchoredPosition = new Vector2(48f, 52f);
-        panelRect.sizeDelta = new Vector2(620f, 132f);
+        panelRect.sizeDelta = new Vector2(700f, 150f);
         Outline outline = panel.gameObject.AddComponent<Outline>();
         outline.effectColor = new Color(0.35f, 0.9f, 0.82f, 0.45f);
         outline.effectDistance = new Vector2(1f, -1f);
 
         text = CreateText("Text", panelRect);
+
+        inspectWaypointDot = CreateImage("InspectWaypointDot", canvasObject.transform as RectTransform, new Color(0.2f, 1f, 0.9f, 0.95f));
+        inspectWaypointDot.rectTransform.sizeDelta = new Vector2(14f, 14f);
+        inspectWaypointLabel = CreateText("InspectWaypointLabel", canvasObject.transform as RectTransform);
+        inspectWaypointLabel.fontSize = 18f;
+        inspectWaypointLabel.alignment = TextAlignmentOptions.Center;
+        inspectWaypointLabel.color = new Color(0.2f, 1f, 0.9f, 1f);
+        inspectWaypointLabel.raycastTarget = false;
+
+        evidenceWaypointDot = CreateImage("EvidenceWaypointDot", canvasObject.transform as RectTransform, new Color(1f, 0.86f, 0.22f, 0.95f));
+        evidenceWaypointDot.rectTransform.sizeDelta = new Vector2(14f, 14f);
+        evidenceWaypointLabel = CreateText("EvidenceWaypointLabel", canvasObject.transform as RectTransform);
+        evidenceWaypointLabel.fontSize = 18f;
+        evidenceWaypointLabel.alignment = TextAlignmentOptions.Center;
+        evidenceWaypointLabel.color = new Color(1f, 0.86f, 0.22f, 1f);
+        evidenceWaypointLabel.raycastTarget = false;
+        SetWaypointVisible(inspectWaypointDot, inspectWaypointLabel, false);
+        SetWaypointVisible(evidenceWaypointDot, evidenceWaypointLabel, false);
     }
 
     private void SetVisible(bool visible)

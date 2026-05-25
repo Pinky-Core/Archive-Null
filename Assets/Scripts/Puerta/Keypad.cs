@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
@@ -18,17 +19,27 @@ public class Keypad : MonoBehaviour
     public Text interactionText;
 
     private RigidbodyConstraints originalConstraints;
-    private string Answer = "929571";
+    private string Answer = "229571";
     private Rigidbody playerRigidbody;
     private bool isOpen;
+    private GraphicRaycaster keypadRaycaster;
+    private readonly List<RaycastResult> uiHits = new List<RaycastResult>(16);
 
     public static bool IsAnyOpen { get; private set; }
 
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetStaticState()
+    {
+        IsAnyOpen = false;
+    }
+
     void Start()
     {
+        IsAnyOpen = false;
         if (keypadCanvas != null)
         {
             keypadCanvas.SetActive(false);
+            keypadRaycaster = keypadCanvas.GetComponentInChildren<GraphicRaycaster>(true);
         }
 
         if (player != null)
@@ -46,6 +57,11 @@ public class Keypad : MonoBehaviour
         if (!isOpen || Keyboard.current == null)
         {
             return;
+        }
+
+        if (Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame)
+        {
+            TryHandleUiClick();
         }
 
         if (Keyboard.current.escapeKey.wasPressedThisFrame)
@@ -139,6 +155,10 @@ public class Keypad : MonoBehaviour
         IsAnyOpen = true;
         EnsureEventSystem();
         if (keypadCanvas != null) keypadCanvas.SetActive(true);
+        if (keypadRaycaster == null && keypadCanvas != null)
+        {
+            keypadRaycaster = keypadCanvas.GetComponentInChildren<GraphicRaycaster>(true);
+        }
         if (Ans != null) Ans.text = "";
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
@@ -191,5 +211,36 @@ public class Keypad : MonoBehaviour
         }
 
         new GameObject("EventSystem", typeof(EventSystem), typeof(UnityEngine.InputSystem.UI.InputSystemUIInputModule));
+    }
+
+    private void TryHandleUiClick()
+    {
+        if (EventSystem.current == null || keypadRaycaster == null || Mouse.current == null)
+        {
+            return;
+        }
+
+        PointerEventData pointer = new PointerEventData(EventSystem.current)
+        {
+            position = Mouse.current.position.ReadValue()
+        };
+
+        uiHits.Clear();
+        keypadRaycaster.Raycast(pointer, uiHits);
+        for (int i = 0; i < uiHits.Count; i++)
+        {
+            GameObject go = uiHits[i].gameObject;
+            if (go == null)
+            {
+                continue;
+            }
+
+            Button button = go.GetComponentInParent<Button>();
+            if (button != null && button.interactable)
+            {
+                button.onClick.Invoke();
+                return;
+            }
+        }
     }
 }

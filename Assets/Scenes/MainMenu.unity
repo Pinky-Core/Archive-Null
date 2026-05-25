@@ -12343,8 +12343,8 @@ MonoBehaviour:
   speakerSource: {fileID: 1674475753}
   subtitleText: {fileID: 0}
   subtitleGroup: {fileID: 0}
-  playOnlyFirstTime: 0
-  alwaysShowInEditor: 0
+  playOnlyFirstTime: 1
+  alwaysShowInEditor: 1
   resetTutorialOnStart: 0
   lineGap: 0.35
   subtitleFadeDuration: 0.2
