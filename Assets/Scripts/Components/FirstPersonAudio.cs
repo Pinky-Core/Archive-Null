@@ -12,6 +12,12 @@ public class FirstPersonAudio : MonoBehaviour
     [Tooltip("Minimum velocity for moving audio to play")]
     /// <summary> "Minimum velocity for moving audio to play" </summary>
     public float velocityThreshold = .01f;
+    [Tooltip("Pitch usado para pasos caminando. Menor valor = pasos mas lentos.")]
+    public float walkingStepPitch = 0.72f;
+    [Tooltip("Pitch usado para pasos corriendo.")]
+    public float runningStepPitch = 0.92f;
+    [Tooltip("Pitch usado para pasos agachado.")]
+    public float crouchedStepPitch = 0.62f;
     Vector2 lastCharacterPosition;
     Vector2 CurrentCharacterPosition => new Vector2(character.transform.position.x, character.transform.position.z);
 
@@ -104,10 +110,29 @@ public class FirstPersonAudio : MonoBehaviour
         }
 
         // Play audioToPlay if it was not playing.
-        if (audioToPlay && !audioToPlay.isPlaying)
+        if (audioToPlay)
         {
-            audioToPlay.Play();
+            audioToPlay.pitch = GetMovingAudioPitch(audioToPlay);
+            if (!audioToPlay.isPlaying)
+            {
+                audioToPlay.Play();
+            }
         }
+    }
+
+    float GetMovingAudioPitch(AudioSource audio)
+    {
+        if (audio == runningAudio)
+        {
+            return runningStepPitch;
+        }
+
+        if (audio == crouchedAudio)
+        {
+            return crouchedStepPitch;
+        }
+
+        return walkingStepPitch;
     }
 
     #region Play instant-related audios.

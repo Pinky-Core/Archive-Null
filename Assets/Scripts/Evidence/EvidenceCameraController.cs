@@ -45,14 +45,32 @@ namespace ArchiveNull.Evidence
         [SerializeField] private bool createUiIfMissing = true;
         [SerializeField] private string cameraModeLabel = "CAMARA DE EVIDENCIA";
         [SerializeField] private string captureHint = "CLICK: FOTO  //  F: ABRIR/CERRAR";
+        [SerializeField] private string wheelHint = "SOLTA G O CLICK: EQUIPAR";
         [SerializeField] private Color hudColor = new Color(0.78f, 0.96f, 0.92f, 1f);
+        [SerializeField] private Sprite handWheelIcon;
         [SerializeField] private Sprite cameraWheelIcon;
         [SerializeField] private Sprite uvWheelIcon;
-        [SerializeField] private Sprite analyzerWheelIcon;
+
+        [Header("Held Tools")]
+        [SerializeField] private GameObject handToolObject;
+        [SerializeField] private GameObject cameraToolObject;
+        [SerializeField] private GameObject uvLightToolObject;
+        [SerializeField] private float equipAnimationDuration = 0.22f;
+        [SerializeField] private Vector3 hiddenToolLocalOffset = new Vector3(0f, -0.45f, -0.08f);
+        [SerializeField] private Vector3 cameraFaceLocalPosition = new Vector3(0f, -0.08f, 0.24f);
+        [SerializeField] private Vector3 cameraFaceLocalEuler = new Vector3(-8f, 0f, 0f);
+
+        [Header("UV Light")]
+        [SerializeField] private Key uvToggleKey = Key.F;
+        [SerializeField] private Light uvSpotlight;
+        [SerializeField] private float uvRevealDistance = 4f;
+        [SerializeField] private float uvRevealRadius = 0.22f;
+        [SerializeField] private LayerMask uvRevealLayers = ~0;
 
         public bool IsCameraModeActive { get; private set; }
         public static bool IsAnyCameraModeActive { get; private set; }
         public static bool IsAnyRadialMenuOpen { get; private set; }
+        public static bool IsAnyUvLightActive { get; private set; }
 
         private CanvasGroup hudGroup;
         private RectTransform hudAnimatedRoot;
@@ -77,16 +95,35 @@ namespace ArchiveNull.Evidence
         private RectTransform inventoryWheelRoot;
         private Image wheelBackdrop;
         private readonly List<WheelSegmentVisual> wheelSegments = new List<WheelSegmentVisual>(3);
-        private ToolSlot equippedTool = ToolSlot.None;
-        private ToolSlot hoveredTool = ToolSlot.None;
+        private ToolSlot equippedTool = ToolSlot.Hand;
+        private ToolSlot hoveredTool = ToolSlot.Hand;
         private readonly RaycastHit[] captureHits = new RaycastHit[24];
+        private readonly RaycastHit[] uvHits = new RaycastHit[24];
+        private readonly Collider[] uvOverlapHits = new Collider[64];
+        private readonly Dictionary<GameObject, ToolPose> toolPoses = new Dictionary<GameObject, ToolPose>();
+        private Coroutine equipRoutine;
+        private Coroutine cameraPoseRoutine;
+        private bool uvLightOn;
+
+        private readonly struct ToolPose
+        {
+            public readonly Vector3 LocalPosition;
+            public readonly Quaternion LocalRotation;
+            public readonly Vector3 LocalScale;
+
+            public ToolPose(Transform transform)
+            {
+                LocalPosition = transform.localPosition;
+                LocalRotation = transform.localRotation;
+                LocalScale = transform.localScale;
+            }
+        }
 
         private enum ToolSlot
         {
-            None,
+            Hand,
             Camera,
-            UvLight,
-            Analyzer
+            UvLight
         }
 
         private sealed class WheelSegmentVisual
@@ -120,12 +157,16 @@ namespace ArchiveNull.Evidence
             EnsureAudio();
             EnsureHudAnimationReferences();
             EnsureNotebook();
+            CacheToolPoses();
+            ApplyEquippedToolImmediate();
             SetCameraModeImmediate(false);
         }
 
         private void OnDisable()
         {
             IsAnyRadialMenuOpen = false;
+            IsAnyUvLightActive = false;
+            SetUvLight(false);
             if (IsCameraModeActive)
             {
                 SetCameraModeImmediate(false);
@@ -141,6 +182,8 @@ namespace ArchiveNull.Evidence
                     SetInventoryWheel(false);
                 }
 
+                IsAnyUvLightActive = false;
+                SetUvLight(false);
                 RestoreCameraFov();
                 return;
             }
@@ -153,6 +196,7 @@ namespace ArchiveNull.Evidence
 
             if (radialMenuOpen)
             {
+                IsAnyUvLightActive = false;
                 UpdateInventoryWheelSelection();
                 if (Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame)
                 {
@@ -166,6 +210,21 @@ namespace ArchiveNull.Evidence
                 return;
             }
 
+            if (equippedTool == ToolSlot.UvLight && (GlobalInputBindings.WasPressed(GameInputAction.Camera) || WasPressed(uvToggleKey)))
+            {
+                SetUvLight(!uvLightOn);
+            }
+
+            IsAnyUvLightActive = equippedTool == ToolSlot.UvLight && uvLightOn;
+            if (equippedTool == ToolSlot.UvLight)
+            {
+                SetCameraMode(false);
+                if (uvLightOn)
+                {
+                    UpdateUvReveal();
+                }
+            }
+
             if (equippedTool == ToolSlot.Camera && GlobalInputBindings.WasPressed(GameInputAction.Camera) && !global::InspectObject.IsAnyInspecting)
             {
                 SetCameraMode(!IsCameraModeActive);
@@ -173,6 +232,12 @@ namespace ArchiveNull.Evidence
 
             if (!IsCameraModeActive)
             {
+                if (equippedTool != ToolSlot.UvLight)
+                {
+                    IsAnyUvLightActive = false;
+                    SetUvLight(false);
+                }
+
                 RestoreCameraFov();
                 return;
             }
@@ -192,7 +257,7 @@ namespace ArchiveNull.Evidence
 
         private void SetCameraMode(bool active)
         {
-            if (equippedTool != ToolSlot.Camera)
+            if (active && equippedTool != ToolSlot.Camera)
             {
                 return;
             }
@@ -204,6 +269,7 @@ namespace ArchiveNull.Evidence
 
             IsCameraModeActive = active;
             IsAnyCameraModeActive = active;
+            AnimateCameraHeldPose(active);
             if (cameraModeRoutine != null)
             {
                 StopCoroutine(cameraModeRoutine);
@@ -229,7 +295,7 @@ namespace ArchiveNull.Evidence
 
             if (active)
             {
-                hoveredTool = equippedTool != ToolSlot.None ? equippedTool : ToolSlot.Camera;
+                hoveredTool = equippedTool;
                 Cursor.lockState = CursorLockMode.None;
                 Cursor.visible = true;
                 SetCameraMode(false);
@@ -254,7 +320,7 @@ namespace ArchiveNull.Evidence
             Vector2 delta = Mouse.current.position.ReadValue() - center;
             if (delta.sqrMagnitude < 2500f)
             {
-                hoveredTool = equippedTool != ToolSlot.None ? equippedTool : ToolSlot.Camera;
+                hoveredTool = equippedTool;
                 UpdateWheelVisuals();
                 return;
             }
@@ -268,12 +334,12 @@ namespace ArchiveNull.Evidence
         {
             if (wheelSegments.Count == 0)
             {
-                return ToolSlot.Camera;
+                return ToolSlot.Hand;
             }
 
             float wrapped = NormalizeAngle180(angle);
             float bestDelta = float.MaxValue;
-            ToolSlot best = ToolSlot.Camera;
+            ToolSlot best = ToolSlot.Hand;
             for (int i = 0; i < wheelSegments.Count; i++)
             {
                 WheelSegmentVisual segment = wheelSegments[i];
@@ -320,7 +386,29 @@ namespace ArchiveNull.Evidence
 
         private void EquipHoveredTool(bool closeWheel)
         {
+            if (equippedTool == hoveredTool)
+            {
+                if (closeWheel)
+                {
+                    SetInventoryWheel(false);
+                }
+
+                return;
+            }
+
             equippedTool = hoveredTool;
+            if (equippedTool != ToolSlot.Camera)
+            {
+                SetCameraMode(false);
+            }
+
+            if (equippedTool != ToolSlot.UvLight)
+            {
+                SetUvLight(false);
+            }
+
+            IsAnyUvLightActive = equippedTool == ToolSlot.UvLight && uvLightOn;
+            AnimateToolEquip(equippedTool);
             if (closeWheel)
             {
                 SetInventoryWheel(false);
@@ -337,10 +425,10 @@ namespace ArchiveNull.Evidence
         {
             return tool switch
             {
+                ToolSlot.Hand => "MANO",
                 ToolSlot.Camera => "CAMARA",
                 ToolSlot.UvLight => "LUZ UV",
-                ToolSlot.Analyzer => "ANALIZADOR",
-                _ => "NINGUNA"
+                _ => "MANO"
             };
         }
 
@@ -348,9 +436,9 @@ namespace ArchiveNull.Evidence
         {
             return tool switch
             {
+                ToolSlot.Hand => handWheelIcon,
                 ToolSlot.Camera => cameraWheelIcon,
                 ToolSlot.UvLight => uvWheelIcon,
-                ToolSlot.Analyzer => analyzerWheelIcon,
                 _ => null
             };
         }
@@ -359,11 +447,325 @@ namespace ArchiveNull.Evidence
         {
             return tool switch
             {
-                ToolSlot.Camera => "⌖",
-                ToolSlot.UvLight => "✷",
-                ToolSlot.Analyzer => "◈",
-                _ => "○"
+                ToolSlot.Hand => "M",
+                ToolSlot.Camera => "C",
+                ToolSlot.UvLight => "UV",
+                _ => "M"
             };
+        }
+
+        private void UpdateUvReveal()
+        {
+            if (playerCamera == null && uvSpotlight == null)
+            {
+                return;
+            }
+
+            if (uvSpotlight != null)
+            {
+                UpdateUvRevealFromSpotlight();
+                return;
+            }
+
+            Ray ray = playerCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
+            int hitCount = Physics.SphereCastNonAlloc(ray, uvRevealRadius, uvHits, uvRevealDistance, ~0, QueryTriggerInteraction.Collide);
+            if (hitCount <= 0)
+            {
+                return;
+            }
+
+            SortHitsByDistance(uvHits, hitCount);
+            for (int i = 0; i < hitCount; i++)
+            {
+                Collider hitCollider = uvHits[i].collider;
+                if (hitCollider == null)
+                {
+                    continue;
+                }
+
+                UvRevealTarget revealTarget = hitCollider.GetComponent<UvRevealTarget>();
+                if (revealTarget == null)
+                {
+                    revealTarget = hitCollider.GetComponentInParent<UvRevealTarget>();
+                }
+
+                if (revealTarget != null)
+                {
+                    revealTarget.ReceiveUvIllumination(1f);
+                    continue;
+                }
+
+                if (!hitCollider.isTrigger)
+                {
+                    return;
+                }
+            }
+        }
+
+        private void UpdateUvRevealFromSpotlight()
+        {
+            Transform spotTransform = uvSpotlight.transform;
+            float range = Mathf.Min(uvRevealDistance, uvSpotlight.range > 0f ? uvSpotlight.range : uvRevealDistance);
+            float halfAngle = Mathf.Max(1f, uvSpotlight.spotAngle * 0.5f);
+            int hitCount = Physics.OverlapSphereNonAlloc(spotTransform.position, range, uvOverlapHits, uvRevealLayers, QueryTriggerInteraction.Collide);
+            for (int i = 0; i < hitCount; i++)
+            {
+                Collider candidate = uvOverlapHits[i];
+                if (candidate == null)
+                {
+                    continue;
+                }
+
+                UvRevealTarget revealTarget = candidate.GetComponent<UvRevealTarget>();
+                if (revealTarget == null)
+                {
+                    revealTarget = candidate.GetComponentInParent<UvRevealTarget>();
+                }
+
+                if (revealTarget == null)
+                {
+                    continue;
+                }
+
+                Vector3 toTarget = revealTarget.RevealPosition - spotTransform.position;
+                float distance = toTarget.magnitude;
+                if (distance <= 0.001f || distance > range)
+                {
+                    continue;
+                }
+
+                Vector3 direction = toTarget / distance;
+                float angle = Vector3.Angle(spotTransform.forward, direction);
+                if (angle > halfAngle)
+                {
+                    continue;
+                }
+
+                if (Physics.Raycast(spotTransform.position, direction, out RaycastHit blocker, distance, uvRevealLayers, QueryTriggerInteraction.Ignore))
+                {
+                    UvRevealTarget blockedTarget = blocker.collider.GetComponent<UvRevealTarget>();
+                    if (blockedTarget == null)
+                    {
+                        blockedTarget = blocker.collider.GetComponentInParent<UvRevealTarget>();
+                    }
+
+                    if (blockedTarget != revealTarget)
+                    {
+                        continue;
+                    }
+                }
+
+                float angleStrength = 1f - Mathf.Clamp01(angle / halfAngle);
+                float distanceStrength = 1f - Mathf.Clamp01(distance / range);
+                revealTarget.ReceiveUvIllumination(Mathf.Clamp01(0.25f + angleStrength * 0.55f + distanceStrength * 0.2f));
+            }
+        }
+
+        private void SetUvLight(bool active)
+        {
+            uvLightOn = active && equippedTool == ToolSlot.UvLight;
+            IsAnyUvLightActive = uvLightOn;
+            if (uvSpotlight != null)
+            {
+                uvSpotlight.enabled = uvLightOn;
+            }
+        }
+
+        private void CacheToolPoses()
+        {
+            toolPoses.Clear();
+            CacheToolPose(handToolObject);
+            CacheToolPose(cameraToolObject);
+            CacheToolPose(uvLightToolObject);
+
+            if (uvSpotlight == null && uvLightToolObject != null)
+            {
+                uvSpotlight = uvLightToolObject.GetComponentInChildren<Light>(true);
+            }
+
+            SetUvLight(false);
+        }
+
+        private void CacheToolPose(GameObject toolObject)
+        {
+            if (toolObject == null || toolPoses.ContainsKey(toolObject))
+            {
+                return;
+            }
+
+            toolPoses.Add(toolObject, new ToolPose(toolObject.transform));
+        }
+
+        private void ApplyEquippedToolImmediate()
+        {
+            ApplyToolImmediate(handToolObject, equippedTool == ToolSlot.Hand);
+            ApplyToolImmediate(cameraToolObject, equippedTool == ToolSlot.Camera);
+            ApplyToolImmediate(uvLightToolObject, equippedTool == ToolSlot.UvLight);
+        }
+
+        private void ApplyToolImmediate(GameObject toolObject, bool visible)
+        {
+            if (toolObject == null)
+            {
+                return;
+            }
+
+            if (!toolPoses.TryGetValue(toolObject, out ToolPose pose))
+            {
+                pose = new ToolPose(toolObject.transform);
+            }
+
+            Transform toolTransform = toolObject.transform;
+            toolTransform.localPosition = visible ? pose.LocalPosition : pose.LocalPosition + hiddenToolLocalOffset;
+            toolTransform.localRotation = pose.LocalRotation;
+            toolTransform.localScale = pose.LocalScale;
+            toolObject.SetActive(visible);
+        }
+
+        private void AnimateToolEquip(ToolSlot tool)
+        {
+            if (equipRoutine != null)
+            {
+                StopCoroutine(equipRoutine);
+            }
+
+            equipRoutine = StartCoroutine(AnimateToolEquipRoutine(GetToolObject(tool)));
+        }
+
+        private IEnumerator AnimateToolEquipRoutine(GameObject nextTool)
+        {
+            GameObject previousHand = handToolObject != nextTool && handToolObject != null && handToolObject.activeSelf ? handToolObject : null;
+            GameObject previousCamera = cameraToolObject != nextTool && cameraToolObject != null && cameraToolObject.activeSelf ? cameraToolObject : null;
+            GameObject previousUv = uvLightToolObject != nextTool && uvLightToolObject != null && uvLightToolObject.activeSelf ? uvLightToolObject : null;
+
+            yield return AnimateToolsDown(previousHand, previousCamera, previousUv);
+
+            HideTool(previousHand);
+            HideTool(previousCamera);
+            HideTool(previousUv);
+
+            if (nextTool != null)
+            {
+                if (!toolPoses.TryGetValue(nextTool, out ToolPose pose))
+                {
+                    pose = new ToolPose(nextTool.transform);
+                    toolPoses[nextTool] = pose;
+                }
+
+                nextTool.SetActive(true);
+                Transform nextTransform = nextTool.transform;
+                Vector3 startPosition = pose.LocalPosition + hiddenToolLocalOffset;
+                Quaternion startRotation = pose.LocalRotation;
+                nextTransform.localPosition = startPosition;
+                nextTransform.localRotation = startRotation;
+                nextTransform.localScale = pose.LocalScale;
+
+                float timer = 0f;
+                while (timer < equipAnimationDuration)
+                {
+                    timer += Time.unscaledDeltaTime;
+                    float t = Smooth01(timer / Mathf.Max(0.001f, equipAnimationDuration));
+                    nextTransform.localPosition = Vector3.Lerp(startPosition, pose.LocalPosition, t);
+                    nextTransform.localRotation = Quaternion.Slerp(startRotation, pose.LocalRotation, t);
+                    yield return null;
+                }
+
+                nextTransform.localPosition = pose.LocalPosition;
+                nextTransform.localRotation = pose.LocalRotation;
+            }
+
+            equipRoutine = null;
+        }
+
+        private IEnumerator AnimateToolsDown(params GameObject[] toolObjects)
+        {
+            float timer = 0f;
+            while (timer < equipAnimationDuration)
+            {
+                timer += Time.unscaledDeltaTime;
+                float t = Smooth01(timer / Mathf.Max(0.001f, equipAnimationDuration));
+                for (int i = 0; i < toolObjects.Length; i++)
+                {
+                    GameObject toolObject = toolObjects[i];
+                    if (toolObject == null || !toolObject.activeSelf || !toolPoses.TryGetValue(toolObject, out ToolPose pose))
+                    {
+                        continue;
+                    }
+
+                    toolObject.transform.localPosition = Vector3.Lerp(pose.LocalPosition, pose.LocalPosition + hiddenToolLocalOffset, t);
+                }
+
+                yield return null;
+            }
+        }
+
+        private void HideTool(GameObject toolObject)
+        {
+            if (toolObject == null)
+            {
+                return;
+            }
+
+            if (toolPoses.TryGetValue(toolObject, out ToolPose pose))
+            {
+                toolObject.transform.localPosition = pose.LocalPosition + hiddenToolLocalOffset;
+            }
+
+            toolObject.SetActive(false);
+        }
+
+        private GameObject GetToolObject(ToolSlot tool)
+        {
+            return tool switch
+            {
+                ToolSlot.Hand => handToolObject,
+                ToolSlot.Camera => cameraToolObject,
+                ToolSlot.UvLight => uvLightToolObject,
+                _ => null
+            };
+        }
+
+        private void AnimateCameraHeldPose(bool toFace)
+        {
+            if (cameraToolObject == null)
+            {
+                return;
+            }
+
+            if (cameraPoseRoutine != null)
+            {
+                StopCoroutine(cameraPoseRoutine);
+            }
+
+            cameraPoseRoutine = StartCoroutine(AnimateCameraHeldPoseRoutine(toFace));
+        }
+
+        private IEnumerator AnimateCameraHeldPoseRoutine(bool toFace)
+        {
+            if (!toolPoses.TryGetValue(cameraToolObject, out ToolPose pose))
+            {
+                yield break;
+            }
+
+            Transform toolTransform = cameraToolObject.transform;
+            Vector3 fromPosition = toolTransform.localPosition;
+            Quaternion fromRotation = toolTransform.localRotation;
+            Vector3 toPosition = toFace ? cameraFaceLocalPosition : pose.LocalPosition;
+            Quaternion toRotation = toFace ? Quaternion.Euler(cameraFaceLocalEuler) : pose.LocalRotation;
+
+            float timer = 0f;
+            while (timer < cameraTransitionDuration)
+            {
+                timer += Time.unscaledDeltaTime;
+                float t = Smooth01(timer / Mathf.Max(0.001f, cameraTransitionDuration));
+                toolTransform.localPosition = Vector3.Lerp(fromPosition, toPosition, t);
+                toolTransform.localRotation = Quaternion.Slerp(fromRotation, toRotation, t);
+                yield return null;
+            }
+
+            toolTransform.localPosition = toPosition;
+            toolTransform.localRotation = toRotation;
+            cameraPoseRoutine = null;
         }
 
         private void TryCapture()
@@ -592,7 +994,7 @@ namespace ArchiveNull.Evidence
             zoomText.color = hudColor;
             SetRect(zoomText.rectTransform, new Vector2(0f, 0f), new Vector2(1f, 0f), new Vector2(0f, 0f), new Vector2(70f, 18f), new Vector2(-70f, 54f));
 
-            toolStateText = CreateText("ToolState", rootRect, "HERRAMIENTA: CAMARA", 18f, TextAlignmentOptions.TopRight);
+            toolStateText = CreateText("ToolState", rootRect, "HERRAMIENTA: " + GetToolLabel(equippedTool), 18f, TextAlignmentOptions.TopRight);
             toolStateText.color = hudColor;
             SetRect(toolStateText.rectTransform, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(70f, -90f), new Vector2(-70f, -62f));
 
@@ -666,9 +1068,9 @@ namespace ArchiveNull.Evidence
             Stretch(outerRing.rectTransform);
             outerRing.sprite = CreateRingSprite(512, 0.48f, 0.2f);
 
-            CreateWheelSegment(rootRect, ToolSlot.Camera, 90f, 60f);
-            CreateWheelSegment(rootRect, ToolSlot.UvLight, 210f, 60f);
-            CreateWheelSegment(rootRect, ToolSlot.Analyzer, 330f, 60f);
+            CreateWheelSegment(rootRect, ToolSlot.Hand, 90f, 60f);
+            CreateWheelSegment(rootRect, ToolSlot.Camera, 210f, 60f);
+            CreateWheelSegment(rootRect, ToolSlot.UvLight, 330f, 60f);
 
             RectTransform centerDisk = CreateRectObject("CenterDisk", rootRect).GetComponent<RectTransform>();
             centerDisk.anchorMin = new Vector2(0.5f, 0.5f);
@@ -679,7 +1081,9 @@ namespace ArchiveNull.Evidence
             centerBg.color = new Color(0.05f, 0.09f, 0.09f, 0.94f);
             centerBg.sprite = CreateCircleSprite(256);
 
-            centerDisk.gameObject.SetActive(false);
+            TMP_Text hint = CreateText("WheelHint", centerDisk, wheelHint, 17f, TextAlignmentOptions.Center);
+            hint.color = new Color(0.78f, 0.96f, 0.92f, 0.88f);
+            Stretch(hint.rectTransform, new Vector2(28f, 72f), new Vector2(-28f, -72f));
         }
 
         private void CreateWheelSegment(RectTransform parent, ToolSlot slot, float centerAngle, float halfWidth)
@@ -713,11 +1117,14 @@ namespace ArchiveNull.Evidence
             }
             else
             {
-                iconImage = CreateImage("IconFallbackDot", iconRect, new Color(0.82f, 0.92f, 0.9f, 0.9f));
-                iconImage.sprite = CreateCircleSprite(64);
+                iconImage = CreateImage("IconFallback", iconRect, new Color(0.82f, 0.92f, 0.9f, 0.9f));
+                iconImage.sprite = CreateCircleSprite(84);
                 iconImage.preserveAspect = true;
-                iconImage.rectTransform.sizeDelta = new Vector2(18f, 18f);
+                iconImage.rectTransform.sizeDelta = new Vector2(64f, 64f);
                 Center(iconImage.rectTransform);
+                TMP_Text fallbackText = CreateText("IconLabel", iconRect, GetToolIcon(slot), 19f, TextAlignmentOptions.Center);
+                fallbackText.color = new Color(0.02f, 0.05f, 0.05f, 0.92f);
+                Stretch(fallbackText.rectTransform);
             }
 
             wheelSegments.Add(new WheelSegmentVisual

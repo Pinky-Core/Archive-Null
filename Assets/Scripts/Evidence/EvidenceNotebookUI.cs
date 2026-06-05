@@ -19,6 +19,10 @@ namespace ArchiveNull.Evidence
 
         [Header("Optional Custom UI")]
         [SerializeField] private CanvasGroup rootGroup;
+        [SerializeField] private CanvasGroup galleryGroup;
+        [SerializeField] private CanvasGroup notebookGroup;
+        [SerializeField] private Image galleryTabImage;
+        [SerializeField] private Image notebookTabImage;
         [SerializeField] private Image photoImage;
         [SerializeField] private TMP_Text titleText;
         [SerializeField] private TMP_Text categoryText;
@@ -38,6 +42,14 @@ namespace ArchiveNull.Evidence
         private FirstPersonMovement firstPersonMovement;
         private bool lookWasEnabled;
         private bool movementWasEnabled;
+        private bool noteListenerRegistered;
+        private Tab activeTab = Tab.Gallery;
+
+        private enum Tab
+        {
+            Gallery,
+            Notebook
+        }
 
         public void SetToggleKey(Key key)
         {
@@ -60,10 +72,7 @@ namespace ArchiveNull.Evidence
 
             EnsureEventSystem();
 
-            if (noteInput != null)
-            {
-                noteInput.onValueChanged.AddListener(HandleNoteChanged);
-            }
+            RegisterNoteListener();
 
             SetVisible(false);
         }
@@ -71,6 +80,7 @@ namespace ArchiveNull.Evidence
         private void OnEnable()
         {
             EvidenceInventory.Instance.OnInventoryChanged += RefreshEvidence;
+            RegisterNoteListener();
             RefreshEvidence();
         }
 
@@ -81,11 +91,6 @@ namespace ArchiveNull.Evidence
                 EvidenceInventory.ExistingInstance.OnInventoryChanged -= RefreshEvidence;
             }
 
-            if (noteInput != null)
-            {
-                noteInput.onValueChanged.RemoveListener(HandleNoteChanged);
-            }
-
             if (visible)
             {
                 RestorePlayerControls();
@@ -94,6 +99,11 @@ namespace ArchiveNull.Evidence
 
             visible = false;
             IsAnyNotebookOpen = false;
+        }
+
+        private void OnDestroy()
+        {
+            UnregisterNoteListener();
         }
 
         private void Update()
@@ -115,7 +125,7 @@ namespace ArchiveNull.Evidence
                 return;
             }
 
-            if (!visible || evidence.Count == 0 || IsEditingNote())
+            if (!visible || activeTab != Tab.Gallery || evidence.Count == 0 || IsEditingNote())
             {
                 return;
             }
@@ -189,6 +199,8 @@ namespace ArchiveNull.Evidence
                 noteInput.interactable = true;
                 updatingNote = false;
             }
+
+            RefreshTabs();
         }
 
         private void HandleNoteChanged(string value)
@@ -206,6 +218,8 @@ namespace ArchiveNull.Evidence
             if (visible == value && rootGroup != null)
             {
                 rootGroup.alpha = value ? 1f : 0f;
+                rootGroup.interactable = value;
+                rootGroup.blocksRaycasts = value;
                 return;
             }
 
@@ -229,6 +243,7 @@ namespace ArchiveNull.Evidence
                 Cursor.lockState = CursorLockMode.None;
                 Cursor.visible = true;
                 RefreshView();
+                RefreshTabs();
             }
             else
             {
@@ -340,6 +355,67 @@ namespace ArchiveNull.Evidence
             return noteInput != null && noteInput.isFocused;
         }
 
+        private void SelectTab(Tab tab)
+        {
+            activeTab = tab;
+            RefreshTabs();
+        }
+
+        private void RefreshTabs()
+        {
+            SetGroupVisible(galleryGroup, activeTab == Tab.Gallery);
+            SetGroupVisible(notebookGroup, activeTab == Tab.Notebook);
+
+            if (galleryTabImage != null)
+            {
+                galleryTabImage.color = activeTab == Tab.Gallery
+                    ? new Color(0.18f, 0.28f, 0.26f, 1f)
+                    : new Color(0.075f, 0.1f, 0.095f, 1f);
+            }
+
+            if (notebookTabImage != null)
+            {
+                notebookTabImage.color = activeTab == Tab.Notebook
+                    ? new Color(0.18f, 0.28f, 0.26f, 1f)
+                    : new Color(0.075f, 0.1f, 0.095f, 1f);
+            }
+        }
+
+        private static void SetGroupVisible(CanvasGroup group, bool value)
+        {
+            if (group == null)
+            {
+                return;
+            }
+
+            group.alpha = value ? 1f : 0f;
+            group.interactable = value;
+            group.blocksRaycasts = value;
+            group.gameObject.SetActive(value);
+        }
+
+        private void RegisterNoteListener()
+        {
+            if (noteInput == null || noteListenerRegistered)
+            {
+                return;
+            }
+
+            noteInput.onValueChanged.AddListener(HandleNoteChanged);
+            noteListenerRegistered = true;
+        }
+
+        private void UnregisterNoteListener()
+        {
+            if (noteInput == null || !noteListenerRegistered)
+            {
+                return;
+            }
+
+            noteInput.onValueChanged.RemoveListener(HandleNoteChanged);
+            noteListenerRegistered = false;
+        }
+
         private static bool WasPressed(Key key)
         {
             return key != Key.None && Keyboard.current != null && Keyboard.current[key].wasPressedThisFrame;
@@ -373,7 +449,18 @@ namespace ArchiveNull.Evidence
             outline.effectColor = new Color(0.45f, 0.76f, 0.69f, 0.32f);
             outline.effectDistance = new Vector2(2f, -2f);
 
-            Image photoFrame = CreateImage("PhotoFrame", panelRect, new Color(0.015f, 0.018f, 0.018f, 1f));
+            CreateTabButton("GalleryTab", panelRect, "GALERIA DE EVIDENCIAS", new Vector2(52f, 696f), new Vector2(310f, 44f), () => SelectTab(Tab.Gallery), out galleryTabImage);
+            CreateTabButton("NotebookTab", panelRect, "LIBRETA", new Vector2(372f, 696f), new Vector2(180f, 44f), () => SelectTab(Tab.Notebook), out notebookTabImage);
+
+            RectTransform galleryRoot = CreateRectObject("GalleryRoot", panelRect).GetComponent<RectTransform>();
+            Stretch(galleryRoot);
+            galleryGroup = galleryRoot.gameObject.AddComponent<CanvasGroup>();
+
+            RectTransform notesRoot = CreateRectObject("NotebookRoot", panelRect).GetComponent<RectTransform>();
+            Stretch(notesRoot);
+            notebookGroup = notesRoot.gameObject.AddComponent<CanvasGroup>();
+
+            Image photoFrame = CreateImage("PhotoFrame", galleryRoot, new Color(0.015f, 0.018f, 0.018f, 1f));
             RectTransform photoRect = photoFrame.rectTransform;
             SetRect(photoRect, new Vector2(0f, 0f), new Vector2(0f, 1f), new Vector2(0f, 0.5f), new Vector2(52f, 70f), new Vector2(730f, -70f));
 
@@ -381,37 +468,43 @@ namespace ArchiveNull.Evidence
             Stretch(photoImage.rectTransform, new Vector2(12f, 12f), new Vector2(-12f, -12f));
             photoImage.preserveAspect = true;
 
-            titleText = CreateText("Title", panelRect, "Sin fotos", 35f, TextAlignmentOptions.TopLeft);
-            SetRect(titleText.rectTransform, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0f, 1f), new Vector2(778f, -88f), new Vector2(-60f, -38f));
-            categoryText = CreateText("Category", panelRect, "REGISTRO VACIO", 18f, TextAlignmentOptions.TopLeft);
+            titleText = CreateText("Title", galleryRoot, "Sin fotos", 35f, TextAlignmentOptions.TopLeft);
+            SetRect(titleText.rectTransform, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0f, 1f), new Vector2(778f, -96f), new Vector2(-60f, -50f));
+            categoryText = CreateText("Category", galleryRoot, "REGISTRO VACIO", 18f, TextAlignmentOptions.TopLeft);
             categoryText.color = new Color(0.48f, 0.86f, 0.77f, 1f);
-            SetRect(categoryText.rectTransform, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0f, 1f), new Vector2(780f, -132f), new Vector2(-60f, -102f));
+            SetRect(categoryText.rectTransform, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0f, 1f), new Vector2(780f, -142f), new Vector2(-60f, -112f));
 
-            descriptionText = CreateText("Description", panelRect, string.Empty, 22f, TextAlignmentOptions.TopLeft);
-            SetPointRect(descriptionText.rectTransform, new Vector2(0f, 0f), new Vector2(780f, 472f), new Vector2(420f, 132f));
+            descriptionText = CreateText("Description", galleryRoot, string.Empty, 22f, TextAlignmentOptions.TopLeft);
+            SetPointRect(descriptionText.rectTransform, new Vector2(0f, 0f), new Vector2(780f, 292f), new Vector2(420f, 300f));
 
-            TMP_Text noteLabel = CreateText("NoteLabel", panelRect, "NOTEPAD DEL OPERADOR", 18f, TextAlignmentOptions.TopLeft);
-            noteLabel.color = categoryText.color;
-            SetPointRect(noteLabel.rectTransform, new Vector2(0f, 0f), new Vector2(780f, 382f), new Vector2(420f, 30f));
-            noteInput = CreateNoteInput(panelRect);
+            TMP_Text noteLabel = CreateText("NoteLabel", notesRoot, "LIBRETA DEL OPERADOR", 24f, TextAlignmentOptions.TopLeft);
+            noteLabel.color = new Color(0.48f, 0.86f, 0.77f, 1f);
+            SetRect(noteLabel.rectTransform, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0f, 1f), new Vector2(70f, -108f), new Vector2(-70f, -66f));
+            TMP_Text noteHint = CreateText("NoteHint", notesRoot, "Anotaciones libres. No modifican la descripcion oficial de las evidencias.", 18f, TextAlignmentOptions.TopLeft);
+            noteHint.color = new Color(0.7f, 0.84f, 0.81f, 0.82f);
+            SetRect(noteHint.rectTransform, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0f, 1f), new Vector2(70f, -146f), new Vector2(-70f, -108f));
+            noteInput = CreateNoteInput(notesRoot);
+            RegisterNoteListener();
 
-            counterText = CreateText("Counter", panelRect, "00/00", 20f, TextAlignmentOptions.Bottom);
+            counterText = CreateText("Counter", galleryRoot, "00/00", 20f, TextAlignmentOptions.Bottom);
             SetRect(counterText.rectTransform, new Vector2(0f, 0f), new Vector2(0f, 0f), new Vector2(0.5f, 0f), new Vector2(280f, 24f), new Vector2(500f, 56f));
 
-            CreateButton("Previous", panelRect, "<", new Vector2(96f, 42f), new Vector2(160f, 40f), () => Select(currentIndex - 1));
-            CreateButton("Next", panelRect, ">", new Vector2(96f, 42f), new Vector2(620f, 40f), () => Select(currentIndex + 1));
+            CreateButton("Previous", galleryRoot, "<", new Vector2(96f, 42f), new Vector2(160f, 40f), () => Select(currentIndex - 1));
+            CreateButton("Next", galleryRoot, ">", new Vector2(96f, 42f), new Vector2(620f, 40f), () => Select(currentIndex + 1));
             CreateButton("Close", panelRect, "X", new Vector2(52f, 42f), new Vector2(1180f, 696f), () => SetVisible(false));
 
             TMP_Text hint = CreateText("Hint", panelRect, "Q/E: FOTO ANTERIOR/SIGUIENTE  //  TAB: CERRAR", 16f, TextAlignmentOptions.BottomRight);
             hint.color = new Color(0.7f, 0.84f, 0.81f, 0.8f);
             SetRect(hint.rectTransform, Vector2.zero, Vector2.one, new Vector2(1f, 0f), new Vector2(780f, 24f), new Vector2(-60f, 58f));
+
+            RefreshTabs();
         }
 
         private TMP_InputField CreateNoteInput(RectTransform parent)
         {
             Image fieldImage = CreateImage("NoteInput", parent, new Color(0.018f, 0.024f, 0.023f, 1f));
             RectTransform fieldRect = fieldImage.rectTransform;
-            SetPointRect(fieldRect, new Vector2(0f, 0f), new Vector2(780f, 96f), new Vector2(420f, 270f));
+            SetRect(fieldRect, Vector2.zero, Vector2.one, Vector2.zero, new Vector2(70f, 86f), new Vector2(-70f, -174f));
 
             TMP_InputField input = fieldImage.gameObject.AddComponent<TMP_InputField>();
             TMP_Text text = CreateText("Text", fieldRect, string.Empty, 20f, TextAlignmentOptions.TopLeft);
@@ -425,6 +518,7 @@ namespace ArchiveNull.Evidence
             input.placeholder = placeholder;
             input.lineType = TMP_InputField.LineType.MultiLineNewline;
             input.textViewport = fieldRect;
+            input.targetGraphic = fieldImage;
             return input;
         }
 
@@ -453,6 +547,29 @@ namespace ArchiveNull.Evidence
             button.onClick.AddListener(action);
             TMP_Text text = CreateText("Label", rect, label, 24f, TextAlignmentOptions.Center);
             Stretch(text.rectTransform);
+        }
+
+        private void CreateTabButton(string name, RectTransform parent, string label, Vector2 position, Vector2 size, UnityEngine.Events.UnityAction action, out Image image)
+        {
+            image = CreateImage(name, parent, new Color(0.075f, 0.1f, 0.095f, 1f));
+            RectTransform rect = image.rectTransform;
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.zero;
+            rect.pivot = Vector2.zero;
+            rect.anchoredPosition = position;
+            rect.sizeDelta = size;
+            Button button = image.gameObject.AddComponent<Button>();
+            button.targetGraphic = image;
+            button.onClick.AddListener(action);
+            TMP_Text text = CreateText("Label", rect, label, 18f, TextAlignmentOptions.Center);
+            Stretch(text.rectTransform, new Vector2(10f, 4f), new Vector2(-10f, -4f));
+        }
+
+        private static GameObject CreateRectObject(string name, RectTransform parent)
+        {
+            GameObject child = new GameObject(name, typeof(RectTransform));
+            child.transform.SetParent(parent, false);
+            return child;
         }
 
         private static Image CreateImage(string name, RectTransform parent, Color color)
