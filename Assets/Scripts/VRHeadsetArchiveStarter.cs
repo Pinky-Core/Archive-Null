@@ -95,7 +95,7 @@ namespace ArchiveNull.UI
 
         private void Update()
         {
-            if (_busy)
+            if (_busy || CaseFileReader.IsAnyCaseFileOpen)
             {
                 return;
             }

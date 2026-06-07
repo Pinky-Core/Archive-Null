@@ -106,7 +106,7 @@ namespace ArchiveNull.UI
 
         private static bool IsUiBlockingLook()
         {
-            return EvidenceNotebookUI.IsAnyNotebookOpen || EvidenceCameraController.IsAnyRadialMenuOpen;
+            return EvidenceNotebookUI.IsAnyNotebookOpen || EvidenceCameraController.IsAnyRadialMenuOpen || CaseFileReader.IsAnyCaseFileOpen;
         }
 
         private void SyncFlightState()

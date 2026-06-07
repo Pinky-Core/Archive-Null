@@ -165,6 +165,11 @@ namespace ArchiveNull.UI
 
         private void HandleInput()
         {
+            if (CaseFileReader.IsAnyCaseFileOpen)
+            {
+                return;
+            }
+
             if (!_isFocused && _currentPose == CameraPose.Stand && WasLeftClickThisFrame() && IsClickingReturnToFarTarget())
             {
                 MoveToFarPose();

@@ -69,7 +69,7 @@ namespace ArchiveNull.UI
                 return false;
             }
 
-            return true;
+            return !CaseFileReader.IsAnyCaseFileOpen;
         }
 
         private bool IsLookingAtInteractable()
