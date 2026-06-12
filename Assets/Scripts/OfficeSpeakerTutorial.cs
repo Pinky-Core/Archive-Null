@@ -56,19 +56,19 @@ namespace ArchiveNull.UI
             new()
             {
                 step = TutorialStep.Welcome,
-                subtitle = "Bienvenido, Operador 253. Estacion Archive Null en espera.",
+                subtitle = "Bienvenido, Operador 253. Hay un expediente preliminar sobre la mesa.",
                 fallbackDuration = 3.5f
             },
             new()
             {
                 step = TutorialStep.Movement,
-                subtitle = "Antes de abrir un expediente, familiaricese con la oficina. Use W A S D para moverse y el mouse para mirar.",
+                subtitle = "Lealo antes de montar una memoria. Use W A S D para moverse, el mouse para mirar y click para interactuar.",
                 fallbackDuration = 5f
             },
             new()
             {
                 step = TutorialStep.SitPrompt,
-                subtitle = "Cuando este listo, tome asiento frente al terminal.",
+                subtitle = "Cuando termine de revisar la carpeta, tome asiento frente al terminal.",
                 fallbackDuration = 3.2f
             },
             new()
@@ -118,6 +118,12 @@ namespace ArchiveNull.UI
                 PlayerPrefs.DeleteKey(CompletedPref);
             }
 
+            if (!PlayerAssistanceSettings.HelpEnabled)
+            {
+                enabled = false;
+                return;
+            }
+
             if (speakerSource == null)
             {
                 speakerSource = GetComponent<AudioSource>();
@@ -156,12 +162,36 @@ namespace ArchiveNull.UI
             }
 
             SubscribeToSceneEvents();
+            PlayerAssistanceSettings.HelpEnabledChanged += HandleHelpEnabledChanged;
             SetSubtitleVisible(false, true);
         }
 
         private void OnDestroy()
         {
+            PlayerAssistanceSettings.HelpEnabledChanged -= HandleHelpEnabledChanged;
             UnsubscribeFromSceneEvents();
+        }
+
+        private void HandleHelpEnabledChanged(bool enabled)
+        {
+            if (enabled)
+            {
+                return;
+            }
+
+            if (lineRoutine != null)
+            {
+                StopCoroutine(lineRoutine);
+                lineRoutine = null;
+            }
+
+            if (speakerSource != null)
+            {
+                speakerSource.Stop();
+            }
+
+            SetSubtitleVisible(false, true);
+            this.enabled = false;
         }
 
         private void SubscribeToSceneEvents()
@@ -335,6 +365,11 @@ namespace ArchiveNull.UI
 
         private bool ShouldSkipTutorial()
         {
+            if (!PlayerAssistanceSettings.HelpEnabled)
+            {
+                return true;
+            }
+
 #if UNITY_EDITOR
             if (alwaysShowInEditor)
             {
