@@ -82,6 +82,10 @@ public sealed class GlobalPauseMenu : MonoBehaviour
     private TMP_Text optionsHeaderText;
     private PauseOptionsCategory currentOptionsCategory;
     private Image[] glitchBars;
+    private Image[] glitchBlocks;
+    private TMP_Text[] glitchTextLines;
+    private float glitchBurstTimer;
+    private float glitchTextTimer;
     private CanvasGroup exitFadeOverlay;
     private FirstPersonMovement movement;
     private FirstPersonLook look;
@@ -180,10 +184,17 @@ public sealed class GlobalPauseMenu : MonoBehaviour
 
     public void ExitToMainMenu()
     {
-        if (!isBusy)
+        if (isBusy)
         {
-            StartCoroutine(ExitRoutine());
+            return;
         }
+
+        RuntimeConfirmationDialog.Show(
+            L("VOLVER AL MENU", "RETURN TO MENU"),
+            L("Vas a volver a la oficina. Se conservaran evidencias, notas y pizarra guardadas.", "You are returning to the office. Saved evidence, notes and board data will be kept."),
+            L("VOLVER", "RETURN"),
+            L("CANCELAR", "CANCEL"),
+            () => StartCoroutine(ExitRoutine()));
     }
 
     private IEnumerator ExitRoutine()
@@ -194,7 +205,9 @@ public sealed class GlobalPauseMenu : MonoBehaviour
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
 
+        GameSaveSystem.SaveNow();
         PlayerPrefs.SetInt(OfficeDissolveTransition.PendingOfficeRebuildPref, 1);
+        GameSaveSystem.MarkOfficeContext();
         PlayerPrefs.Save();
         SetVisible(false);
 
@@ -469,7 +482,9 @@ public sealed class GlobalPauseMenu : MonoBehaviour
         {
             case PauseOptionsCategory.General:
                 sensitivitySlider = CreateOptionSlider(optionsContentRoot, L("SENSIBILIDAD MOUSE", "MOUSE SENSITIVITY"), new Vector2(0f, -58f), OnSensitivityChanged);
-                CreateInfoLine(optionsContentRoot, L("Los cambios se guardan y se aplican al instante.", "Changes are saved and applied instantly."), new Vector2(0f, -146f));
+                CreateValueButton(optionsContentRoot, L("AYUDAS CONTEXTUALES", "CONTEXT HELP"), GetHelpLabel(), new Vector2(0f, -136f), ToggleContextHelp);
+                CreateValueButton(optionsContentRoot, L("REINICIAR AYUDAS", "RESET HELP"), L("REINICIAR", "RESET"), new Vector2(0f, -214f), ResetContextHelp);
+                CreateInfoLine(optionsContentRoot, L("Las ayudas no son lineales: solo aparecen para explicar mecanicas nuevas.", "Help is not linear: it only appears to explain new mechanics."), new Vector2(0f, -302f));
                 if (sensitivitySlider != null) sensitivitySlider.value = Mathf.InverseLerp(0.25f, 8f, PlayerPrefs.GetFloat(PrefLookSensitivity, look != null ? look.sensitivity : 2f));
                 break;
 
@@ -562,6 +577,24 @@ public sealed class GlobalPauseMenu : MonoBehaviour
         PlayerPrefs.SetInt(PrefLanguageIndex, IsSpanish() ? 1 : 0);
         PlayerPrefs.Save();
         BuildOptionsCategory(PauseOptionsCategory.Language);
+    }
+
+    private static string GetHelpLabel()
+    {
+        return PlayerAssistanceSettings.HelpEnabled ? L("ACTIVADAS", "ENABLED") : L("DESACTIVADAS", "DISABLED");
+    }
+
+    private void ToggleContextHelp()
+    {
+        PlayerAssistanceSettings.HelpEnabled = !PlayerAssistanceSettings.HelpEnabled;
+        BuildOptionsCategory(PauseOptionsCategory.General);
+    }
+
+    private void ResetContextHelp()
+    {
+        PlayerAssistanceSettings.ResetHelpProgress();
+        PlayerAssistanceSettings.HelpEnabled = true;
+        BuildOptionsCategory(PauseOptionsCategory.General);
     }
 
     private static void ClearChildren(RectTransform parent)
@@ -765,17 +798,44 @@ public sealed class GlobalPauseMenu : MonoBehaviour
 
     private void BuildGlitchBackdrop(RectTransform parent)
     {
-        glitchBars = new Image[14];
+        glitchBars = new Image[24];
         for (int i = 0; i < glitchBars.Length; i++)
         {
-            Image bar = CreateImage("GlitchBar" + i, parent, new Color(0.3f, 0.95f, 0.85f, 0.04f));
+            Image bar = CreateImage("GlitchBar" + i, parent, new Color(0.3f, 0.95f, 0.85f, 0.045f));
             RectTransform rect = bar.rectTransform;
             rect.anchorMin = new Vector2(0f, 0f);
             rect.anchorMax = new Vector2(1f, 0f);
             rect.pivot = new Vector2(0.5f, 0.5f);
-            rect.sizeDelta = new Vector2(0f, Random.Range(2f, 10f));
-            rect.anchoredPosition = new Vector2(Random.Range(-80f, 80f), Random.Range(0f, 1080f));
+            rect.sizeDelta = new Vector2(Random.Range(-220f, 220f), Random.Range(1f, 16f));
+            rect.anchoredPosition = new Vector2(Random.Range(-180f, 180f), Random.Range(0f, 1080f));
             glitchBars[i] = bar;
+        }
+
+        glitchBlocks = new Image[18];
+        for (int i = 0; i < glitchBlocks.Length; i++)
+        {
+            Image block = CreateImage("GlitchBlock" + i, parent, new Color(0.1f, 0.95f, 0.84f, 0f));
+            RectTransform rect = block.rectTransform;
+            rect.anchorMin = new Vector2(0f, 0f);
+            rect.anchorMax = new Vector2(0f, 0f);
+            rect.pivot = new Vector2(0f, 0.5f);
+            rect.sizeDelta = new Vector2(Random.Range(48f, 260f), Random.Range(8f, 42f));
+            rect.anchoredPosition = new Vector2(Random.Range(0f, 1920f), Random.Range(0f, 1080f));
+            glitchBlocks[i] = block;
+        }
+
+        glitchTextLines = new TMP_Text[5];
+        for (int i = 0; i < glitchTextLines.Length; i++)
+        {
+            TMP_Text line = CreateText("GlitchText" + i, parent, string.Empty, Random.Range(13f, 22f), FontStyles.Bold, TextAlignmentOptions.Left);
+            line.color = new Color(0.48f, 1f, 0.9f, 0f);
+            RectTransform rect = line.rectTransform;
+            rect.anchorMin = new Vector2(0f, 0f);
+            rect.anchorMax = new Vector2(0f, 0f);
+            rect.pivot = new Vector2(0f, 0.5f);
+            rect.anchoredPosition = new Vector2(Random.Range(80f, 1500f), Random.Range(80f, 1000f));
+            rect.sizeDelta = new Vector2(420f, 30f);
+            glitchTextLines[i] = line;
         }
     }
 
@@ -784,6 +844,13 @@ public sealed class GlobalPauseMenu : MonoBehaviour
         if (glitchBars == null)
         {
             return;
+        }
+
+        glitchBurstTimer -= Time.unscaledDeltaTime;
+        bool burst = glitchBurstTimer <= 0f;
+        if (burst)
+        {
+            glitchBurstTimer = Random.Range(0.035f, 0.16f);
         }
 
         for (int i = 0; i < glitchBars.Length; i++)
@@ -796,23 +863,115 @@ public sealed class GlobalPauseMenu : MonoBehaviour
 
             RectTransform rect = bar.rectTransform;
             Vector2 position = rect.anchoredPosition;
-            position.y += (20f + i * 3f) * Time.unscaledDeltaTime;
+            position.y += (36f + i * 5f) * Time.unscaledDeltaTime;
             if (position.y > 1120f)
             {
                 position.y = -40f;
-                position.x = Random.Range(-120f, 120f);
+                position.x = Random.Range(-260f, 260f);
             }
 
-            if (Random.value < 0.04f)
+            if (burst || Random.value < 0.035f)
             {
-                position.x = Random.Range(-140f, 140f);
-                rect.sizeDelta = new Vector2(0f, Random.Range(2f, 14f));
+                position.x = Random.Range(-360f, 360f);
+                rect.sizeDelta = new Vector2(Random.Range(-280f, 320f), Random.Range(1f, 22f));
             }
 
             rect.anchoredPosition = position;
             Color color = bar.color;
-            color.a = Random.value < 0.2f ? Random.Range(0.04f, 0.14f) : Mathf.Lerp(color.a, 0.045f, Time.unscaledDeltaTime * 8f);
+            color.r = Random.value < 0.18f ? 0.9f : 0.2f;
+            color.g = Random.value < 0.12f ? 0.25f : 0.95f;
+            color.b = Random.value < 0.2f ? 1f : 0.84f;
+            color.a = burst || Random.value < 0.22f ? Random.Range(0.035f, 0.22f) : Mathf.Lerp(color.a, 0.035f, Time.unscaledDeltaTime * 10f);
             bar.color = color;
+        }
+
+        UpdateGlitchBlocks(burst);
+        UpdateGlitchText(burst);
+    }
+
+    private void UpdateGlitchBlocks(bool burst)
+    {
+        if (glitchBlocks == null)
+        {
+            return;
+        }
+
+        for (int i = 0; i < glitchBlocks.Length; i++)
+        {
+            Image block = glitchBlocks[i];
+            if (block == null)
+            {
+                continue;
+            }
+
+            RectTransform rect = block.rectTransform;
+            if (burst || Random.value < 0.08f)
+            {
+                rect.anchoredPosition = new Vector2(Random.Range(0f, 1920f), Random.Range(0f, 1080f));
+                rect.sizeDelta = new Vector2(Random.Range(34f, 360f), Random.Range(6f, 54f));
+            }
+
+            Color color = block.color;
+            color.r = Random.value < 0.5f ? 0.1f : 0.95f;
+            color.g = Random.value < 0.35f ? 0.18f : 0.9f;
+            color.b = Random.value < 0.5f ? 0.95f : 0.18f;
+            color.a = burst && Random.value < 0.55f ? Random.Range(0.035f, 0.16f) : Mathf.Lerp(color.a, 0f, Time.unscaledDeltaTime * 18f);
+            block.color = color;
+        }
+    }
+
+    private void UpdateGlitchText(bool burst)
+    {
+        if (glitchTextLines == null)
+        {
+            return;
+        }
+
+        glitchTextTimer -= Time.unscaledDeltaTime;
+        if (!burst && glitchTextTimer > 0f)
+        {
+            FadeGlitchText();
+            return;
+        }
+
+        glitchTextTimer = Random.Range(0.05f, 0.22f);
+        const string chars = "01#%/[]{}ARCHIVE_NULL_MEM";
+        for (int i = 0; i < glitchTextLines.Length; i++)
+        {
+            TMP_Text line = glitchTextLines[i];
+            if (line == null)
+            {
+                continue;
+            }
+
+            int length = Random.Range(12, 34);
+            System.Text.StringBuilder builder = new(length);
+            for (int c = 0; c < length; c++)
+            {
+                builder.Append(chars[Random.Range(0, chars.Length)]);
+            }
+
+            line.text = builder.ToString();
+            line.rectTransform.anchoredPosition = new Vector2(Random.Range(80f, 1500f), Random.Range(80f, 1000f));
+            Color color = line.color;
+            color.a = Random.Range(0.04f, 0.18f);
+            line.color = color;
+        }
+    }
+
+    private void FadeGlitchText()
+    {
+        for (int i = 0; i < glitchTextLines.Length; i++)
+        {
+            TMP_Text line = glitchTextLines[i];
+            if (line == null)
+            {
+                continue;
+            }
+
+            Color color = line.color;
+            color.a = Mathf.Lerp(color.a, 0f, Time.unscaledDeltaTime * 10f);
+            line.color = color;
         }
     }
 

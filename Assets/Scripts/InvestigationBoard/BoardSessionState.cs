@@ -12,6 +12,16 @@ namespace ArchiveNull.InvestigationBoard
         public static readonly HashSet<string> UnlockedConclusions = new HashSet<string>();
         public static readonly Dictionary<string, int> TimelineSlots = new Dictionary<string, int>();
 
+        public static void Clear()
+        {
+            CardPositions.Clear();
+            WorldPhotoPositions.Clear();
+            EvidenceZones.Clear();
+            Connections.Clear();
+            UnlockedConclusions.Clear();
+            TimelineSlots.Clear();
+        }
+
         public static string GetConnectionKey(string a, string b)
         {
             if (string.CompareOrdinal(a, b) <= 0)

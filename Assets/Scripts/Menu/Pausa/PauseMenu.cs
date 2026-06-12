@@ -72,8 +72,20 @@ public class PauseMenu : MonoBehaviour
 
     public void MainMenu()
     {
+        RuntimeConfirmationDialog.Show(
+            "VOLVER AL MENU",
+            "Vas a volver a la oficina. Se conservaran los datos guardados.",
+            "VOLVER",
+            "CANCELAR",
+            MainMenuConfirmed);
+    }
+
+    private void MainMenuConfirmed()
+    {
         Time.timeScale = 1f;
+        GameSaveSystem.SaveNow();
         PlayerPrefs.SetInt(ArchiveNull.UI.OfficeDissolveTransition.PendingOfficeRebuildPref, 1);
+        GameSaveSystem.MarkOfficeContext();
         PlayerPrefs.Save();
         SceneManager.LoadScene(mainMenuSceneName, LoadSceneMode.Single);
     }
