@@ -72,6 +72,51 @@ namespace ArchiveNull.Evidence
             return registeredEvidence;
         }
 
+        public void RestoreEvidence(IEnumerable<EvidenceData> evidence)
+        {
+            registeredIds.Clear();
+            registeredEvidence.Clear();
+
+            if (evidence != null)
+            {
+                foreach (EvidenceData data in evidence)
+                {
+                    if (data == null || string.IsNullOrWhiteSpace(data.evidenceId) || registeredIds.Contains(data.evidenceId))
+                    {
+                        continue;
+                    }
+
+                    registeredIds.Add(data.evidenceId);
+                    registeredEvidence.Add(data);
+                }
+            }
+
+            OnInventoryChanged?.Invoke();
+        }
+
+        public IReadOnlyDictionary<string, string> GetAllNotes()
+        {
+            return notesByEvidenceId;
+        }
+
+        public void RestoreNotes(IDictionary<string, string> notes, string restoredOperatorNotes)
+        {
+            notesByEvidenceId.Clear();
+            if (notes != null)
+            {
+                foreach (KeyValuePair<string, string> entry in notes)
+                {
+                    if (!string.IsNullOrWhiteSpace(entry.Key))
+                    {
+                        notesByEvidenceId[entry.Key] = entry.Value ?? string.Empty;
+                    }
+                }
+            }
+
+            operatorNotes = restoredOperatorNotes ?? string.Empty;
+            OnInventoryChanged?.Invoke();
+        }
+
         public string GetNote(string evidenceId)
         {
             return !string.IsNullOrWhiteSpace(evidenceId) && notesByEvidenceId.TryGetValue(evidenceId, out string note) ? note : string.Empty;
@@ -85,6 +130,7 @@ namespace ArchiveNull.Evidence
             }
 
             notesByEvidenceId[evidenceId] = note ?? string.Empty;
+            OnInventoryChanged?.Invoke();
         }
 
         public string GetOperatorNotes()
@@ -95,6 +141,7 @@ namespace ArchiveNull.Evidence
         public void SetOperatorNotes(string notes)
         {
             operatorNotes = notes ?? string.Empty;
+            OnInventoryChanged?.Invoke();
         }
     }
 }

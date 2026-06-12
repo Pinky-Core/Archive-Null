@@ -331,6 +331,11 @@ namespace ArchiveNull.UI
         {
         }
 
+        private void OnApplicationQuit()
+        {
+            GameSaveSystem.MarkOfficeContext();
+        }
+
         private void Update()
         {
             if (_canvas == null)
@@ -339,6 +344,11 @@ namespace ArchiveNull.UI
             }
 
             UpdateVisualNoise();
+            if (StartupNoticeSequence.IsShowing)
+            {
+                return;
+            }
+
             HandleInput();
         }
 
@@ -585,6 +595,11 @@ namespace ArchiveNull.UI
             _mainMenuItems.Add(new MenuItem
             {
                 Label = GetLocalizedMainMenuLabel(2),
+                Action = ConfirmDeleteAllData
+            });
+            _mainMenuItems.Add(new MenuItem
+            {
+                Label = GetLocalizedMainMenuLabel(3),
                 Action = QuitGame
             });
 
@@ -2088,12 +2103,40 @@ namespace ArchiveNull.UI
 
         private void QuitGame()
         {
+            RuntimeConfirmationDialog.Show(
+                Localize("CONFIRMAR SALIDA", "CONFIRM QUIT"),
+                Localize("Vas a cerrar el juego. Los datos de gameplay guardados se conservaran.", "You are about to close the game. Saved gameplay data will be kept."),
+                Localize("SALIR", "QUIT"),
+                Localize("CANCELAR", "CANCEL"),
+                QuitGameConfirmed);
+        }
+
+        private void QuitGameConfirmed()
+        {
             SetStatus("TERMINATING SESSION.");
+            GameSaveSystem.MarkOfficeContext();
 #if UNITY_EDITOR
             UnityEditor.EditorApplication.isPlaying = false;
 #else
             Application.Quit();
 #endif
+        }
+
+        private void ConfirmDeleteAllData()
+        {
+            RuntimeConfirmationDialog.Show(
+                Localize("ELIMINAR DATOS", "DELETE DATA"),
+                Localize("Esto borra evidencias, notas, pizarra, conexiones, conclusiones y progreso de gameplay. Las opciones no se borran.", "This deletes evidence, notes, board, connections, conclusions and gameplay progress. Settings are not deleted."),
+                Localize("ELIMINAR", "DELETE"),
+                Localize("CANCELAR", "CANCEL"),
+                DeleteAllDataConfirmed);
+        }
+
+        private void DeleteAllDataConfirmed()
+        {
+            GameSaveSystem.DeleteAllGameplayData();
+            SetStatus(Localize("DATOS DE GAMEPLAY ELIMINADOS.", "GAMEPLAY DATA DELETED."));
+            RefreshMainMenuAvailability();
         }
 
         private void ToggleAudioEnabled()
@@ -2523,7 +2566,8 @@ namespace ArchiveNull.UI
             {
                 0 => Localize("EXPEDIENTES", "CASE FILES"),
                 1 => Localize("OPCIONES", "SETTINGS"),
-                2 => Localize("SALIR", "QUIT"),
+                2 => Localize("ELIMINAR TODOS LOS DATOS", "DELETE ALL DATA"),
+                3 => Localize("SALIR", "QUIT"),
                 _ => string.Empty
             };
         }

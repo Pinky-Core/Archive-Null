@@ -43,6 +43,11 @@ public sealed class CrimeSceneTutorial : MonoBehaviour
             return;
         }
 
+        if (!PlayerAssistanceSettings.HelpEnabled)
+        {
+            return;
+        }
+
 #if UNITY_EDITOR
         bool skipByCompletion = false;
 #else
@@ -72,6 +77,12 @@ public sealed class CrimeSceneTutorial : MonoBehaviour
         }
 #endif
 
+        if (!PlayerAssistanceSettings.HelpEnabled)
+        {
+            Destroy(gameObject);
+            return;
+        }
+
         mainCamera = Camera.main;
         BuildUi();
         CacheWaypointTargets();
@@ -81,14 +92,24 @@ public sealed class CrimeSceneTutorial : MonoBehaviour
 
     private void OnEnable()
     {
+        PlayerAssistanceSettings.HelpEnabledChanged += HandleHelpEnabledChanged;
         EvidenceInventory.Instance.OnEvidenceRegistered += HandleEvidenceRegistered;
     }
 
     private void OnDisable()
     {
+        PlayerAssistanceSettings.HelpEnabledChanged -= HandleHelpEnabledChanged;
         if (EvidenceInventory.ExistingInstance != null)
         {
             EvidenceInventory.ExistingInstance.OnEvidenceRegistered -= HandleEvidenceRegistered;
+        }
+    }
+
+    private void HandleHelpEnabledChanged(bool enabled)
+    {
+        if (!enabled)
+        {
+            Destroy(gameObject);
         }
     }
 
@@ -175,11 +196,11 @@ public sealed class CrimeSceneTutorial : MonoBehaviour
 
         text.text = step switch
         {
-            0 => $"MEMORIA ACTIVA\nMuevete con {GlobalInputBindings.GetDisplayName(GameInputAction.MoveForward)}/{GlobalInputBindings.GetDisplayName(GameInputAction.MoveLeft)}/{GlobalInputBindings.GetDisplayName(GameInputAction.MoveBackward)}/{GlobalInputBindings.GetDisplayName(GameInputAction.MoveRight)}.",
-            1 => $"INSPECCION\nMira el objetivo marcado y pulsa {GlobalInputBindings.GetDisplayName(GameInputAction.Inspect)}. Manten click para girarlo y usa rueda para zoom.",
-            2 => $"CAMARA DE EVIDENCIA\nManten G para abrir inventario radial, equipa CAMARA y luego pulsa {GlobalInputBindings.GetDisplayName(GameInputAction.Camera)} para abrirla.",
-            3 => "REGISTRO\nEnfoca la evidencia marcada y toma una foto con click izquierdo.",
-            4 => $"LIBRETA\nPulsa {GlobalInputBindings.GetDisplayName(GameInputAction.Notebook)} para revisar fotos y escribir notas.",
+            0 => $"AYUDA // MEMORIA ACTIVA\nExplora con {GlobalInputBindings.GetDisplayName(GameInputAction.MoveForward)}/{GlobalInputBindings.GetDisplayName(GameInputAction.MoveLeft)}/{GlobalInputBindings.GetDisplayName(GameInputAction.MoveBackward)}/{GlobalInputBindings.GetDisplayName(GameInputAction.MoveRight)}. Puedes apagar estas ayudas en Pausa > General.",
+            1 => $"AYUDA // INSPECCION\nMira un objeto marcado y pulsa {GlobalInputBindings.GetDisplayName(GameInputAction.Inspect)}. Manten click para girarlo y usa la rueda para acercar.",
+            2 => $"AYUDA // HERRAMIENTAS\nManten G para abrir la rueda: mano para interactuar, camara para registrar evidencias y luz UV para rastros ocultos. Con camara equipada, pulsa {GlobalInputBindings.GetDisplayName(GameInputAction.Camera)}.",
+            3 => "AYUDA // REGISTRO\nEnfoca una evidencia con la camara y saca foto con click izquierdo. Las evidencias registradas muestran ficha al apuntarlas.",
+            4 => $"AYUDA // LIBRETA Y GALERIA\nPulsa {GlobalInputBindings.GetDisplayName(GameInputAction.Notebook)}. La galeria muestra evidencias con descripcion fija; la libreta es para tus notas.",
             _ => string.Empty
         };
     }
@@ -342,7 +363,7 @@ public sealed class CrimeSceneTutorial : MonoBehaviour
         rootGroup.interactable = false;
         rootGroup.blocksRaycasts = false;
 
-        Image panel = CreateImage("Panel", canvasObject.transform as RectTransform, new Color(0.025f, 0.035f, 0.034f, 0.86f));
+        Image panel = CreateImage("HelpPanel", canvasObject.transform as RectTransform, new Color(0.04f, 0.038f, 0.032f, 0.9f));
         RectTransform panelRect = panel.rectTransform;
         panelRect.anchorMin = new Vector2(0f, 0f);
         panelRect.anchorMax = new Vector2(0f, 0f);
@@ -350,7 +371,7 @@ public sealed class CrimeSceneTutorial : MonoBehaviour
         panelRect.anchoredPosition = new Vector2(48f, 52f);
         panelRect.sizeDelta = new Vector2(700f, 150f);
         Outline outline = panel.gameObject.AddComponent<Outline>();
-        outline.effectColor = new Color(0.35f, 0.9f, 0.82f, 0.45f);
+        outline.effectColor = new Color(0.78f, 0.68f, 0.48f, 0.42f);
         outline.effectDistance = new Vector2(1f, -1f);
 
         text = CreateText("Text", panelRect);
@@ -415,7 +436,7 @@ public sealed class CrimeSceneTutorial : MonoBehaviour
         child.transform.SetParent(parent, false);
         TMP_Text tmp = child.GetComponent<TMP_Text>();
         tmp.fontSize = 21f;
-        tmp.color = new Color(0.78f, 0.98f, 0.92f, 1f);
+        tmp.color = new Color(0.93f, 0.86f, 0.68f, 1f);
         tmp.alignment = TextAlignmentOptions.MidlineLeft;
         tmp.textWrappingMode = TextWrappingModes.Normal;
         RectTransform rect = tmp.rectTransform;
