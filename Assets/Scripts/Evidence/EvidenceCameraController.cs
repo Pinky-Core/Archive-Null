@@ -13,6 +13,7 @@ namespace ArchiveNull.Evidence
         [Header("Capture")]
         [SerializeField] private Camera playerCamera;
         [SerializeField] private float maxCaptureDistance = 4f;
+        [SerializeField] private float zoomedCaptureDistanceMultiplier = 2.25f;
         [SerializeField] private int capturedPhotoWidth = 1024;
         [SerializeField] private bool createNotebookIfMissing = true;
         [SerializeField] private Key notebookToggleKey = Key.Tab;
@@ -50,11 +51,13 @@ namespace ArchiveNull.Evidence
         [SerializeField] private Sprite handWheelIcon;
         [SerializeField] private Sprite cameraWheelIcon;
         [SerializeField] private Sprite uvWheelIcon;
+        [SerializeField] private Sprite inventoryWheelIcon;
 
         [Header("Held Tools")]
         [SerializeField] private GameObject handToolObject;
         [SerializeField] private GameObject cameraToolObject;
         [SerializeField] private GameObject uvLightToolObject;
+        [SerializeField] private Transform heldItemAnchor;
         [SerializeField] private float equipAnimationDuration = 0.22f;
         [SerializeField] private Vector3 hiddenToolLocalOffset = new Vector3(0f, -0.45f, -0.08f);
         [SerializeField] private Vector3 cameraFaceLocalPosition = new Vector3(0f, -0.08f, 0.24f);
@@ -94,9 +97,16 @@ namespace ArchiveNull.Evidence
         private CanvasGroup inventoryWheelGroup;
         private RectTransform inventoryWheelRoot;
         private Image wheelBackdrop;
-        private readonly List<WheelSegmentVisual> wheelSegments = new List<WheelSegmentVisual>(3);
+        private readonly List<WheelSegmentVisual> wheelSegments = new List<WheelSegmentVisual>(4);
+        private CanvasGroup itemSubInventoryGroup;
+        private RectTransform itemSubInventoryRoot;
+        private Image phoneInventorySlot;
+        private Image phoneInventoryIcon;
+        private TMP_Text phoneInventoryLabel;
         private ToolSlot equippedTool = ToolSlot.Hand;
         private ToolSlot hoveredTool = ToolSlot.Hand;
+        private PhoneEvidenceReader collectedPhone;
+        private bool phoneSlotHovered;
         private readonly RaycastHit[] captureHits = new RaycastHit[24];
         private readonly RaycastHit[] uvHits = new RaycastHit[24];
         private readonly Collider[] uvOverlapHits = new Collider[64];
@@ -123,7 +133,8 @@ namespace ArchiveNull.Evidence
         {
             Hand,
             Camera,
-            UvLight
+            UvLight,
+            InventoryItem
         }
 
         private sealed class WheelSegmentVisual
@@ -200,13 +211,20 @@ namespace ArchiveNull.Evidence
                 UpdateInventoryWheelSelection();
                 if (Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame)
                 {
-                    EquipHoveredTool(true);
+                    TryEquipWheelSelection(true);
                 }
                 else if (!wheelHold)
                 {
-                    EquipHoveredTool(true);
+                    TryEquipWheelSelection(true);
                 }
 
+                return;
+            }
+
+            if (equippedTool == ToolSlot.InventoryItem)
+            {
+                collectedPhone?.HandleEquippedInput();
+                RestoreCameraFov();
                 return;
             }
 
@@ -296,6 +314,7 @@ namespace ArchiveNull.Evidence
             if (active)
             {
                 hoveredTool = equippedTool;
+                phoneSlotHovered = false;
                 Cursor.lockState = CursorLockMode.None;
                 Cursor.visible = true;
                 SetCameraMode(false);
@@ -307,12 +326,24 @@ namespace ArchiveNull.Evidence
             }
 
             UpdateWheelVisuals();
+            UpdateItemSubInventory();
         }
 
         private void UpdateInventoryWheelSelection()
         {
             if (Mouse.current == null || inventoryWheelRoot == null)
             {
+                return;
+            }
+
+            phoneSlotHovered = collectedPhone != null &&
+                               phoneInventorySlot != null &&
+                               RectTransformUtility.RectangleContainsScreenPoint(phoneInventorySlot.rectTransform, Mouse.current.position.ReadValue());
+            if (phoneSlotHovered)
+            {
+                hoveredTool = ToolSlot.InventoryItem;
+                UpdateWheelVisuals();
+                UpdateItemSubInventory();
                 return;
             }
 
@@ -328,6 +359,7 @@ namespace ArchiveNull.Evidence
             float angle = Mathf.Atan2(delta.y, delta.x) * Mathf.Rad2Deg;
             hoveredTool = GetToolFromAngle(angle);
             UpdateWheelVisuals();
+            UpdateItemSubInventory();
         }
 
         private ToolSlot GetToolFromAngle(float angle)
@@ -384,6 +416,72 @@ namespace ArchiveNull.Evidence
             }
         }
 
+        private void UpdateItemSubInventory()
+        {
+            if (itemSubInventoryGroup == null)
+            {
+                return;
+            }
+
+            bool visible = radialMenuOpen && hoveredTool == ToolSlot.InventoryItem;
+            itemSubInventoryGroup.alpha = visible ? 1f : 0f;
+            itemSubInventoryGroup.interactable = visible;
+            itemSubInventoryGroup.blocksRaycasts = visible;
+
+            bool available = collectedPhone != null;
+            if (phoneInventorySlot != null)
+            {
+                phoneInventorySlot.gameObject.SetActive(available);
+                phoneInventorySlot.color = phoneSlotHovered
+                    ? new Color(0.84f, 0.96f, 0.92f, 0.98f)
+                    : new Color(0.07f, 0.12f, 0.115f, 0.96f);
+            }
+
+            if (phoneInventoryLabel != null)
+            {
+                phoneInventoryLabel.text = available ? collectedPhone.InventoryDisplayName : "SIN OBJETOS";
+                phoneInventoryLabel.color = phoneSlotHovered ? new Color(0.03f, 0.06f, 0.055f, 1f) : hudColor;
+            }
+
+            if (phoneInventoryIcon != null)
+            {
+                phoneInventoryIcon.gameObject.SetActive(available && collectedPhone.InventoryIcon != null);
+                phoneInventoryIcon.sprite = available ? collectedPhone.InventoryIcon : null;
+            }
+        }
+
+        private void TryEquipWheelSelection(bool closeWheel)
+        {
+            if (hoveredTool == ToolSlot.InventoryItem)
+            {
+                if (collectedPhone == null)
+                {
+                    if (closeWheel)
+                    {
+                        SetInventoryWheel(false);
+                    }
+
+                    ShowMessage("No hay objetos recogidos.");
+                    return;
+                }
+
+                if (!phoneSlotHovered)
+                {
+                    if (!IsHeld(inventoryWheelKey) && closeWheel)
+                    {
+                        SetInventoryWheel(false);
+                    }
+
+                    return;
+                }
+
+                EquipHoveredTool(closeWheel);
+                return;
+            }
+
+            EquipHoveredTool(closeWheel);
+        }
+
         private void EquipHoveredTool(bool closeWheel)
         {
             if (equippedTool == hoveredTool)
@@ -394,6 +492,12 @@ namespace ArchiveNull.Evidence
                 }
 
                 return;
+            }
+
+            bool unequippingPhone = equippedTool == ToolSlot.InventoryItem && hoveredTool != ToolSlot.InventoryItem;
+            if (unequippingPhone)
+            {
+                collectedPhone?.SetEquippedState(false);
             }
 
             equippedTool = hoveredTool;
@@ -409,6 +513,11 @@ namespace ArchiveNull.Evidence
 
             IsAnyUvLightActive = equippedTool == ToolSlot.UvLight && uvLightOn;
             AnimateToolEquip(equippedTool);
+            if (equippedTool == ToolSlot.InventoryItem)
+            {
+                collectedPhone?.SetEquippedState(true);
+            }
+
             if (closeWheel)
             {
                 SetInventoryWheel(false);
@@ -421,13 +530,14 @@ namespace ArchiveNull.Evidence
             }
         }
 
-        private static string GetToolLabel(ToolSlot tool)
+        private string GetToolLabel(ToolSlot tool)
         {
             return tool switch
             {
                 ToolSlot.Hand => "MANO",
                 ToolSlot.Camera => "CAMARA",
                 ToolSlot.UvLight => "LUZ UV",
+                ToolSlot.InventoryItem => collectedPhone != null ? collectedPhone.InventoryDisplayName : "OBJETO",
                 _ => "MANO"
             };
         }
@@ -439,6 +549,7 @@ namespace ArchiveNull.Evidence
                 ToolSlot.Hand => handWheelIcon,
                 ToolSlot.Camera => cameraWheelIcon,
                 ToolSlot.UvLight => uvWheelIcon,
+                ToolSlot.InventoryItem => inventoryWheelIcon,
                 _ => null
             };
         }
@@ -450,6 +561,7 @@ namespace ArchiveNull.Evidence
                 ToolSlot.Hand => "M",
                 ToolSlot.Camera => "C",
                 ToolSlot.UvLight => "UV",
+                ToolSlot.InventoryItem => "OBJ",
                 _ => "M"
             };
         }
@@ -577,6 +689,10 @@ namespace ArchiveNull.Evidence
             CacheToolPose(handToolObject);
             CacheToolPose(cameraToolObject);
             CacheToolPose(uvLightToolObject);
+            if (collectedPhone != null)
+            {
+                CacheToolPose(collectedPhone.gameObject);
+            }
 
             if (uvSpotlight == null && uvLightToolObject != null)
             {
@@ -596,11 +712,42 @@ namespace ArchiveNull.Evidence
             toolPoses.Add(toolObject, new ToolPose(toolObject.transform));
         }
 
+        public bool RegisterCollectedPhone(PhoneEvidenceReader phone)
+        {
+            if (phone == null)
+            {
+                return false;
+            }
+
+            if (collectedPhone != null && collectedPhone != phone)
+            {
+                return false;
+            }
+
+            collectedPhone = phone;
+            Transform anchor = heldItemAnchor != null
+                ? heldItemAnchor
+                : playerCamera != null
+                    ? playerCamera.transform
+                    : transform;
+            collectedPhone.AttachToInventory(anchor);
+            toolPoses.Remove(collectedPhone.gameObject);
+            CacheToolPose(collectedPhone.gameObject);
+            ApplyToolImmediate(collectedPhone.gameObject, equippedTool == ToolSlot.InventoryItem);
+            UpdateItemSubInventory();
+            ShowMessage("Objeto recogido: " + collectedPhone.InventoryDisplayName);
+            return true;
+        }
+
         private void ApplyEquippedToolImmediate()
         {
             ApplyToolImmediate(handToolObject, equippedTool == ToolSlot.Hand);
             ApplyToolImmediate(cameraToolObject, equippedTool == ToolSlot.Camera);
             ApplyToolImmediate(uvLightToolObject, equippedTool == ToolSlot.UvLight);
+            if (collectedPhone != null)
+            {
+                ApplyToolImmediate(collectedPhone.gameObject, equippedTool == ToolSlot.InventoryItem);
+            }
         }
 
         private void ApplyToolImmediate(GameObject toolObject, bool visible)
@@ -637,12 +784,16 @@ namespace ArchiveNull.Evidence
             GameObject previousHand = handToolObject != nextTool && handToolObject != null && handToolObject.activeSelf ? handToolObject : null;
             GameObject previousCamera = cameraToolObject != nextTool && cameraToolObject != null && cameraToolObject.activeSelf ? cameraToolObject : null;
             GameObject previousUv = uvLightToolObject != nextTool && uvLightToolObject != null && uvLightToolObject.activeSelf ? uvLightToolObject : null;
+            GameObject previousInventoryItem = collectedPhone != null && collectedPhone.gameObject != nextTool && collectedPhone.gameObject.activeSelf
+                ? collectedPhone.gameObject
+                : null;
 
-            yield return AnimateToolsDown(previousHand, previousCamera, previousUv);
+            yield return AnimateToolsDown(previousHand, previousCamera, previousUv, previousInventoryItem);
 
             HideTool(previousHand);
             HideTool(previousCamera);
             HideTool(previousUv);
+            HideTool(previousInventoryItem);
 
             if (nextTool != null)
             {
@@ -721,6 +872,7 @@ namespace ArchiveNull.Evidence
                 ToolSlot.Hand => handToolObject,
                 ToolSlot.Camera => cameraToolObject,
                 ToolSlot.UvLight => uvLightToolObject,
+                ToolSlot.InventoryItem => collectedPhone != null ? collectedPhone.gameObject : null,
                 _ => null
             };
         }
@@ -801,7 +953,22 @@ namespace ArchiveNull.Evidence
             Sprite capturedPhoto = CaptureCameraPhoto();
             EvidenceData capturedEvidence = target.CreateCapturedEvidence(capturedPhoto);
             bool registered = EvidenceInventory.Instance.RegisterEvidence(capturedEvidence);
-            ShowMessage(registered ? "Evidencia registrada: " + capturedEvidence.evidenceName : "Evidencia ya registrada.");
+            ShowMessage(registered ? BuildEvidenceSubtitle(capturedEvidence) : "Evidencia ya registrada.");
+        }
+
+        private static string BuildEvidenceSubtitle(EvidenceData data)
+        {
+            if (data == null)
+            {
+                return "Evidencia registrada.";
+            }
+
+            if (string.IsNullOrWhiteSpace(data.description))
+            {
+                return "Evidencia registrada: " + data.evidenceName;
+            }
+
+            return data.evidenceName + "\n" + data.description;
         }
 
         private bool TryGetCaptureTarget(Ray ray, out EvidenceTarget target, out bool blocked)
@@ -809,7 +976,7 @@ namespace ArchiveNull.Evidence
             target = null;
             blocked = false;
 
-            int hitCount = Physics.RaycastNonAlloc(ray, captureHits, maxCaptureDistance, ~0, QueryTriggerInteraction.Collide);
+            int hitCount = Physics.RaycastNonAlloc(ray, captureHits, GetEffectiveCaptureDistance(), ~0, QueryTriggerInteraction.Collide);
             if (hitCount <= 0)
             {
                 return false;
@@ -843,6 +1010,18 @@ namespace ArchiveNull.Evidence
             }
 
             return false;
+        }
+
+        private float GetEffectiveCaptureDistance()
+        {
+            if (playerCamera == null || defaultFov <= 0.001f || maxCaptureDistance <= 0f)
+            {
+                return maxCaptureDistance;
+            }
+
+            float zoom01 = Mathf.InverseLerp(defaultFov, minZoomFov, playerCamera.fieldOfView);
+            float multiplier = Mathf.Lerp(1f, Mathf.Max(1f, zoomedCaptureDistanceMultiplier), zoom01);
+            return maxCaptureDistance * multiplier;
         }
 
         private static void SortHitsByDistance(RaycastHit[] hits, int count)
@@ -1068,9 +1247,10 @@ namespace ArchiveNull.Evidence
             Stretch(outerRing.rectTransform);
             outerRing.sprite = CreateRingSprite(512, 0.48f, 0.2f);
 
-            CreateWheelSegment(rootRect, ToolSlot.Hand, 90f, 60f);
-            CreateWheelSegment(rootRect, ToolSlot.Camera, 210f, 60f);
-            CreateWheelSegment(rootRect, ToolSlot.UvLight, 330f, 60f);
+            CreateWheelSegment(rootRect, ToolSlot.Hand, 90f, 45f);
+            CreateWheelSegment(rootRect, ToolSlot.Camera, 180f, 45f);
+            CreateWheelSegment(rootRect, ToolSlot.UvLight, 270f, 45f);
+            CreateWheelSegment(rootRect, ToolSlot.InventoryItem, 0f, 45f);
 
             RectTransform centerDisk = CreateRectObject("CenterDisk", rootRect).GetComponent<RectTransform>();
             centerDisk.anchorMin = new Vector2(0.5f, 0.5f);
@@ -1084,6 +1264,51 @@ namespace ArchiveNull.Evidence
             TMP_Text hint = CreateText("WheelHint", centerDisk, wheelHint, 17f, TextAlignmentOptions.Center);
             hint.color = new Color(0.78f, 0.96f, 0.92f, 0.88f);
             Stretch(hint.rectTransform, new Vector2(28f, 72f), new Vector2(-28f, -72f));
+
+            CreateItemSubInventory(rootRect);
+        }
+
+        private void CreateItemSubInventory(RectTransform wheelRoot)
+        {
+            itemSubInventoryRoot = CreateRectObject("ItemSubInventory", wheelRoot).GetComponent<RectTransform>();
+            itemSubInventoryRoot.anchorMin = new Vector2(1f, 0.5f);
+            itemSubInventoryRoot.anchorMax = new Vector2(1f, 0.5f);
+            itemSubInventoryRoot.pivot = new Vector2(0f, 0.5f);
+            itemSubInventoryRoot.anchoredPosition = new Vector2(26f, 0f);
+            itemSubInventoryRoot.sizeDelta = new Vector2(250f, 116f);
+
+            Image background = itemSubInventoryRoot.gameObject.AddComponent<Image>();
+            background.color = new Color(0.025f, 0.05f, 0.048f, 0.96f);
+            Outline outline = itemSubInventoryRoot.gameObject.AddComponent<Outline>();
+            outline.effectColor = new Color(0.55f, 0.95f, 0.86f, 0.28f);
+            outline.effectDistance = new Vector2(1f, -1f);
+
+            itemSubInventoryGroup = itemSubInventoryRoot.gameObject.AddComponent<CanvasGroup>();
+
+            phoneInventorySlot = CreateImage("PhoneSlot", itemSubInventoryRoot, new Color(0.07f, 0.12f, 0.115f, 0.96f));
+            RectTransform slotRect = phoneInventorySlot.rectTransform;
+            slotRect.anchorMin = new Vector2(0f, 0.5f);
+            slotRect.anchorMax = new Vector2(0f, 0.5f);
+            slotRect.pivot = new Vector2(0f, 0.5f);
+            slotRect.anchoredPosition = new Vector2(12f, 0f);
+            slotRect.sizeDelta = new Vector2(226f, 88f);
+
+            phoneInventoryLabel = CreateText("PhoneLabel", slotRect, "SIN OBJETOS", 17f, TextAlignmentOptions.Center);
+            phoneInventoryLabel.color = hudColor;
+            Stretch(phoneInventoryLabel.rectTransform, new Vector2(58f, 8f), new Vector2(-10f, -8f));
+
+            phoneInventoryIcon = CreateImage("PhoneIcon", slotRect, Color.white);
+            phoneInventoryIcon.preserveAspect = true;
+            RectTransform iconRect = phoneInventoryIcon.rectTransform;
+            iconRect.anchorMin = new Vector2(0f, 0.5f);
+            iconRect.anchorMax = new Vector2(0f, 0.5f);
+            iconRect.pivot = new Vector2(0.5f, 0.5f);
+            iconRect.anchoredPosition = new Vector2(34f, 0f);
+            iconRect.sizeDelta = new Vector2(42f, 58f);
+
+            itemSubInventoryGroup.alpha = 0f;
+            itemSubInventoryGroup.interactable = false;
+            itemSubInventoryGroup.blocksRaycasts = false;
         }
 
         private void CreateWheelSegment(RectTransform parent, ToolSlot slot, float centerAngle, float halfWidth)

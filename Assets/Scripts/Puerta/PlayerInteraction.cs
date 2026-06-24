@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;
+using ArchiveNull.Evidence;
 
 public class PlayerInteraction : MonoBehaviour
 {
@@ -47,6 +48,12 @@ public class PlayerInteraction : MonoBehaviour
                 keypad = hit.collider.GetComponentInParent<Keypad>();
             }
 
+            PhoneEvidenceReader phone = hit.collider.GetComponent<PhoneEvidenceReader>();
+            if (phone == null)
+            {
+                phone = hit.collider.GetComponentInParent<PhoneEvidenceReader>();
+            }
+
             if (keypad != null)
             {
                 if (interactionText != null)
@@ -58,6 +65,23 @@ public class PlayerInteraction : MonoBehaviour
                 if (GlobalInputBindings.WasPressed(GameInputAction.Interact))
                 {
                     keypad.ShowKeypad();
+                    if (interactionText != null)
+                    {
+                        interactionText.gameObject.SetActive(false);
+                    }
+                }
+            }
+            else if (phone != null && !phone.IsOpen)
+            {
+                if (interactionText != null)
+                {
+                    interactionText.gameObject.SetActive(true);
+                    interactionText.text = "(" + GlobalInputBindings.GetDisplayName(GameInputAction.Interact) + ") Recoger";
+                }
+
+                if (GlobalInputBindings.WasPressed(GameInputAction.Interact))
+                {
+                    phone.Collect();
                     if (interactionText != null)
                     {
                         interactionText.gameObject.SetActive(false);

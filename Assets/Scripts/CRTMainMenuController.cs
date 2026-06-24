@@ -344,11 +344,6 @@ namespace ArchiveNull.UI
             }
 
             UpdateVisualNoise();
-            if (StartupNoticeSequence.IsShowing)
-            {
-                return;
-            }
-
             HandleInput();
         }
 

@@ -115,6 +115,11 @@ public class FirstPersonMovement : MonoBehaviour
             return "KeypadOpen";
         }
 
+        if (PhoneEvidenceReader.IsAnyOpen)
+        {
+            return "PhoneOpen";
+        }
+
         if (EvidenceCameraController.IsAnyRadialMenuOpen)
         {
             return "RadialOpen";

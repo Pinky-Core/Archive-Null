@@ -39,6 +39,7 @@ public class InspectObject : MonoBehaviour
     private RigidbodyConstraints originalConstraints;
     private float inspectDistance;
     private float heldCollisionRadius;
+    private Vector3 heldLocalCenterOffset;
     private readonly RaycastHit[] obstructionHits = new RaycastHit[16];
     private CanvasGroup reticleGroup;
     private RectTransform reticleRoot;
@@ -154,8 +155,8 @@ public class InspectObject : MonoBehaviour
 
         CacheAndDisableInspectedColliders();
         inspectDistance = Mathf.Clamp(Vector3.Distance(playerCamera.transform.position, inspectPosition.position), minInspectDistance, maxInspectDistance);
-        currentObject.transform.position = GetSafeInspectPosition();
         currentObject.transform.rotation = inspectPosition.rotation;
+        currentObject.transform.position = GetSafeInspectObjectPosition();
         isInspecting = true;
         IsAnyInspecting = true;
         movementScript.enabled = false;
@@ -229,10 +230,16 @@ public class InspectObject : MonoBehaviour
             return;
         }
 
-        currentObject.transform.position = GetSafeInspectPosition();
+        currentObject.transform.position = GetSafeInspectObjectPosition();
     }
 
-    Vector3 GetSafeInspectPosition()
+    Vector3 GetSafeInspectObjectPosition()
+    {
+        Vector3 desiredCenter = GetSafeInspectCenterPosition();
+        return desiredCenter - currentObject.transform.rotation * heldLocalCenterOffset;
+    }
+
+    Vector3 GetSafeInspectCenterPosition()
     {
         Vector3 origin = playerCamera.transform.position;
         Vector3 direction = playerCamera.transform.forward;
@@ -266,6 +273,28 @@ public class InspectObject : MonoBehaviour
         inspectedColliderStates = new bool[inspectedColliders.Length];
         Bounds combinedBounds = default;
         bool hasBounds = false;
+        Bounds visualBounds = default;
+        bool hasVisualBounds = false;
+        Renderer[] renderers = currentObject.GetComponentsInChildren<Renderer>(true);
+        for (int i = 0; i < renderers.Length; i++)
+        {
+            Renderer renderer = renderers[i];
+            if (renderer == null || !renderer.enabled)
+            {
+                continue;
+            }
+
+            if (!hasVisualBounds)
+            {
+                visualBounds = renderer.bounds;
+                hasVisualBounds = true;
+            }
+            else
+            {
+                visualBounds.Encapsulate(renderer.bounds);
+            }
+        }
+
         for (int i = 0; i < inspectedColliders.Length; i++)
         {
             inspectedColliderStates[i] = inspectedColliders[i] != null && inspectedColliders[i].enabled;
@@ -288,7 +317,21 @@ public class InspectObject : MonoBehaviour
             }
         }
 
-        heldCollisionRadius = hasBounds ? Mathf.Max(combinedBounds.extents.x, combinedBounds.extents.y, combinedBounds.extents.z) : holdRadius;
+        if (hasBounds)
+        {
+            heldCollisionRadius = Mathf.Max(combinedBounds.extents.x, combinedBounds.extents.y, combinedBounds.extents.z);
+        }
+        else if (hasVisualBounds)
+        {
+            heldCollisionRadius = Mathf.Max(visualBounds.extents.x, visualBounds.extents.y, visualBounds.extents.z);
+        }
+        else
+        {
+            heldCollisionRadius = holdRadius;
+        }
+
+        Bounds centerBounds = hasVisualBounds ? visualBounds : combinedBounds;
+        heldLocalCenterOffset = (hasVisualBounds || hasBounds) ? currentObject.transform.InverseTransformPoint(centerBounds.center) : Vector3.zero;
     }
 
     void RestoreInspectedColliders()
@@ -309,6 +352,7 @@ public class InspectObject : MonoBehaviour
         inspectedColliders = null;
         inspectedColliderStates = null;
         heldCollisionRadius = 0f;
+        heldLocalCenterOffset = Vector3.zero;
     }
 
     bool IsIgnoredObstruction(Collider candidate)

@@ -9,7 +9,7 @@ namespace ArchiveNull.Evidence
     {
         [SerializeField] private TMP_Text messageText;
         [SerializeField] private CanvasGroup group;
-        [SerializeField] private float visibleDuration = 2f;
+        [SerializeField] private float visibleDuration = 3.8f;
         [SerializeField] private float fadeDuration = 0.2f;
 
         private Coroutine routine;

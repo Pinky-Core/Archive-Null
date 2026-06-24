@@ -43,7 +43,7 @@ public sealed class CrimeSceneTutorial : MonoBehaviour
             return;
         }
 
-        if (!PlayerAssistanceSettings.HelpEnabled)
+        if (!PlayerAssistanceSettings.ShouldShowHelp)
         {
             return;
         }
@@ -77,7 +77,7 @@ public sealed class CrimeSceneTutorial : MonoBehaviour
         }
 #endif
 
-        if (!PlayerAssistanceSettings.HelpEnabled)
+        if (!PlayerAssistanceSettings.ShouldShowHelp)
         {
             Destroy(gameObject);
             return;

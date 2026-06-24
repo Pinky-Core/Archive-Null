@@ -2699,9 +2699,9 @@ CapsuleCollider:
   m_Enabled: 1
   serializedVersion: 2
   m_Radius: 0.5
-  m_Height: 2.0982451
+  m_Height: 3.0789702
   m_Direction: 1
-  m_Center: {x: 0, y: -0.54912174, z: 0}
+  m_Center: {x: 0, y: -1.0394831, z: 0}
 --- !u!1001 &334151490
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -7064,6 +7064,8 @@ MonoBehaviour:
   _focusOnComputerClick: 1
   _openMenuWhenFocused: 1
   _openMenuAfterMoveCompletes: 1
+  _computerClickDistance: 2.25
+  _seatClickDistance: 2.25
   _moveDuration: 0.55
   _moveEase:
     serializedVersion: 2
@@ -12834,7 +12836,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1674475751}
-  m_Enabled: 0
+  m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: abbed25832c2489cb2451a31ce694c15, type: 3}
   m_Name: 
@@ -12845,7 +12847,7 @@ MonoBehaviour:
   speakerSource: {fileID: 1674475753}
   subtitleText: {fileID: 0}
   subtitleGroup: {fileID: 0}
-  playOnlyFirstTime: 1
+  playOnlyFirstTime: 0
   alwaysShowInEditor: 0
   resetTutorialOnStart: 0
   lineGap: 0.35
@@ -13965,7 +13967,7 @@ Transform:
   m_GameObject: {fileID: 1719480518}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0.18348725, z: -0, w: 0.9830221}
-  m_LocalPosition: {x: 1.194, y: 1.4268999, z: -21.061}
+  m_LocalPosition: {x: 1.194, y: 1.69, z: -21.061}
   m_LocalScale: {x: 0.69948, y: 0.69948, z: 0.69948}
   m_ConstrainProportionsScale: 0
   m_Children: []

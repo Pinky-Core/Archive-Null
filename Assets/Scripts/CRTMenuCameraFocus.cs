@@ -22,6 +22,8 @@ namespace ArchiveNull.UI
         [SerializeField] private bool _focusOnComputerClick = true;
         [SerializeField] private bool _openMenuWhenFocused = true;
         [SerializeField] private bool _openMenuAfterMoveCompletes = true;
+        [SerializeField] private float _computerClickDistance = 2.25f;
+        [SerializeField] private float _seatClickDistance = 2.25f;
         [SerializeField] private float _moveDuration = 0.55f;
         [SerializeField] private AnimationCurve _moveEase = null;
 
@@ -386,7 +388,7 @@ namespace ArchiveNull.UI
             }
 
             Ray ray = _targetCamera.ScreenPointToRay(Mouse.current.position.ReadValue());
-            return _computerClickCollider.Raycast(ray, out _, 100f);
+            return _computerClickCollider.Raycast(ray, out _, _computerClickDistance);
         }
 
         private bool IsClickingReturnToFarTarget()
@@ -402,7 +404,7 @@ namespace ArchiveNull.UI
                 for (int i = 0; i < _returnToFarClickColliders.Length; i++)
                 {
                     Collider target = _returnToFarClickColliders[i];
-                    if (target != null && target.Raycast(ray, out _, 100f))
+                    if (target != null && target.Raycast(ray, out _, _seatClickDistance))
                     {
                         return true;
                     }
@@ -411,7 +413,7 @@ namespace ArchiveNull.UI
                 return false;
             }
 
-            if (!Physics.Raycast(ray, out RaycastHit hit, 100f, _returnToFarFallbackLayers, QueryTriggerInteraction.Collide))
+            if (!Physics.Raycast(ray, out RaycastHit hit, _seatClickDistance, _returnToFarFallbackLayers, QueryTriggerInteraction.Collide))
             {
                 return false;
             }

@@ -118,7 +118,7 @@ namespace ArchiveNull.UI
                 PlayerPrefs.DeleteKey(CompletedPref);
             }
 
-            if (!PlayerAssistanceSettings.HelpEnabled)
+            if (!PlayerAssistanceSettings.ShouldShowHelp)
             {
                 enabled = false;
                 return;
@@ -365,7 +365,7 @@ namespace ArchiveNull.UI
 
         private bool ShouldSkipTutorial()
         {
-            if (!PlayerAssistanceSettings.HelpEnabled)
+            if (!PlayerAssistanceSettings.ShouldShowHelp)
             {
                 return true;
             }
