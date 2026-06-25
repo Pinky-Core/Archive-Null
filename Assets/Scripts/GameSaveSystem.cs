@@ -48,6 +48,8 @@ public sealed class GameSaveSystem : MonoBehaviour
         public string id;
         public string name;
         public string description;
+        public string narrativeLine;
+        public string hintText;
         public EvidenceCategory category;
         public string sourceScene;
         public string photoFile;
@@ -184,12 +186,13 @@ public sealed class GameSaveSystem : MonoBehaviour
         FirstPersonMovement movement = FindObjectOfType<FirstPersonMovement>();
         if (movement != null)
         {
-            Transform player = movement.transform;
+            Vector3 safePosition = movement.LastSafePosition;
+            Quaternion safeRotation = movement.LastSafeRotation;
             data.hasPlayerTransform = true;
-            data.playerX = player.position.x;
-            data.playerY = player.position.y;
-            data.playerZ = player.position.z;
-            data.playerYaw = player.eulerAngles.y;
+            data.playerX = safePosition.x;
+            data.playerY = safePosition.y;
+            data.playerZ = safePosition.z;
+            data.playerYaw = safeRotation.eulerAngles.y;
         }
 
         IReadOnlyList<EvidenceData> evidence = EvidenceInventory.Instance.GetAllEvidence();
@@ -206,6 +209,8 @@ public sealed class GameSaveSystem : MonoBehaviour
                 id = item.evidenceId,
                 name = item.evidenceName,
                 description = item.description,
+                narrativeLine = item.narrativeLine,
+                hintText = item.hintText,
                 category = item.category,
                 sourceScene = item.sourceSceneName,
                 photoFile = SaveEvidencePhoto(item)
@@ -264,9 +269,9 @@ public sealed class GameSaveSystem : MonoBehaviour
             return;
         }
 
-        Transform player = movement.transform;
-        player.position = new Vector3(data.playerX, data.playerY, data.playerZ);
-        player.rotation = Quaternion.Euler(0f, data.playerYaw, 0f);
+        movement.TryRestorePosition(
+            new Vector3(data.playerX, data.playerY, data.playerZ),
+            Quaternion.Euler(0f, data.playerYaw, 0f));
     }
 
     public static void MarkOfficeContext()
@@ -365,6 +370,8 @@ public sealed class GameSaveSystem : MonoBehaviour
             data.evidenceId = record.id;
             data.evidenceName = record.name;
             data.description = record.description;
+            data.narrativeLine = record.narrativeLine;
+            data.hintText = record.hintText;
             data.category = record.category;
             data.sourceSceneName = record.sourceScene;
             data.photoSprite = LoadSprite(record.photoFile);

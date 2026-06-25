@@ -5,7 +5,7 @@ using ArchiveNull.Evidence;
 
 public class PlayerInteraction : MonoBehaviour
 {
-    public float interactionDistance = 1f;
+    public float interactionDistance = 2.5f;
     public Text interactionText;
     private Camera playerCamera;
 
@@ -40,7 +40,7 @@ public class PlayerInteraction : MonoBehaviour
         }
 
         Ray ray = playerCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
-        if (Physics.Raycast(ray, out RaycastHit hit, interactionDistance))
+        if (Physics.Raycast(ray, out RaycastHit hit, interactionDistance, ~0, QueryTriggerInteraction.Collide))
         {
             Keypad keypad = hit.collider.GetComponent<Keypad>();
             if (keypad == null)

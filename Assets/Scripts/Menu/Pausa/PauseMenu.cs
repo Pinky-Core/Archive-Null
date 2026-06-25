@@ -33,6 +33,11 @@ public class PauseMenu : MonoBehaviour
 
         if (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
         {
+            if (ArchiveNull.Evidence.PhoneEvidenceReader.IsAnyOpen)
+            {
+                return;
+            }
+
             if (isPaused)
             {
                 Resume();

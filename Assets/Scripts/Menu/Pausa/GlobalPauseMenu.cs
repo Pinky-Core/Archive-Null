@@ -132,7 +132,10 @@ public sealed class GlobalPauseMenu : MonoBehaviour
 
         if (GlobalInputBindings.WasPressed(GameInputAction.Pause))
         {
-            if (InspectObject.IsAnyInspecting || ArchiveNull.Evidence.EvidenceNotebookUI.IsAnyNotebookOpen || Keypad.IsAnyOpen)
+            if (InspectObject.IsAnyInspecting ||
+                ArchiveNull.Evidence.EvidenceNotebookUI.IsAnyNotebookOpen ||
+                ArchiveNull.Evidence.PhoneEvidenceReader.IsAnyOpen ||
+                Keypad.IsAnyOpen)
             {
                 return;
             }

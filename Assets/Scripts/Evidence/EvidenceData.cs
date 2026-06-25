@@ -11,6 +11,8 @@ namespace ArchiveNull.Evidence
 
         [Header("Content")]
         [TextArea(3, 8)] public string description;
+        [TextArea(2, 5)] public string narrativeLine;
+        [TextArea(2, 4)] public string hintText;
         public EvidenceCategory category = EvidenceCategory.Other;
         public Sprite photoSprite;
         public string sourceSceneName;

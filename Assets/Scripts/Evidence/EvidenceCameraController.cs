@@ -149,6 +149,13 @@ namespace ArchiveNull.Evidence
 
         private void Awake()
         {
+            radialMenuOpen = false;
+            IsAnyRadialMenuOpen = false;
+            equippedTool = ToolSlot.Hand;
+            hoveredTool = ToolSlot.Hand;
+            collectedPhone = null;
+            phoneSlotHovered = false;
+
             if (playerCamera == null)
             {
                 playerCamera = Camera.main;

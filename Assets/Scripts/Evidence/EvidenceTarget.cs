@@ -16,6 +16,12 @@ namespace ArchiveNull.Evidence
         [SerializeField] private string evidenceName;
         [TextArea(3, 8)]
         [SerializeField] private string description;
+        [Tooltip("Comentario del protagonista al registrar esta evidencia.")]
+        [TextArea(2, 5)]
+        [SerializeField] private string narrativeLine;
+        [Tooltip("Pista mostrada si el jugador pasa mucho tiempo sin encontrar evidencia.")]
+        [TextArea(2, 4)]
+        [SerializeField] private string hintText;
         [SerializeField] private EvidenceCategory category = EvidenceCategory.Other;
         [Tooltip("Fallback opcional. La camara reemplaza esto por la foto real capturada en la sesion.")]
         [SerializeField] private Sprite photoSprite;
@@ -65,6 +71,8 @@ namespace ArchiveNull.Evidence
             captured.evidenceId = source.evidenceId;
             captured.evidenceName = source.evidenceName;
             captured.description = source.description;
+            captured.narrativeLine = source.narrativeLine;
+            captured.hintText = source.hintText;
             captured.category = source.category;
             captured.photoSprite = capturedPhoto != null ? capturedPhoto : source.photoSprite;
             captured.sourceSceneName = source.sourceSceneName;
@@ -110,6 +118,8 @@ namespace ArchiveNull.Evidence
             runtimeEvidenceData.evidenceId = evidenceId;
             runtimeEvidenceData.evidenceName = string.IsNullOrWhiteSpace(evidenceName) ? gameObject.name : evidenceName;
             runtimeEvidenceData.description = description;
+            runtimeEvidenceData.narrativeLine = narrativeLine;
+            runtimeEvidenceData.hintText = hintText;
             runtimeEvidenceData.category = category;
             runtimeEvidenceData.photoSprite = photoSprite;
             runtimeEvidenceData.sourceSceneName = gameObject.scene.IsValid() ? gameObject.scene.name : SceneManager.GetActiveScene().name;
