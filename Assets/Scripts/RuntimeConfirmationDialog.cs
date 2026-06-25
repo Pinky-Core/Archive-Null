@@ -1,12 +1,27 @@
 using TMPro;
 using UnityEngine;
 using UnityEngine.Events;
+using UnityEngine.EventSystems;
+using UnityEngine.InputSystem;
 using UnityEngine.UI;
 
 public static class RuntimeConfirmationDialog
 {
+    public static bool IsOpen { get; private set; }
+
     public static void Show(string title, string message, string confirmLabel, string cancelLabel, UnityAction onConfirm)
     {
+        GameObject existing = GameObject.Find("ConfirmationDialog");
+        if (existing != null)
+        {
+            return;
+        }
+
+        EnsureEventSystem();
+        Cursor.lockState = CursorLockMode.None;
+        Cursor.visible = true;
+        IsOpen = true;
+
         GameObject canvasObject = new("ConfirmationDialog", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
         Canvas canvas = canvasObject.GetComponent<Canvas>();
         canvas.renderMode = RenderMode.ScreenSpaceOverlay;
@@ -46,7 +61,26 @@ public static class RuntimeConfirmationDialog
             onConfirm?.Invoke();
         });
 
-        cancelButton.Select();
+        ConfirmationDialogInput input = canvasObject.AddComponent<ConfirmationDialogInput>();
+        input.Configure(cancelButton, confirmButton);
+    }
+
+    public static void NotifyClosed()
+    {
+        IsOpen = false;
+    }
+
+    private static void EnsureEventSystem()
+    {
+        if (EventSystem.current != null)
+        {
+            return;
+        }
+
+        new GameObject(
+            "EventSystem",
+            typeof(EventSystem),
+            typeof(UnityEngine.InputSystem.UI.InputSystemUIInputModule));
     }
 
     private static Button CreateButton(RectTransform parent, string label, Vector2 position, UnityAction action)
@@ -61,6 +95,12 @@ public static class RuntimeConfirmationDialog
         Button button = rect.gameObject.AddComponent<Button>();
         button.targetGraphic = rect.GetComponent<Image>();
         button.onClick.AddListener(action);
+        ColorBlock colors = button.colors;
+        colors.normalColor = new Color(0.06f, 0.1f, 0.095f, 1f);
+        colors.highlightedColor = new Color(0.13f, 0.32f, 0.28f, 1f);
+        colors.selectedColor = colors.highlightedColor;
+        colors.pressedColor = new Color(0.08f, 0.5f, 0.4f, 1f);
+        button.colors = colors;
 
         TMP_Text text = CreateText("Label", rect, label, 20f, FontStyles.Bold, TextAlignmentOptions.Center);
         Stretch(text.rectTransform);
@@ -105,5 +145,61 @@ public static class RuntimeConfirmationDialog
         rect.pivot = pivot;
         rect.offsetMin = offsetMin;
         rect.offsetMax = offsetMax;
+    }
+}
+
+public sealed class ConfirmationDialogInput : MonoBehaviour
+{
+    private Button cancelButton;
+    private Button confirmButton;
+    private bool confirmSelected;
+
+    public void Configure(Button cancel, Button confirm)
+    {
+        cancelButton = cancel;
+        confirmButton = confirm;
+        Select(false);
+    }
+
+    private void OnDestroy()
+    {
+        RuntimeConfirmationDialog.NotifyClosed();
+    }
+
+    private void Update()
+    {
+        if (Keyboard.current == null)
+        {
+            return;
+        }
+
+        if (Keyboard.current.leftArrowKey.wasPressedThisFrame ||
+            Keyboard.current.aKey.wasPressedThisFrame)
+        {
+            Select(false);
+        }
+        else if (Keyboard.current.rightArrowKey.wasPressedThisFrame ||
+                 Keyboard.current.dKey.wasPressedThisFrame)
+        {
+            Select(true);
+        }
+
+        if (Keyboard.current.enterKey.wasPressedThisFrame ||
+            Keyboard.current.numpadEnterKey.wasPressedThisFrame ||
+            Keyboard.current.spaceKey.wasPressedThisFrame)
+        {
+            (confirmSelected ? confirmButton : cancelButton)?.onClick.Invoke();
+        }
+        else if (Keyboard.current.escapeKey.wasPressedThisFrame)
+        {
+            cancelButton?.onClick.Invoke();
+        }
+    }
+
+    private void Select(bool confirm)
+    {
+        confirmSelected = confirm;
+        Button target = confirm ? confirmButton : cancelButton;
+        target?.Select();
     }
 }

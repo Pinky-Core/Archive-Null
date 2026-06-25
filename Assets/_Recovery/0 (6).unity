@@ -2598,15 +2598,6 @@ MonoBehaviour:
   - MISSED|Numero desconocido|17:56|Llamada perdida
   powerOnDuration: 0.42
   accentColor: {r: 0.2, g: 0.82, b: 0.72, a: 1}
-  messagesIcon: {fileID: 21300000, guid: 241cf54d4023ebe49b28ea3bc22a99f7, type: 3}
-  callsIcon: {fileID: 21300000, guid: f26072b2ce728f746a6403fc4bc11d55, type: 3}
-  galleryIcon: {fileID: 21300000, guid: 7571befc2b60c11439ef2cda517f0609, type: 3}
-  mailIcon: {fileID: 21300000, guid: c83284d21a1286240b13cd467185485a, type: 3}
-  notesIcon: {fileID: 21300000, guid: d4f1a9ca678bea246b971f7c1c7c9fd6, type: 3}
-  settingsIcon: {fileID: 21300000, guid: d7a78360e1136ad4eb9ed939d7fcb844, type: 3}
-  recentsIcon: {fileID: 21300000, guid: c5953d6c0dc831f45b81179e6de36682, type: 3}
-  homeIcon: {fileID: 21300000, guid: e19f917e311b1384380a927f6be29efa, type: 3}
-  backIcon: {fileID: 21300000, guid: 23ec617a6edd6a746924bc5d79ccff2d, type: 3}
 --- !u!1 &826236455
 GameObject:
   m_ObjectHideFlags: 0
@@ -5086,7 +5077,7 @@ Light:
     serializedVersion: 2
     m_Bits: 4294967295
   m_RenderingLayerMask: 1
-  m_Lightmapping: 4
+  m_Lightmapping: 1
   m_LightShadowCasterMode: 0
   m_AreaSize: {x: 1, y: 1}
   m_BounceIntensity: 1.38

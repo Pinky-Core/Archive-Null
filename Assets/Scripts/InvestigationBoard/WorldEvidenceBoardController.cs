@@ -45,6 +45,9 @@ namespace ArchiveNull.InvestigationBoard
         private Image reticleDot;
         private Image reticleFrame;
         private Transform runtimePhotoContainer;
+        private int horizontalAxis;
+        private int verticalAxis = 1;
+        private int normalAxis = 2;
  
         private void Awake()
         {
@@ -57,6 +60,8 @@ namespace ArchiveNull.InvestigationBoard
             {
                 boardSurface = transform;
             }
+
+            DetectBoardAxes();
 
             if (photoContainer == null || photoContainer == photoPrefab?.transform)
             {
@@ -118,11 +123,15 @@ namespace ArchiveNull.InvestigationBoard
                 return;
             }
 
-            Transform spawnParent = photoContainer == photoPrefab.transform ? GetRuntimePhotoContainer() : photoContainer;
-            WorldEvidencePhoto photo = Instantiate(photoPrefab);
-            photo.transform.SetParent(spawnParent, true);
+            // Keep spawned photos under the same unscaled parent as the authored template.
+            // Parenting them to the board inherits its non-uniform scale and deforms the prefab.
+            Transform spawnParent = photoPrefab.transform.parent;
+            Quaternion templateLocalRotation = photoPrefab.transform.localRotation;
+            Vector3 templateLocalScale = photoPrefab.transform.localScale;
+            WorldEvidencePhoto photo = Instantiate(photoPrefab, spawnParent, false);
+            photo.transform.localRotation = templateLocalRotation;
+            photo.transform.localScale = templateLocalScale;
             photo.Bind(data);
-            NormalizePhotoScale(photo);
             photosById.Add(data.evidenceId, photo);
 
             if (BoardSessionState.WorldPhotoPositions.TryGetValue(data.evidenceId, out Vector2 savedPosition))
@@ -176,7 +185,6 @@ namespace ArchiveNull.InvestigationBoard
                 if (TryGetBoardPoint(out Vector3 boardPoint))
                 {
                     SetPhotoWorldPoint(draggedPhoto, boardPoint + dragSurfaceOffset);
-                    ApplyPhotoRotation(draggedPhoto);
                     draggedEnough |= Vector3.Distance(dragStartPosition, draggedPhoto.transform.position) > clickMaxDragDistance;
                     SavePhotoPosition(draggedPhoto);
                 }
@@ -245,7 +253,6 @@ namespace ArchiveNull.InvestigationBoard
             }
 
             SetPhotoWorldPoint(photo, position);
-            ApplyPhotoRotation(photo);
             SavePhotoPosition(photo);
         }
 
@@ -262,14 +269,6 @@ namespace ArchiveNull.InvestigationBoard
         private Vector3 GetSurfaceOffsetPoint(Vector3 point)
         {
             return point + GetBoardNormal() * surfaceOffset;
-        }
-
-        private void ApplyPhotoRotation(WorldEvidencePhoto photo)
-        {
-            if (photo != null)
-            {
-                photo.transform.localRotation = Quaternion.Euler(photoRotationOffset);
-            }
         }
 
         private Transform GetRuntimePhotoContainer()
@@ -296,18 +295,6 @@ namespace ArchiveNull.InvestigationBoard
             return runtimePhotoContainer;
         }
 
-        private void NormalizePhotoScale(WorldEvidencePhoto photo)
-        {
-            if (photo == null)
-            {
-                return;
-            }
-
-            Vector3 scale = photo.transform.localScale;
-            scale = new Vector3(Mathf.Abs(scale.x), Mathf.Abs(scale.y), Mathf.Abs(scale.z));
-            photo.transform.localScale = scale * Mathf.Max(0.01f, photoScaleMultiplier);
-        }
-
         private void SetPhotoWorldPoint(WorldEvidencePhoto photo, Vector3 worldPoint)
         {
             if (photo == null)
@@ -318,12 +305,6 @@ namespace ArchiveNull.InvestigationBoard
             Vector2 clamped = ClampLocalBoardPosition(WorldToBoardLocalPosition(worldPoint));
             Vector3 clampedWorldPoint = BoardLocalPositionToWorld(clamped);
             Vector3 finalPoint = GetSurfaceOffsetPoint(clampedWorldPoint);
-            if (photo.transform.parent == boardSurface || photo.transform.parent == runtimePhotoContainer)
-            {
-                photo.transform.localPosition = photo.transform.parent.InverseTransformPoint(finalPoint);
-                return;
-            }
-
             photo.transform.position = finalPoint;
         }
 
@@ -421,21 +402,96 @@ namespace ArchiveNull.InvestigationBoard
             return rect.width > 0.001f && rect.height > 0.001f;
         }
 
-        // EvidenceBoard is mounted as a thin X axis cube in the office: Z/Y are the usable board plane.
         private Vector2 WorldToBoardLocalPosition(Vector3 worldPoint)
         {
             Vector3 local = boardSurface.InverseTransformPoint(worldPoint);
-            return new Vector2(local.z, local.y);
+            return new Vector2(GetAxis(local, horizontalAxis), GetAxis(local, verticalAxis));
         }
 
         private Vector3 BoardLocalPositionToWorld(Vector2 localPosition)
         {
-            return boardSurface.TransformPoint(new Vector3(0f, localPosition.y, localPosition.x));
+            Vector3 local = Vector3.zero;
+            SetAxis(ref local, horizontalAxis, localPosition.x);
+            SetAxis(ref local, verticalAxis, localPosition.y);
+            return boardSurface.TransformPoint(local);
         }
 
         private Vector3 GetBoardNormal()
         {
-            return boardSurface.right;
+            Vector3 normal = boardSurface.TransformDirection(GetUnitAxis(normalAxis)).normalized;
+            if (interactionCamera != null &&
+                Vector3.Dot(normal, interactionCamera.transform.position - boardSurface.position) < 0f)
+            {
+                normal = -normal;
+            }
+
+            return normal;
+        }
+
+        private Vector3 GetBoardVertical()
+        {
+            return boardSurface.TransformDirection(GetUnitAxis(verticalAxis)).normalized;
+        }
+
+        private void DetectBoardAxes()
+        {
+            if (boardCollider == null || boardSurface == null)
+            {
+                return;
+            }
+
+            Bounds bounds = boardCollider.bounds;
+            Vector3 localMin = new(float.PositiveInfinity, float.PositiveInfinity, float.PositiveInfinity);
+            Vector3 localMax = new(float.NegativeInfinity, float.NegativeInfinity, float.NegativeInfinity);
+            for (int x = 0; x <= 1; x++)
+            {
+                for (int y = 0; y <= 1; y++)
+                {
+                    for (int z = 0; z <= 1; z++)
+                    {
+                        Vector3 corner = new(
+                            x == 0 ? bounds.min.x : bounds.max.x,
+                            y == 0 ? bounds.min.y : bounds.max.y,
+                            z == 0 ? bounds.min.z : bounds.max.z);
+                        Vector3 local = boardSurface.InverseTransformPoint(corner);
+                        localMin = Vector3.Min(localMin, local);
+                        localMax = Vector3.Max(localMax, local);
+                    }
+                }
+            }
+
+            Vector3 extents = localMax - localMin;
+            normalAxis = extents.x <= extents.y && extents.x <= extents.z ? 0 : extents.y <= extents.z ? 1 : 2;
+            int axisA = normalAxis == 0 ? 1 : 0;
+            int axisB = normalAxis == 2 ? 1 : 2;
+            if (axisA == normalAxis)
+            {
+                axisA = 0;
+            }
+
+            Vector3 worldA = boardSurface.TransformDirection(GetUnitAxis(axisA)).normalized;
+            Vector3 worldB = boardSurface.TransformDirection(GetUnitAxis(axisB)).normalized;
+            verticalAxis = Mathf.Abs(Vector3.Dot(worldA, Vector3.up)) >= Mathf.Abs(Vector3.Dot(worldB, Vector3.up))
+                ? axisA
+                : axisB;
+            horizontalAxis = verticalAxis == axisA ? axisB : axisA;
+        }
+
+        private static float GetAxis(Vector3 value, int axis)
+        {
+            return axis == 0 ? value.x : axis == 1 ? value.y : value.z;
+        }
+
+        private static void SetAxis(ref Vector3 value, int axis, float component)
+        {
+            if (axis == 0) value.x = component;
+            else if (axis == 1) value.y = component;
+            else value.z = component;
+        }
+
+        private static Vector3 GetUnitAxis(int axis)
+        {
+            return axis == 0 ? Vector3.right : axis == 1 ? Vector3.up : Vector3.forward;
         }
 
         private void CreateReticle()

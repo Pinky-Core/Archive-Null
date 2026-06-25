@@ -15,6 +15,8 @@ namespace ArchiveNull.InvestigationBoard
         [SerializeField] private TMP_Text descriptionText;
         [SerializeField] private Collider interactionCollider;
         [SerializeField] private bool normalizeFrameFacing = true;
+        [SerializeField] private bool mirrorFrameX = true;
+        [SerializeField] private Vector3 frameLocalEuler = Vector3.zero;
 
         private EvidenceData evidenceData;
 
@@ -100,15 +102,13 @@ namespace ArchiveNull.InvestigationBoard
             }
 
             Vector3 scale = frameRect.localScale;
-            frameRect.localScale = new Vector3(Mathf.Abs(scale.x), Mathf.Abs(scale.y), Mathf.Abs(scale.z));
-
-            Vector3 localEuler = frameRect.localEulerAngles;
-            frameRect.localRotation = Quaternion.Euler(localEuler.x, -Mathf.Abs(NormalizeAngle(localEuler.y)), 0f);
-        }
-
-        private static float NormalizeAngle(float angle)
-        {
-            return angle > 180f ? angle - 360f : angle;
+            frameRect.localScale = new Vector3(
+                mirrorFrameX ? -Mathf.Abs(scale.x) : Mathf.Abs(scale.x),
+                Mathf.Abs(scale.y),
+                Mathf.Abs(scale.z));
+            frameRect.localPosition = Vector3.zero;
+            frameRect.anchoredPosition = Vector2.zero;
+            frameRect.localRotation = Quaternion.Euler(frameLocalEuler);
         }
     }
 }

@@ -338,6 +338,11 @@ namespace ArchiveNull.UI
 
         private void Update()
         {
+            if (RuntimeConfirmationDialog.IsOpen)
+            {
+                return;
+            }
+
             if (_canvas == null)
             {
                 return;

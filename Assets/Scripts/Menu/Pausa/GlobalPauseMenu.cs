@@ -113,6 +113,11 @@ public sealed class GlobalPauseMenu : MonoBehaviour
 
     private void Update()
     {
+        if (RuntimeConfirmationDialog.IsOpen)
+        {
+            return;
+        }
+
         if (awaitingRebind)
         {
             CaptureRebindInput();
@@ -195,7 +200,7 @@ public sealed class GlobalPauseMenu : MonoBehaviour
         RuntimeConfirmationDialog.Show(
             L("VOLVER AL MENU", "RETURN TO MENU"),
             L("Vas a volver a la oficina. Se conservaran evidencias, notas y pizarra guardadas.", "You are returning to the office. Saved evidence, notes and board data will be kept."),
-            L("VOLVER", "RETURN"),
+            L("IR A LA OFICINA", "GO TO OFFICE"),
             L("CANCELAR", "CANCEL"),
             () => StartCoroutine(ExitRoutine()));
     }
@@ -215,6 +220,11 @@ public sealed class GlobalPauseMenu : MonoBehaviour
         SetVisible(false);
 
         exitFadeOverlay = CreateFadeOverlay();
+        AsyncOperation officeLoad = SceneManager.LoadSceneAsync(MainMenuSceneName, LoadSceneMode.Single);
+        if (officeLoad != null)
+        {
+            officeLoad.allowSceneActivation = false;
+        }
 
         OfficeDissolveTransition sceneTransition = FindObjectOfType<OfficeDissolveTransition>();
         bool destroyTemporaryTransition = false;
@@ -238,7 +248,18 @@ public sealed class GlobalPauseMenu : MonoBehaviour
             Destroy(sceneTransition.gameObject);
         }
 
-        SceneManager.LoadScene(MainMenuSceneName, LoadSceneMode.Single);
+        if (officeLoad == null)
+        {
+            SceneManager.LoadScene(MainMenuSceneName, LoadSceneMode.Single);
+            yield break;
+        }
+
+        while (officeLoad.progress < 0.9f)
+        {
+            yield return null;
+        }
+
+        officeLoad.allowSceneActivation = true;
     }
 
     private void BuildUi()

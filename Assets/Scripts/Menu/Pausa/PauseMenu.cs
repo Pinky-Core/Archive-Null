@@ -80,7 +80,7 @@ public class PauseMenu : MonoBehaviour
         RuntimeConfirmationDialog.Show(
             "VOLVER AL MENU",
             "Vas a volver a la oficina. Se conservaran los datos guardados.",
-            "VOLVER",
+            "IR A LA OFICINA",
             "CANCELAR",
             MainMenuConfirmed);
     }

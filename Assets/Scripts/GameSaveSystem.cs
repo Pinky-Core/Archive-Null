@@ -413,6 +413,11 @@ public sealed class GameSaveSystem : MonoBehaviour
             string fileName = SanitizeFileName(data.evidenceId) + ".png";
             string path = Path.Combine(PhotoDirectory, fileName);
             Directory.CreateDirectory(PhotoDirectory);
+            if (File.Exists(path))
+            {
+                return fileName;
+            }
+
             File.WriteAllBytes(path, texture.EncodeToPNG());
             return fileName;
         }

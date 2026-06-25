@@ -1374,11 +1374,11 @@ namespace ArchiveNull.Evidence
         {
             GameObject panelObject = CreateRectObject("EvidenceMessage", parent);
             RectTransform panelRect = panelObject.GetComponent<RectTransform>();
-            panelRect.anchorMin = new Vector2(0.5f, 0f);
-            panelRect.anchorMax = new Vector2(0.5f, 0f);
-            panelRect.pivot = new Vector2(0.5f, 0f);
-            panelRect.anchoredPosition = new Vector2(0f, 96f);
-            panelRect.sizeDelta = new Vector2(760f, 72f);
+            panelRect.anchorMin = new Vector2(1f, 1f);
+            panelRect.anchorMax = new Vector2(1f, 1f);
+            panelRect.pivot = new Vector2(1f, 1f);
+            panelRect.anchoredPosition = new Vector2(-34f, -142f);
+            panelRect.sizeDelta = new Vector2(430f, 64f);
 
             Image panel = panelObject.AddComponent<Image>();
             panel.color = new Color(0f, 0f, 0f, 0.7f);
@@ -1388,7 +1388,7 @@ namespace ArchiveNull.Evidence
             group.interactable = false;
             group.blocksRaycasts = false;
 
-            TMP_Text text = CreateText("MessageText", panelRect, string.Empty, 25f, TextAlignmentOptions.Center);
+            TMP_Text text = CreateText("MessageText", panelRect, string.Empty, 20f, TextAlignmentOptions.MidlineLeft);
             text.color = hudColor;
             Stretch(text.rectTransform, new Vector2(24f, 8f), new Vector2(-24f, -8f));
 

@@ -31,10 +31,10 @@ namespace ArchiveNull.UI
         [SerializeField] private bool rebuildOnMainMenuReturn = true;
         [SerializeField] private bool restoreOriginalMaterialsAfterRebuild = true;
         [SerializeField] private bool fadeFromBlackOnMainMenuReturn = true;
-        [SerializeField] private float returnFadeDuration = 1.1f;
+        [SerializeField] private float returnFadeDuration = 0.55f;
         [SerializeField] private float postRebuildBlackHold = 0.08f;
         [SerializeField] private bool smoothMaterialRestore = true;
-        [SerializeField] private float materialRestoreBlendDuration = 0.28f;
+        [SerializeField] private float materialRestoreBlendDuration = 0.16f;
         [SerializeField] private float materialRestoreOverlayAlpha = 0.16f;
 
         public const string PendingOfficeRebuildPref = "archive.office.rebuild.pending";

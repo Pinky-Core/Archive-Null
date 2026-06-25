@@ -24,7 +24,8 @@ namespace ArchiveNull.Evidence
             Home,
             ChatList,
             Chat,
-            Calls
+            Calls,
+            Recents
         }
 
         [System.Serializable]
@@ -118,6 +119,19 @@ namespace ArchiveNull.Evidence
         [SerializeField] private float powerOnDuration = 0.32f;
         [SerializeField] private Color accentColor = new(0.2f, 0.82f, 0.72f, 1f);
 
+        [Header("Application Icons")]
+        [SerializeField] private Sprite messagesIcon;
+        [SerializeField] private Sprite callsIcon;
+        [SerializeField] private Sprite galleryIcon;
+        [SerializeField] private Sprite mailIcon;
+        [SerializeField] private Sprite notesIcon;
+        [SerializeField] private Sprite settingsIcon;
+
+        [Header("Navigation Icons")]
+        [SerializeField] private Sprite recentsIcon;
+        [SerializeField] private Sprite homeIcon;
+        [SerializeField] private Sprite backIcon;
+
         private Camera playerCamera;
         private static PhoneEvidenceReader equippedPhone;
         private bool collected;
@@ -137,12 +151,15 @@ namespace ArchiveNull.Evidence
         private TMP_Text contentTitle;
         private TMP_Text contentBody;
         private TMP_Text pinDots;
-        private TMP_Text footerText;
         private RectTransform homeGrid;
         private RectTransform pinGrid;
+        private RectTransform chatListViewport;
+        private RectTransform callsViewport;
         private RectTransform chatListRoot;
         private RectTransform callsRoot;
         private RectTransform conversationRoot;
+        private RectTransform recentsRoot;
+        private RectTransform navigationBarRoot;
         private ScrollRect conversationScroll;
         private TMP_InputField chatComposer;
         private readonly List<Button> selectableButtons = new();
@@ -150,7 +167,11 @@ namespace ArchiveNull.Evidence
         private readonly List<Button> pinButtons = new();
         private Button unlockButton;
         private Button backButton;
+        private Button recentsButton;
+        private Button homeButton;
+        private Button recentAppButton;
         private int selectedChat;
+        private PhoneScreen previousAppScreen = PhoneScreen.Home;
 
         public string InventoryDisplayName => inventoryDisplayName;
         public Sprite InventoryIcon => inventoryIcon;
@@ -468,9 +489,61 @@ namespace ArchiveNull.Evidence
 
         private void OpenScreen(PhoneScreen screen)
         {
+            if (screen != PhoneScreen.Home && screen != PhoneScreen.Lock && screen != PhoneScreen.Pin && screen != PhoneScreen.Recents)
+            {
+                previousAppScreen = screen;
+            }
+
             currentScreen = screen;
             selectedItem = 0;
             RefreshScreen();
+        }
+
+        private void NavigateHome()
+        {
+            if (!unlocked)
+            {
+                currentScreen = PhoneScreen.Lock;
+            }
+            else
+            {
+                RememberCurrentApp();
+                currentScreen = PhoneScreen.Home;
+            }
+
+            selectedItem = 0;
+            RefreshScreen();
+        }
+
+        private void OpenRecents()
+        {
+            if (!unlocked)
+            {
+                return;
+            }
+
+            RememberCurrentApp();
+            currentScreen = PhoneScreen.Recents;
+            selectedItem = 0;
+            RefreshScreen();
+        }
+
+        private void ResumeRecentApp()
+        {
+            currentScreen = previousAppScreen == PhoneScreen.Home ? PhoneScreen.ChatList : previousAppScreen;
+            selectedItem = 0;
+            RefreshScreen();
+        }
+
+        private void RememberCurrentApp()
+        {
+            if (currentScreen != PhoneScreen.Home &&
+                currentScreen != PhoneScreen.Lock &&
+                currentScreen != PhoneScreen.Pin &&
+                currentScreen != PhoneScreen.Recents)
+            {
+                previousAppScreen = currentScreen == PhoneScreen.Chat ? PhoneScreen.ChatList : currentScreen;
+            }
         }
 
         private void NavigateBack()
@@ -484,6 +557,13 @@ namespace ArchiveNull.Evidence
             {
                 currentScreen = PhoneScreen.ChatList;
                 selectedItem = selectedChat;
+                RefreshScreen();
+                return;
+            }
+
+            if (currentScreen == PhoneScreen.Recents)
+            {
+                currentScreen = PhoneScreen.Home;
                 RefreshScreen();
                 return;
             }
@@ -521,9 +601,12 @@ namespace ArchiveNull.Evidence
             selectableButtons.Clear();
             SetActive(homeGrid, currentScreen == PhoneScreen.Home);
             SetActive(pinGrid, currentScreen == PhoneScreen.Pin);
-            SetActive(chatListRoot, currentScreen == PhoneScreen.ChatList);
-            SetActive(callsRoot, currentScreen == PhoneScreen.Calls);
+            SetActive(pinDots, currentScreen == PhoneScreen.Pin);
+            SetActive(chatListViewport, currentScreen == PhoneScreen.ChatList);
+            SetActive(callsViewport, currentScreen == PhoneScreen.Calls);
             SetActive(conversationRoot, currentScreen == PhoneScreen.Chat);
+            SetActive(recentsRoot, currentScreen == PhoneScreen.Recents);
+            SetActive(navigationBarRoot, unlocked);
             SetActive(contentTitle, currentScreen == PhoneScreen.Lock);
             SetActive(contentBody, currentScreen == PhoneScreen.Lock);
             SetActive(unlockButton, currentScreen == PhoneScreen.Lock);
@@ -549,6 +632,10 @@ namespace ArchiveNull.Evidence
             {
                 BuildCallList();
             }
+            else if (currentScreen == PhoneScreen.Recents && recentAppButton != null)
+            {
+                selectableButtons.Add(recentAppButton);
+            }
 
             statusTime.text = System.DateTime.Now.ToString("HH:mm");
             headerText.text = currentScreen switch
@@ -559,16 +646,8 @@ namespace ArchiveNull.Evidence
                 PhoneScreen.ChatList => "Mensajes",
                 PhoneScreen.Chat => chats != null && chats.Length > 0 ? chats[Mathf.Clamp(selectedChat, 0, chats.Length - 1)].contact : "Chat",
                 PhoneScreen.Calls => "Registro de llamadas",
+                PhoneScreen.Recents => "Aplicaciones recientes",
                 _ => ownerName
-            };
-
-            footerText.text = currentScreen switch
-            {
-                PhoneScreen.Lock => unlockMode == UnlockMode.Pin ? "CLICK PARA INGRESAR PIN" : "CLICK PARA DESBLOQUEAR",
-                PhoneScreen.Pin => "INGRESA 4 DIGITOS",
-                PhoneScreen.Home => "SELECCIONA UNA APLICACION",
-                PhoneScreen.Chat => "ESCRIBE UN MENSAJE / ESC: VOLVER",
-                _ => "ESC / CLICK ATRAS"
             };
 
             RefreshContent();
@@ -581,6 +660,8 @@ namespace ArchiveNull.Evidence
             {
                 RefreshPinDots();
             }
+
+            SelectCurrentButton();
         }
 
         private void RefreshContent()
@@ -625,8 +706,8 @@ namespace ArchiveNull.Evidence
             phoneRoot.anchorMin = new Vector2(1f, 0f);
             phoneRoot.anchorMax = new Vector2(1f, 0f);
             phoneRoot.pivot = new Vector2(1f, 0f);
-            phoneRoot.anchoredPosition = new Vector2(-72f, 34f);
-            phoneRoot.sizeDelta = new Vector2(390f, 780f);
+            phoneRoot.anchoredPosition = new Vector2(-62f, 26f);
+            phoneRoot.sizeDelta = new Vector2(430f, 840f);
 
             Image shadow = CreateImage("Shadow", phoneRoot, new Color(0f, 0f, 0f, 0.42f));
             Stretch(shadow.rectTransform, new Vector2(-16f, -18f), new Vector2(18f, 12f));
@@ -691,23 +772,34 @@ namespace ArchiveNull.Evidence
             homeLayout.spacing = new Vector2(30f, 28f);
             homeLayout.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
             homeLayout.constraintCount = 2;
-            homeButtons.Add(CreateAppButton(homeGrid, "MENSAJES", chats?.Length.ToString() ?? "0", new Color(0.14f, 0.66f, 0.42f), () => OpenScreen(PhoneScreen.ChatList)));
-            homeButtons.Add(CreateAppButton(homeGrid, "LLAMADAS", callRecords?.Length.ToString() ?? "0", new Color(0.18f, 0.55f, 0.38f), () => OpenScreen(PhoneScreen.Calls)));
-            CreateLockedApp(homeGrid, "GALERIA", new Color(0.28f, 0.48f, 0.82f));
-            CreateLockedApp(homeGrid, "CORREO", new Color(0.72f, 0.34f, 0.22f));
-            CreateLockedApp(homeGrid, "NOTAS", new Color(0.72f, 0.62f, 0.18f));
-            CreateLockedApp(homeGrid, "AJUSTES", new Color(0.34f, 0.38f, 0.44f));
+            homeButtons.Add(CreateAppButton(homeGrid, "MENSAJES", chats?.Length.ToString() ?? "0", messagesIcon, new Color(0.14f, 0.66f, 0.42f), () => OpenScreen(PhoneScreen.ChatList)));
+            homeButtons.Add(CreateAppButton(homeGrid, "LLAMADAS", callRecords?.Length.ToString() ?? "0", callsIcon, new Color(0.18f, 0.55f, 0.38f), () => OpenScreen(PhoneScreen.Calls)));
+            CreateLockedApp(homeGrid, "GALERIA", galleryIcon, new Color(0.28f, 0.48f, 0.82f));
+            CreateLockedApp(homeGrid, "CORREO", mailIcon, new Color(0.72f, 0.34f, 0.22f));
+            CreateLockedApp(homeGrid, "NOTAS", notesIcon, new Color(0.72f, 0.62f, 0.18f));
+            CreateLockedApp(homeGrid, "AJUSTES", settingsIcon, new Color(0.34f, 0.38f, 0.44f));
 
-            chatListRoot = CreateListRoot("ChatList", screen, new Vector2(18f, 98f), new Vector2(-18f, -108f));
-            callsRoot = CreateListRoot("CallList", screen, new Vector2(18f, 98f), new Vector2(-18f, -108f));
+            chatListRoot = CreateListRoot("ChatList", screen, new Vector2(18f, 82f), new Vector2(-18f, -108f), out chatListViewport);
+            callsRoot = CreateListRoot("CallList", screen, new Vector2(18f, 82f), new Vector2(-18f, -108f), out callsViewport);
             BuildConversationUi(screen);
 
-            backButton = CreateButton("Back", screen, "<", new Color(0.08f, 0.1f, 0.12f, 1f), NavigateBack);
-            SetRect(backButton.transform as RectTransform, Vector2.zero, Vector2.zero, Vector2.zero, new Vector2(18f, 22f), new Vector2(72f, 76f));
+            recentsRoot = CreateRect("Recents", screen);
+            SetRect(recentsRoot, Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), new Vector2(28f, 112f), new Vector2(-28f, -132f));
+            Image recentsBackground = recentsRoot.gameObject.AddComponent<Image>();
+            recentsBackground.color = new Color(0.04f, 0.052f, 0.06f, 1f);
+            recentAppButton = CreateButton("RecentApp", recentsRoot, "ULTIMA APLICACION\nTOCAR PARA CONTINUAR", new Color(0.1f, 0.14f, 0.16f, 1f), ResumeRecentApp);
+            SetRect(recentAppButton.transform as RectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(-150f, -100f), new Vector2(150f, 100f));
 
-            footerText = CreateText("Footer", screen, 13f, FontStyles.Normal, TextAlignmentOptions.Center);
-            SetRect(footerText.rectTransform, Vector2.zero, Vector2.one, new Vector2(0.5f, 0f), new Vector2(80f, 24f), new Vector2(-24f, 72f));
-            footerText.color = new Color(0.65f, 0.7f, 0.73f);
+            Image navigationBar = CreateImage("NavigationBar", screen, new Color(0.018f, 0.022f, 0.026f, 1f));
+            navigationBarRoot = navigationBar.rectTransform;
+            SetRect(navigationBar.rectTransform, Vector2.zero, new Vector2(1f, 0f), new Vector2(0.5f, 0f), Vector2.zero, new Vector2(0f, 66f));
+
+            recentsButton = CreateNavigationButton("Recents", navigationBar.rectTransform, "□", recentsIcon, OpenRecents);
+            SetRect(recentsButton.transform as RectTransform, new Vector2(0f, 0f), new Vector2(0.333f, 1f), new Vector2(0.5f, 0.5f), new Vector2(4f, 4f), new Vector2(-4f, -4f));
+            homeButton = CreateNavigationButton("Home", navigationBar.rectTransform, "○", homeIcon, NavigateHome);
+            SetRect(homeButton.transform as RectTransform, new Vector2(0.333f, 0f), new Vector2(0.666f, 1f), new Vector2(0.5f, 0.5f), new Vector2(4f, 4f), new Vector2(-4f, -4f));
+            backButton = CreateNavigationButton("Back", navigationBar.rectTransform, "<", backIcon, NavigateBack);
+            SetRect(backButton.transform as RectTransform, new Vector2(0.666f, 0f), Vector2.one, new Vector2(0.5f, 0.5f), new Vector2(4f, 4f), new Vector2(-4f, -4f));
 
             phoneGroup.alpha = 0f;
             phoneGroup.interactable = false;
@@ -715,9 +807,14 @@ namespace ArchiveNull.Evidence
             RefreshScreen();
         }
 
-        private RectTransform CreateListRoot(string name, RectTransform parent, Vector2 offsetMin, Vector2 offsetMax)
+        private RectTransform CreateListRoot(
+            string name,
+            RectTransform parent,
+            Vector2 offsetMin,
+            Vector2 offsetMax,
+            out RectTransform viewport)
         {
-            RectTransform viewport = CreateRect(name + "Viewport", parent);
+            viewport = CreateRect(name + "Viewport", parent);
             viewport.anchorMin = Vector2.zero;
             viewport.anchorMax = Vector2.one;
             viewport.offsetMin = offsetMin;
@@ -771,6 +868,8 @@ namespace ArchiveNull.Evidence
                 label.alignment = TextAlignmentOptions.MidlineLeft;
                 selectableButtons.Add(button);
             }
+
+            SelectCurrentButton();
         }
 
         private void BuildCallList()
@@ -807,7 +906,7 @@ namespace ArchiveNull.Evidence
             conversationRoot = CreateRect("Conversation", screen);
             conversationRoot.anchorMin = Vector2.zero;
             conversationRoot.anchorMax = Vector2.one;
-            conversationRoot.offsetMin = new Vector2(16f, 92f);
+            conversationRoot.offsetMin = new Vector2(16f, 78f);
             conversationRoot.offsetMax = new Vector2(-16f, -104f);
 
             RectTransform viewport = CreateRect("MessagesViewport", conversationRoot);
@@ -904,18 +1003,36 @@ namespace ArchiveNull.Evidence
 
             RectTransform row = CreateRect("MessageRow", parent);
             LayoutElement rowLayout = row.gameObject.AddComponent<LayoutElement>();
-            rowLayout.preferredHeight = Mathf.Max(58f, 42f + message.Length * 0.55f);
 
             Image bubble = CreateImage("Bubble", row, outgoing
                 ? new Color(0.08f, 0.34f, 0.28f, 1f)
                 : new Color(0.12f, 0.14f, 0.15f, 1f));
-            bubble.rectTransform.anchorMin = new Vector2(outgoing ? 0.18f : 0f, 0f);
-            bubble.rectTransform.anchorMax = new Vector2(outgoing ? 1f : 0.82f, 1f);
-            bubble.rectTransform.offsetMin = new Vector2(outgoing ? 6f : 0f, 0f);
-            bubble.rectTransform.offsetMax = new Vector2(outgoing ? 0f : -6f, 0f);
-            TMP_Text text = CreateText("Message", bubble.rectTransform, 17f, FontStyles.Normal, TextAlignmentOptions.TopLeft);
-            Stretch(text.rectTransform, new Vector2(12f, 8f), new Vector2(-12f, -7f));
-            text.text = message + $"\n<size=11><color=#AAB5B5>{time}{(outgoing ? "  ✓✓" : string.Empty)}</color></size>";
+            bubble.rectTransform.anchorMin = new Vector2(outgoing ? 0.24f : 0f, 0f);
+            bubble.rectTransform.anchorMax = new Vector2(outgoing ? 0.98f : 0.74f, 1f);
+            bubble.rectTransform.offsetMin = new Vector2(outgoing ? 4f : 0f, 0f);
+            bubble.rectTransform.offsetMax = new Vector2(outgoing ? 0f : -4f, 0f);
+
+            TMP_Text text = CreateText("Message", bubble.rectTransform, 16f, FontStyles.Normal, TextAlignmentOptions.TopLeft);
+            text.text = message;
+            text.enableAutoSizing = false;
+            text.overflowMode = TextOverflowModes.Overflow;
+            text.rectTransform.anchorMin = Vector2.zero;
+            text.rectTransform.anchorMax = Vector2.one;
+            text.rectTransform.offsetMin = new Vector2(12f, 25f);
+            text.rectTransform.offsetMax = new Vector2(-12f, -8f);
+
+            TMP_Text timestamp = CreateText("Timestamp", bubble.rectTransform, 11f, FontStyles.Normal, TextAlignmentOptions.BottomRight);
+            timestamp.text = time + (outgoing ? "  OK" : string.Empty);
+            timestamp.color = new Color(0.68f, 0.75f, 0.75f, 1f);
+            timestamp.rectTransform.anchorMin = new Vector2(0f, 0f);
+            timestamp.rectTransform.anchorMax = new Vector2(1f, 0f);
+            timestamp.rectTransform.pivot = new Vector2(1f, 0f);
+            timestamp.rectTransform.offsetMin = new Vector2(12f, 5f);
+            timestamp.rectTransform.offsetMax = new Vector2(-10f, 23f);
+
+            const float availableTextWidth = 245f;
+            Vector2 preferred = text.GetPreferredValues(message, availableTextWidth, 0f);
+            rowLayout.preferredHeight = Mathf.Max(64f, preferred.y + 43f);
         }
 
         private void SendChatMessage()
@@ -950,6 +1067,17 @@ namespace ArchiveNull.Evidence
             }
         }
 
+        private void SelectCurrentButton()
+        {
+            if (selectableButtons.Count == 0)
+            {
+                return;
+            }
+
+            selectedItem = Mathf.Clamp(selectedItem, 0, selectableButtons.Count - 1);
+            selectableButtons[selectedItem].Select();
+        }
+
         private void DeletePinDigit()
         {
             if (enteredPin.Length > 0)
@@ -959,17 +1087,68 @@ namespace ArchiveNull.Evidence
             }
         }
 
-        private Button CreateAppButton(RectTransform parent, string label, string badge, Color color, UnityEngine.Events.UnityAction action)
+        private Button CreateAppButton(RectTransform parent, string label, string badge, Sprite icon, Color color, UnityEngine.Events.UnityAction action)
         {
             Button button = CreateButton(label, parent, label + "\n<size=15>" + badge + "</size>", color, action);
             button.GetComponentInChildren<TMP_Text>().fontSize = 19f;
+            ApplyButtonIcon(button, icon, label + "\n<size=15>" + badge + "</size>", new Vector2(48f, 48f));
             return button;
         }
 
-        private void CreateLockedApp(RectTransform parent, string label, Color color)
+        private void CreateLockedApp(RectTransform parent, string label, Sprite icon, Color color)
         {
             Button button = CreateButton(label, parent, label + "\n<size=13>NO DISPONIBLE</size>", color * new Color(0.65f, 0.65f, 0.65f, 1f), null);
+            ApplyButtonIcon(button, icon, label + "\n<size=13>NO DISPONIBLE</size>", new Vector2(44f, 44f));
             button.interactable = false;
+        }
+
+        private Button CreateNavigationButton(
+            string name,
+            RectTransform parent,
+            string fallback,
+            Sprite icon,
+            UnityEngine.Events.UnityAction action)
+        {
+            Button button = CreateButton(name, parent, fallback, Color.clear, action);
+            ApplyButtonIcon(button, icon, fallback, new Vector2(30f, 30f));
+            return button;
+        }
+
+        private static void ApplyButtonIcon(Button button, Sprite icon, string fallbackText, Vector2 iconSize)
+        {
+            if (button == null)
+            {
+                return;
+            }
+
+            TMP_Text label = button.GetComponentInChildren<TMP_Text>();
+            if (icon == null)
+            {
+                if (label != null)
+                {
+                    label.text = fallbackText;
+                }
+                return;
+            }
+
+            if (label != null)
+            {
+                label.alignment = TextAlignmentOptions.Bottom;
+                label.fontSize = 14f;
+                label.text = fallbackText;
+                label.rectTransform.offsetMin = new Vector2(4f, 4f);
+                label.rectTransform.offsetMax = new Vector2(-4f, -60f);
+            }
+
+            Image iconImage = CreateImage("Icon", button.transform as RectTransform, Color.white);
+            iconImage.sprite = icon;
+            iconImage.preserveAspect = true;
+            iconImage.raycastTarget = false;
+            iconImage.rectTransform.anchorMin = new Vector2(0.5f, 0.5f);
+            iconImage.rectTransform.anchorMax = new Vector2(0.5f, 0.5f);
+            iconImage.rectTransform.pivot = new Vector2(0.5f, 0.5f);
+            iconImage.rectTransform.sizeDelta = iconSize;
+            iconImage.rectTransform.anchoredPosition = new Vector2(0f, 14f);
         }
 
         private void SetUiVisible(bool visible, bool immediate)
