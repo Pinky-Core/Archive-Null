@@ -937,6 +937,10 @@ PrefabInstance:
       propertyPath: m_LightmapTilingOffset.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 2300000, guid: 3df2746dbbb9fcd4b98280488b85163f, type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: ae74bf10d7a14a54f8adce2be72e0524, type: 2}
     m_RemovedComponents:
     - {fileID: 9500000, guid: 3df2746dbbb9fcd4b98280488b85163f, type: 3}
     m_RemovedGameObjects: []
@@ -1306,6 +1310,10 @@ PrefabInstance:
       propertyPath: m_LightmapTilingOffset.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 2300000, guid: 3df2746dbbb9fcd4b98280488b85163f, type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: 8a3e5f630184ac44cac2dea3d22e6f67, type: 2}
     m_RemovedComponents:
     - {fileID: 9500000, guid: 3df2746dbbb9fcd4b98280488b85163f, type: 3}
     m_RemovedGameObjects: []
@@ -1625,6 +1633,10 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.y
       value: -0.68
       objectReference: {fileID: 0}
+    - target: {fileID: 2300000, guid: d734e0f1e8152164f912667b484f1bb9, type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: 34152c1c900a2bc47814b7febd914791, type: 2}
     m_RemovedComponents:
     - {fileID: 9500000, guid: d734e0f1e8152164f912667b484f1bb9, type: 3}
     m_RemovedGameObjects: []
@@ -2542,8 +2554,8 @@ MonoBehaviour:
   inventoryIcon: {fileID: 0}
   heldLocalPosition: {x: 0.22, y: -0.25, z: 0.48}
   heldLocalEuler: {x: 8, y: -8, z: 0}
-  heldLocalScale: {x: 2, y: 2, z: 2}
-  pickupDistance: 3
+  heldLocalScale: {x: 1, y: 1, z: 1}
+  pickupDistance: 2.5
   pickupLayers:
     serializedVersion: 2
     m_Bits: 4294967295
@@ -3770,6 +3782,10 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.y
       value: 89.32
       objectReference: {fileID: 0}
+    - target: {fileID: 2300000, guid: 92f18712826840f4bb15ca76d3f7d765, type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: 93e80f5503529614b9be8870f4ec7f12, type: 2}
     m_RemovedComponents:
     - {fileID: 9500000, guid: 92f18712826840f4bb15ca76d3f7d765, type: 3}
     m_RemovedGameObjects: []
@@ -5061,7 +5077,7 @@ Light:
     serializedVersion: 2
     m_Bits: 4294967295
   m_RenderingLayerMask: 1
-  m_Lightmapping: 1
+  m_Lightmapping: 4
   m_LightShadowCasterMode: 0
   m_AreaSize: {x: 1, y: 1}
   m_BounceIntensity: 1.38
@@ -6064,6 +6080,10 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.y
       value: 180
       objectReference: {fileID: 0}
+    - target: {fileID: 2300000, guid: 23e5f126029186c47a301cb4c506b280, type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: 28b53ecb2e9f9b74b8aefb9dcc971115, type: 2}
     m_RemovedComponents:
     - {fileID: 9500000, guid: 23e5f126029186c47a301cb4c506b280, type: 3}
     m_RemovedGameObjects: []
