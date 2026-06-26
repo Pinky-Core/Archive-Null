@@ -900,6 +900,8 @@ namespace ArchiveNull.UI
 
             if (_state == MenuState.MainMenu)
             {
+                EnsureSelectableIndex(_mainMenuItems, ref _mainIndex);
+
                 if (WasBackPressed())
                 {
                     _cameraFocus?.MoveToStandPose();
@@ -918,8 +920,11 @@ namespace ArchiveNull.UI
 
                 if (submit || (pointerClick && pointerOverMainOption))
                 {
-                    PlayUiSound(_confirmClip, _interfaceVolume);
-                    ExecuteItem(_mainMenuItems[_mainIndex]);
+                    if (TryGetMenuItem(_mainMenuItems, _mainIndex, out MenuItem item))
+                    {
+                        PlayUiSound(_confirmClip, _interfaceVolume);
+                        ExecuteItem(item);
+                    }
                 }
 
                 return;
@@ -927,6 +932,8 @@ namespace ArchiveNull.UI
 
             if (_state == MenuState.Settings)
             {
+                EnsureSelectableIndex(_settingsItems, ref _settingsIndex);
+
                 int direction = ReadVerticalNavigation();
                 if (direction != 0)
                 {
@@ -971,13 +978,18 @@ namespace ArchiveNull.UI
                         }
                     }
 
-                    PlayUiSound(_confirmClip, _interfaceVolume);
-                    ExecuteItem(_settingsItems[_settingsIndex]);
+                    if (TryGetMenuItem(_settingsItems, _settingsIndex, out MenuItem item))
+                    {
+                        PlayUiSound(_confirmClip, _interfaceVolume);
+                        ExecuteItem(item);
+                    }
                 }
             }
 
             if (_state == MenuState.LevelSelect)
             {
+                EnsureSelectableIndex(_settingsItems, ref _levelIndex);
+
                 int direction = ReadVerticalNavigation();
                 if (direction != 0)
                 {
@@ -1004,8 +1016,11 @@ namespace ArchiveNull.UI
 
                 if (submit || (pointerClick && pointerOverLevel))
                 {
-                    PlayUiSound(_confirmClip, _interfaceVolume);
-                    ExecuteItem(_settingsItems[_levelIndex]);
+                    if (TryGetMenuItem(_settingsItems, _levelIndex, out MenuItem item))
+                    {
+                        PlayUiSound(_confirmClip, _interfaceVolume);
+                        ExecuteItem(item);
+                    }
                 }
             }
         }
@@ -1297,7 +1312,15 @@ namespace ArchiveNull.UI
 
             if (_state == MenuState.MainMenu && _mainMenuTexts.Count > 0)
             {
-                PositionSelectionBar(_mainMenuTexts[_mainIndex].rectTransform);
+                EnsureSelectableIndex(_mainMenuItems, ref _mainIndex);
+                if (_mainIndex >= 0 && _mainIndex < _mainMenuTexts.Count && _mainMenuTexts[_mainIndex] != null)
+                {
+                    PositionSelectionBar(_mainMenuTexts[_mainIndex].rectTransform);
+                }
+                else if (_selectionBar != null)
+                {
+                    _selectionBar.gameObject.SetActive(false);
+                }
             }
             else if (_state == MenuState.Settings && _settingsTexts.Count > 0)
             {
@@ -1377,6 +1400,18 @@ namespace ArchiveNull.UI
             {
                 RefreshMenuVisuals();
             }
+        }
+
+        private static bool TryGetMenuItem(List<MenuItem> items, int index, out MenuItem item)
+        {
+            item = default;
+            if (items == null || index < 0 || index >= items.Count)
+            {
+                return false;
+            }
+
+            item = items[index];
+            return true;
         }
 
         private string BuildMenuLine(string label, bool selected, bool enabled)
