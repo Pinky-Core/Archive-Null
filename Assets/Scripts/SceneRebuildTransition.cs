@@ -19,7 +19,7 @@ namespace ArchiveNull.UI
 
         private void Awake()
         {
-            SetCanvasGroup(fadeFromBlack, 1f, true);
+            SetCanvasGroup(fadeFromBlack, autoPlayOnStart ? 1f : 0f, autoPlayOnStart);
         }
 
         private void Start()
@@ -36,7 +36,7 @@ namespace ArchiveNull.UI
 
             if (blackHoldDuration > 0f)
             {
-                yield return new WaitForSeconds(blackHoldDuration);
+                yield return new WaitForSecondsRealtime(blackHoldDuration);
             }
 
             bool rebuildCompleted = officeDissolveTransition == null;
@@ -86,7 +86,7 @@ namespace ArchiveNull.UI
             float timer = 0f;
             while (timer < duration)
             {
-                timer += Time.deltaTime;
+                timer += Time.unscaledDeltaTime;
                 float t = Mathf.Clamp01(timer / Mathf.Max(0.001f, duration));
                 group.alpha = Mathf.Lerp(from, to, t);
                 yield return null;

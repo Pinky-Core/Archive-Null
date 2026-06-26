@@ -5,8 +5,10 @@ public static class PlayerAssistanceSettings
 {
     public const string PrefHelpEnabled = "archive.assistance.help.enabled";
     public const string PrefEditorHelpEnabled = "archive.assistance.editor.enabled";
+    public const string PrefActionFeedbackEnabled = "archive.assistance.action_feedback.enabled";
 
     public static event Action<bool> HelpEnabledChanged;
+    public static event Action<bool> ActionFeedbackEnabledChanged;
 
     public static bool HelpEnabled
     {
@@ -27,13 +29,22 @@ public static class PlayerAssistanceSettings
 
     public static bool ShouldShowHelp
     {
-        get
+        get => HelpEnabled;
+    }
+
+    public static bool ActionFeedbackEnabled
+    {
+        get => PlayerPrefs.GetInt(PrefActionFeedbackEnabled, 1) == 1;
+        set
         {
-#if UNITY_EDITOR
-            return HelpEnabled && PlayerPrefs.GetInt(PrefEditorHelpEnabled, 0) == 1;
-#else
-            return HelpEnabled;
-#endif
+            if (ActionFeedbackEnabled == value)
+            {
+                return;
+            }
+
+            PlayerPrefs.SetInt(PrefActionFeedbackEnabled, value ? 1 : 0);
+            PlayerPrefs.Save();
+            ActionFeedbackEnabledChanged?.Invoke(value);
         }
     }
 

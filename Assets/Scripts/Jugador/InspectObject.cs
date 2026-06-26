@@ -2,6 +2,9 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;
 using ArchiveNull.Evidence;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 public class InspectObject : MonoBehaviour
 {
@@ -20,6 +23,7 @@ public class InspectObject : MonoBehaviour
     public float obstructionPadding = 0.03f;
     public LayerMask obstructionLayers = ~0;
     public bool disableObjectCollisionWhileInspecting = true;
+    public bool climbToVisualRoot = true;
 
     [Header("Reticle")]
     public bool createReticleIfMissing = true;
@@ -79,9 +83,10 @@ public class InspectObject : MonoBehaviour
             if (GlobalInputBindings.WasPressed(GameInputAction.ReleaseInspect))
             {
                 ReleaseObject();
+                return;
             }
 
-            if (Mouse.current != null && Mouse.current.leftButton.isPressed)
+            if (currentObject != null && Mouse.current != null && Mouse.current.leftButton.isPressed)
             {
                 RotateObject();
             }
@@ -105,7 +110,8 @@ public class InspectObject : MonoBehaviour
             Ray ray = playerCamera.ScreenPointToRay(mousePosition);
             if (Physics.Raycast(ray, out RaycastHit hit, interactionDistance))
             {
-                if (hit.collider.gameObject.CompareTag("Inspectable"))
+                GameObject inspectableObject = ResolveInspectableObject(hit.collider);
+                if (inspectableObject != null)
                 {
                     SetReticleState(true, true);
                     if (inspectText != null)
@@ -116,7 +122,7 @@ public class InspectObject : MonoBehaviour
 
                     if (GlobalInputBindings.WasPressed(GameInputAction.Inspect))
                     {
-                        TryPickObject(hit.collider.gameObject);
+                        TryPickObject(inspectableObject);
                     }
                 }
                 else
@@ -141,7 +147,19 @@ public class InspectObject : MonoBehaviour
 
     void TryPickObject(GameObject obj)
     {
+        if (obj == null || playerCamera == null || inspectPosition == null)
+        {
+            Debug.LogWarning("[InspectObject] No se puede inspeccionar: falta objeto, camara principal o inspectPosition.", this);
+            return;
+        }
+
         currentObject = obj;
+#if UNITY_EDITOR
+        if (GameObjectUtility.AreStaticEditorFlagsSet(currentObject, StaticEditorFlags.BatchingStatic | StaticEditorFlags.ContributeGI))
+        {
+            Debug.LogWarning($"[InspectObject] '{currentObject.name}' esta marcado Static. Para inspeccionarlo bien, desactiva Batching Static/Contribute GI en ese objeto o usa un prefab no static.", currentObject);
+        }
+#endif
         originalPosition = currentObject.transform.position;
         originalRotation = currentObject.transform.rotation;
         inspectedRigidbody = currentObject.GetComponent<Rigidbody>();
@@ -159,16 +177,91 @@ public class InspectObject : MonoBehaviour
         currentObject.transform.position = GetSafeInspectObjectPosition();
         isInspecting = true;
         IsAnyInspecting = true;
-        movementScript.enabled = false;
-        lookScript.enabled = false;
+        if (movementScript != null) movementScript.enabled = false;
+        if (lookScript != null) lookScript.enabled = false;
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
-        playerRigidbody.constraints = RigidbodyConstraints.FreezeAll;
+        if (playerRigidbody != null) playerRigidbody.constraints = RigidbodyConstraints.FreezeAll;
         SetReticleState(false, false);
         if (inspectText != null)
         {
             inspectText.gameObject.SetActive(false);
         }
+    }
+
+    GameObject ResolveInspectableObject(Collider hitCollider)
+    {
+        if (hitCollider == null)
+        {
+            return null;
+        }
+
+        Transform candidate = hitCollider.transform;
+        Transform tagged = null;
+        while (candidate != null)
+        {
+            if (player != null && candidate == player)
+            {
+                break;
+            }
+
+            if (candidate.CompareTag("Inspectable"))
+            {
+                tagged = candidate;
+                break;
+            }
+
+            candidate = candidate.parent;
+        }
+
+        if (tagged == null)
+        {
+            return null;
+        }
+
+        if (!climbToVisualRoot || HasEnabledRenderer(tagged))
+        {
+            return tagged.gameObject;
+        }
+
+        Transform visualRoot = tagged;
+        Transform parent = tagged.parent;
+        while (parent != null)
+        {
+            if (player != null && parent == player)
+            {
+                break;
+            }
+
+            if (HasEnabledRenderer(parent))
+            {
+                visualRoot = parent;
+                break;
+            }
+
+            parent = parent.parent;
+        }
+
+        return visualRoot.gameObject;
+    }
+
+    static bool HasEnabledRenderer(Transform root)
+    {
+        if (root == null)
+        {
+            return false;
+        }
+
+        Renderer[] renderers = root.GetComponentsInChildren<Renderer>(true);
+        for (int i = 0; i < renderers.Length; i++)
+        {
+            if (renderers[i] != null && renderers[i].enabled)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     void ReleaseObject()
@@ -187,17 +280,22 @@ public class InspectObject : MonoBehaviour
             inspectedRigidbody = null;
             isInspecting = false;
             IsAnyInspecting = false;
-            movementScript.enabled = true;
-            lookScript.enabled = true;
+            if (movementScript != null) movementScript.enabled = true;
+            if (lookScript != null) lookScript.enabled = true;
             Cursor.lockState = CursorLockMode.Locked;
             Cursor.visible = false;
-            playerRigidbody.constraints = originalConstraints;
+            if (playerRigidbody != null) playerRigidbody.constraints = originalConstraints;
             SetReticleState(true, false);
         }
     }
 
     void RotateObject()
     {
+        if (currentObject == null || playerCamera == null)
+        {
+            return;
+        }
+
         Vector2 mouseDelta = Mouse.current != null ? Mouse.current.delta.ReadValue() : Vector2.zero;
         float rotateX = mouseDelta.x * rotationSpeed * Time.deltaTime * 0.1f;
         float rotateY = mouseDelta.y * rotationSpeed * Time.deltaTime * 0.1f;

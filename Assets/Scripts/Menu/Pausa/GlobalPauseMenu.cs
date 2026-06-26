@@ -507,8 +507,9 @@ public sealed class GlobalPauseMenu : MonoBehaviour
             case PauseOptionsCategory.General:
                 sensitivitySlider = CreateOptionSlider(optionsContentRoot, L("SENSIBILIDAD MOUSE", "MOUSE SENSITIVITY"), new Vector2(0f, -58f), OnSensitivityChanged);
                 CreateValueButton(optionsContentRoot, L("AYUDAS CONTEXTUALES", "CONTEXT HELP"), GetHelpLabel(), new Vector2(0f, -136f), ToggleContextHelp);
-                CreateValueButton(optionsContentRoot, L("REINICIAR AYUDAS", "RESET HELP"), L("REINICIAR", "RESET"), new Vector2(0f, -214f), ResetContextHelp);
-                CreateInfoLine(optionsContentRoot, L("Las ayudas no son lineales: solo aparecen para explicar mecanicas nuevas.", "Help is not linear: it only appears to explain new mechanics."), new Vector2(0f, -302f));
+                CreateValueButton(optionsContentRoot, L("TEXTOS DE ACCIONES", "ACTION MESSAGES"), GetActionFeedbackLabel(), new Vector2(0f, -214f), ToggleActionFeedback);
+                CreateValueButton(optionsContentRoot, L("REINICIAR AYUDAS", "RESET HELP"), L("REINICIAR", "RESET"), new Vector2(0f, -292f), ResetContextHelp);
+                CreateInfoLine(optionsContentRoot, L("Los subtitulos narrativos permanecen activos aunque ocultes los textos de acciones.", "Narrative subtitles remain active when action messages are hidden."), new Vector2(0f, -372f));
                 if (sensitivitySlider != null) sensitivitySlider.value = Mathf.InverseLerp(0.25f, 8f, PlayerPrefs.GetFloat(PrefLookSensitivity, look != null ? look.sensitivity : 2f));
                 break;
 
@@ -611,6 +612,21 @@ public sealed class GlobalPauseMenu : MonoBehaviour
     private void ToggleContextHelp()
     {
         PlayerAssistanceSettings.HelpEnabled = !PlayerAssistanceSettings.HelpEnabled;
+        if (PlayerAssistanceSettings.HelpEnabled)
+        {
+            CrimeSceneTutorial.EnsureForCurrentScene();
+        }
+        BuildOptionsCategory(PauseOptionsCategory.General);
+    }
+
+    private static string GetActionFeedbackLabel()
+    {
+        return PlayerAssistanceSettings.ActionFeedbackEnabled ? L("ACTIVADOS", "ENABLED") : L("DESACTIVADOS", "DISABLED");
+    }
+
+    private void ToggleActionFeedback()
+    {
+        PlayerAssistanceSettings.ActionFeedbackEnabled = !PlayerAssistanceSettings.ActionFeedbackEnabled;
         BuildOptionsCategory(PauseOptionsCategory.General);
     }
 
@@ -618,6 +634,7 @@ public sealed class GlobalPauseMenu : MonoBehaviour
     {
         PlayerAssistanceSettings.ResetHelpProgress();
         PlayerAssistanceSettings.HelpEnabled = true;
+        CrimeSceneTutorial.EnsureForCurrentScene();
         BuildOptionsCategory(PauseOptionsCategory.General);
     }
 

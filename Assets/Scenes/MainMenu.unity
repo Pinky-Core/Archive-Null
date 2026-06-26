@@ -7987,14 +7987,14 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ArchiveNull.UI.OfficeDissolveTransition
   officeRoot: {fileID: 482749372}
   fallbackDissolveShader: {fileID: 4800000, guid: bb82048c173156e4598be1adb174f664, type: 3}
-  dissolveDuration: 0.65
+  dissolveDuration: 1.25
   rebuildOnMainMenuReturn: 1
   restoreOriginalMaterialsAfterRebuild: 0
   fadeFromBlackOnMainMenuReturn: 1
-  returnFadeDuration: 0.45
+  returnFadeDuration: 1.1
   postRebuildBlackHold: 0.08
   smoothMaterialRestore: 1
-  materialRestoreBlendDuration: 0.14
+  materialRestoreBlendDuration: 0.28
   materialRestoreOverlayAlpha: 0.16
 --- !u!4 &975684151
 Transform:
@@ -13064,8 +13064,8 @@ MonoBehaviour:
   speakerSource: {fileID: 1674475753}
   subtitleText: {fileID: 0}
   subtitleGroup: {fileID: 0}
-  playOnlyFirstTime: 0
-  alwaysShowInEditor: 0
+  playOnlyFirstTime: 1
+  alwaysShowInEditor: 1
   resetTutorialOnStart: 0
   lineGap: 0.35
   subtitleFadeDuration: 0.2
@@ -13075,38 +13075,39 @@ MonoBehaviour:
   lines:
   - step: 0
     subtitle: Bienvenido, Operador #253...
-    voiceClip: {fileID: 8300000, guid: 2e4770bb6370b484ead58f7834196e63, type: 3}
+    voiceClip: {fileID: 0}
     fallbackDuration: 3.5
   - step: 1
     subtitle: Antes de abrir un expediente, familiaricese con la oficina. Use W A
       S D para moverse y el mouse para mirar.
-    voiceClip: {fileID: 8300000, guid: a7aa5cd188a1c2c49abef435f034a19d, type: 3}
+    voiceClip: {fileID: 0}
     fallbackDuration: 5
   - step: 2
     subtitle: Cuando este listo, tome asiento frente al terminal.
-    voiceClip: {fileID: 8300000, guid: f56741a51492ea840b4f1dc5ac4ea41e, type: 3}
+    voiceClip: {fileID: 0}
     fallbackDuration: 3.2
   - step: 3
     subtitle: Asiento confirmado. La pantalla esta lista para recibir entrada.
-    voiceClip: {fileID: 8300000, guid: 932e2071615bbab45bf10f3b07c34f86, type: 3}
+    voiceClip: {fileID: 0}
     fallbackDuration: 3.2
   - step: 4
     subtitle: "Acceso concedido. Use el terminal para revisar las opciones, all\xED
       podr\xE1s modificar controles, audio e idioma de la experiencia. Una vez finalizado
       monte una memoria en Expedientes."
-    voiceClip: {fileID: 8300000, guid: 142cbf9ade83dae4da005de793acaab9, type: 3}
+    voiceClip: {fileID: 0}
     fallbackDuration: 4.4
   - step: 5
     subtitle: Puede apartarse del monitor para volver a la posicion de espera.
-    voiceClip: {fileID: 8300000, guid: 17ea18283c53d064992fe690277db61f, type: 3}
+    voiceClip: {fileID: 0}
     fallbackDuration: 3.5
   - step: 6
     subtitle: Memoria montada. El visor esta preparado.
-    voiceClip: {fileID: 8300000, guid: c7076d577610a8a409046652719a346f, type: 3}
+    voiceClip: {fileID: 0}
     fallbackDuration: 3
   - step: 7
-    subtitle: Sincronizacion iniciada. Cuando este preparado, ejecute la memoria.
-    voiceClip: {fileID: 8300000, guid: 6ae08d38ba01ee248996d51000ef9d05, type: 3}
+    subtitle: Sincronizacion iniciada. Cuando este preparado, ejecute la memoria
+      con Click o Enter.
+    voiceClip: {fileID: 0}
     fallbackDuration: 3.6
 --- !u!1001 &1675663788
 PrefabInstance:

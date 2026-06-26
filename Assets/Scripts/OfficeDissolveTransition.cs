@@ -90,7 +90,7 @@ namespace ArchiveNull.UI
             {
                 if (postRebuildBlackHold > 0f)
                 {
-                    yield return new WaitForSeconds(postRebuildBlackHold);
+                    yield return new WaitForSecondsRealtime(postRebuildBlackHold);
                 }
 
                 yield return FadeCanvasGroup(fadeOverlay, 1f, 0f, returnFadeDuration);
@@ -111,7 +111,7 @@ namespace ArchiveNull.UI
             float timer = 0f;
             while (timer < duration)
             {
-                timer += Time.deltaTime;
+                timer += Time.unscaledDeltaTime;
                 float t = Mathf.Clamp01(timer / duration);
                 ApplyDissolve(t);
                 yield return null;
@@ -132,7 +132,7 @@ namespace ArchiveNull.UI
             float timer = 0f;
             while (timer < duration)
             {
-                timer += Time.deltaTime;
+                timer += Time.unscaledDeltaTime;
                 float t = Mathf.Clamp01(timer / duration);
                 ApplyDissolve(1f - t);
                 yield return null;
@@ -539,7 +539,7 @@ namespace ArchiveNull.UI
             float timer = 0f;
             while (timer < duration)
             {
-                timer += Time.deltaTime;
+                timer += Time.unscaledDeltaTime;
                 float t = Mathf.Clamp01(timer / Mathf.Max(0.001f, duration));
                 group.alpha = Mathf.Lerp(from, to, t);
                 yield return null;

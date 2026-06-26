@@ -14,6 +14,7 @@ public sealed class CrimeSceneTutorial : MonoBehaviour
 
     private CanvasGroup rootGroup;
     private TMP_Text text;
+    private RectTransform controlsRoot;
     private TMP_Text inspectWaypointLabel;
     private TMP_Text evidenceWaypointLabel;
     private Image inspectWaypointDot;
@@ -33,6 +34,11 @@ public sealed class CrimeSceneTutorial : MonoBehaviour
     {
         SceneManager.sceneLoaded -= HandleSceneLoaded;
         SceneManager.sceneLoaded += HandleSceneLoaded;
+        HandleSceneLoaded(SceneManager.GetActiveScene(), LoadSceneMode.Single);
+    }
+
+    public static void EnsureForCurrentScene()
+    {
         HandleSceneLoaded(SceneManager.GetActiveScene(), LoadSceneMode.Single);
     }
 
@@ -196,13 +202,58 @@ public sealed class CrimeSceneTutorial : MonoBehaviour
 
         text.text = step switch
         {
-            0 => $"AYUDA // MEMORIA ACTIVA\nExplora con {GlobalInputBindings.GetDisplayName(GameInputAction.MoveForward)}/{GlobalInputBindings.GetDisplayName(GameInputAction.MoveLeft)}/{GlobalInputBindings.GetDisplayName(GameInputAction.MoveBackward)}/{GlobalInputBindings.GetDisplayName(GameInputAction.MoveRight)}. Puedes apagar estas ayudas en Pausa > General.",
-            1 => $"AYUDA // INSPECCION\nMira un objeto marcado y pulsa {GlobalInputBindings.GetDisplayName(GameInputAction.Inspect)}. Manten click para girarlo y usa la rueda para acercar.",
-            2 => $"AYUDA // HERRAMIENTAS\nManten G para abrir la rueda: mano para interactuar, camara para registrar evidencias y luz UV para rastros ocultos. Con camara equipada, pulsa {GlobalInputBindings.GetDisplayName(GameInputAction.Camera)}.",
-            3 => "AYUDA // REGISTRO\nEnfoca una evidencia con la camara y saca foto con click izquierdo. Las evidencias registradas muestran ficha al apuntarlas.",
-            4 => $"AYUDA // LIBRETA Y GALERIA\nPulsa {GlobalInputBindings.GetDisplayName(GameInputAction.Notebook)}. La galeria muestra evidencias con descripcion fija; la libreta es para tus notas.",
+            0 => "AYUDA // MEMORIA ACTIVA\nExplora el lugar. Puedes ocultar estas ayudas desde Pausa > General.",
+            1 => "AYUDA // INSPECCION\nMira un objeto marcado para examinarlo. Puedes girarlo y acercarlo mientras lo inspeccionas.",
+            2 => "AYUDA // HERRAMIENTAS\nAbre la rueda para elegir mano, camara, luz UV u objetos recogidos.",
+            3 => "AYUDA // REGISTRO\nEnfoca una evidencia con la camara y registra una fotografia.",
+            4 => "AYUDA // LIBRETA Y GALERIA\nLa galeria conserva evidencias; la libreta es un espacio separado para tus notas.",
             _ => string.Empty
         };
+
+        RebuildControlHints();
+    }
+
+    private void RebuildControlHints()
+    {
+        if (controlsRoot == null)
+        {
+            return;
+        }
+
+        for (int i = controlsRoot.childCount - 1; i >= 0; i--)
+        {
+            Destroy(controlsRoot.GetChild(i).gameObject);
+        }
+
+        string[] labels = step switch
+        {
+            0 => new[]
+            {
+                GlobalInputBindings.GetDisplayName(GameInputAction.MoveForward),
+                GlobalInputBindings.GetDisplayName(GameInputAction.MoveLeft),
+                GlobalInputBindings.GetDisplayName(GameInputAction.MoveBackward),
+                GlobalInputBindings.GetDisplayName(GameInputAction.MoveRight)
+            },
+            1 => new[]
+            {
+                GlobalInputBindings.GetDisplayName(GameInputAction.Inspect),
+                "CLICK IZQ",
+                "RUEDA"
+            },
+            2 => new[]
+            {
+                "G",
+                GlobalInputBindings.GetDisplayName(GameInputAction.Camera)
+            },
+            3 => new[] { "CLICK IZQ" },
+            4 => new[] { GlobalInputBindings.GetDisplayName(GameInputAction.Notebook) },
+            _ => System.Array.Empty<string>()
+        };
+
+        foreach (string label in labels)
+        {
+            CreateKeycap(controlsRoot, label);
+        }
     }
 
     private void CacheWaypointTargets()
@@ -369,12 +420,29 @@ public sealed class CrimeSceneTutorial : MonoBehaviour
         panelRect.anchorMax = new Vector2(0f, 0f);
         panelRect.pivot = new Vector2(0f, 0f);
         panelRect.anchoredPosition = new Vector2(48f, 52f);
-        panelRect.sizeDelta = new Vector2(700f, 150f);
+        panelRect.sizeDelta = new Vector2(760f, 176f);
         Outline outline = panel.gameObject.AddComponent<Outline>();
         outline.effectColor = new Color(0.78f, 0.68f, 0.48f, 0.42f);
         outline.effectDistance = new Vector2(1f, -1f);
 
         text = CreateText("Text", panelRect);
+        text.rectTransform.offsetMin = new Vector2(24f, 62f);
+        text.rectTransform.offsetMax = new Vector2(-24f, -14f);
+
+        controlsRoot = new GameObject("ControlHints", typeof(RectTransform), typeof(HorizontalLayoutGroup)).GetComponent<RectTransform>();
+        controlsRoot.SetParent(panelRect, false);
+        controlsRoot.anchorMin = new Vector2(0f, 0f);
+        controlsRoot.anchorMax = new Vector2(1f, 0f);
+        controlsRoot.pivot = new Vector2(0.5f, 0f);
+        controlsRoot.offsetMin = new Vector2(24f, 14f);
+        controlsRoot.offsetMax = new Vector2(-24f, 54f);
+        HorizontalLayoutGroup controlsLayout = controlsRoot.GetComponent<HorizontalLayoutGroup>();
+        controlsLayout.spacing = 9f;
+        controlsLayout.childAlignment = TextAnchor.MiddleLeft;
+        controlsLayout.childControlWidth = false;
+        controlsLayout.childControlHeight = true;
+        controlsLayout.childForceExpandWidth = false;
+        controlsLayout.childForceExpandHeight = true;
 
         inspectWaypointDot = CreateImage("InspectWaypointDot", canvasObject.transform as RectTransform, new Color(0.2f, 1f, 0.9f, 0.95f));
         inspectWaypointDot.rectTransform.sizeDelta = new Vector2(14f, 14f);
@@ -445,5 +513,29 @@ public sealed class CrimeSceneTutorial : MonoBehaviour
         rect.offsetMin = new Vector2(24f, 14f);
         rect.offsetMax = new Vector2(-24f, -14f);
         return tmp;
+    }
+
+    private static void CreateKeycap(RectTransform parent, string label)
+    {
+        GameObject keyObject = new("Key_" + label, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(LayoutElement));
+        keyObject.transform.SetParent(parent, false);
+        Image background = keyObject.GetComponent<Image>();
+        background.color = new Color(0.1f, 0.115f, 0.11f, 1f);
+        Outline outline = keyObject.AddComponent<Outline>();
+        outline.effectColor = new Color(0.82f, 0.72f, 0.48f, 0.72f);
+        outline.effectDistance = new Vector2(1f, -1f);
+
+        LayoutElement layout = keyObject.GetComponent<LayoutElement>();
+        layout.preferredWidth = Mathf.Clamp(34f + (label?.Length ?? 0) * 9f, 52f, 150f);
+        layout.preferredHeight = 34f;
+
+        TMP_Text keyText = CreateText("Label", keyObject.transform as RectTransform);
+        keyText.text = label;
+        keyText.fontSize = 16f;
+        keyText.fontStyle = FontStyles.Bold;
+        keyText.alignment = TextAlignmentOptions.Center;
+        keyText.color = new Color(0.98f, 0.91f, 0.7f, 1f);
+        keyText.rectTransform.offsetMin = new Vector2(8f, 2f);
+        keyText.rectTransform.offsetMax = new Vector2(-8f, -2f);
     }
 }

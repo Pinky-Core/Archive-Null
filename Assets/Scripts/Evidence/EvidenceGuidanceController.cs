@@ -33,7 +33,13 @@ namespace ArchiveNull.Evidence
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void Install()
         {
-            Scene scene = SceneManager.GetActiveScene();
+            SceneManager.sceneLoaded -= HandleSceneLoaded;
+            SceneManager.sceneLoaded += HandleSceneLoaded;
+            HandleSceneLoaded(SceneManager.GetActiveScene(), LoadSceneMode.Single);
+        }
+
+        private static void HandleSceneLoaded(Scene scene, LoadSceneMode mode)
+        {
             if (!scene.IsValid() || string.Equals(scene.name, MainMenuScene, System.StringComparison.OrdinalIgnoreCase))
             {
                 return;

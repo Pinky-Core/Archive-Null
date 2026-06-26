@@ -468,7 +468,7 @@ namespace ArchiveNull.Evidence
                         SetInventoryWheel(false);
                     }
 
-                    ShowMessage("No hay objetos recogidos.");
+                    ShowActionMessage("No hay objetos recogidos.");
                     return;
                 }
 
@@ -530,7 +530,7 @@ namespace ArchiveNull.Evidence
                 SetInventoryWheel(false);
             }
 
-            ShowMessage("Herramienta equipada: " + GetToolLabel(equippedTool));
+            ShowActionMessage("Herramienta equipada: " + GetToolLabel(equippedTool));
             if (toolStateText != null)
             {
                 toolStateText.text = "HERRAMIENTA: " + GetToolLabel(equippedTool);
@@ -742,7 +742,7 @@ namespace ArchiveNull.Evidence
             CacheToolPose(collectedPhone.gameObject);
             ApplyToolImmediate(collectedPhone.gameObject, equippedTool == ToolSlot.InventoryItem);
             UpdateItemSubInventory();
-            ShowMessage("Objeto recogido: " + collectedPhone.InventoryDisplayName);
+            ShowActionMessage("Objeto recogido: " + collectedPhone.InventoryDisplayName);
             return true;
         }
 
@@ -1052,6 +1052,14 @@ namespace ArchiveNull.Evidence
             if (messageUI != null)
             {
                 messageUI.ShowMessage(message);
+            }
+        }
+
+        private void ShowActionMessage(string message)
+        {
+            if (PlayerAssistanceSettings.ActionFeedbackEnabled)
+            {
+                ShowMessage(message);
             }
         }
 
