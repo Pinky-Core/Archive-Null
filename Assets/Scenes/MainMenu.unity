@@ -13065,7 +13065,7 @@ MonoBehaviour:
   subtitleText: {fileID: 0}
   subtitleGroup: {fileID: 0}
   playOnlyFirstTime: 1
-  alwaysShowInEditor: 0
+  alwaysShowInEditor: 1
   resetTutorialOnStart: 0
   lineGap: 0.35
   subtitleFadeDuration: 0.2
@@ -13074,38 +13074,46 @@ MonoBehaviour:
   sitPromptDelay: 2.2
   lines:
   - step: 0
-    subtitle: 'Operador 253, se le asigno el caso de Julian Herrera, 41 anos. Fue hallado muerto en la sala de su casa familiar, cerrada desde adentro.'
+    subtitle: "Bienvenido Operador 253, se le asigno el caso JH. La v\xEDctima hallada
+      muerta en la sala principal de su casa familiar."
     voiceClip: {fileID: 0}
     fallbackDuration: 6
   - step: 1
-    subtitle: 'La escena fue clasificada como posible suicidio: un frasco de pastillas y un mensaje final sostienen esa lectura. Hay inconsistencias. Lea el expediente sobre la mesa antes de entrar.'
+    subtitle: "La escena fue clasificada como posible suicidio: un frasco de pastillas
+      y un mensaje final sostienen esa lectura. Hay inconsistencias. Lea el expediente
+      sobre la mesa izquierda para tener m\xE1s informaci\xF3n."
     voiceClip: {fileID: 0}
     fallbackDuration: 7
   - step: 2
-    subtitle: Su tarea no es confirmar una sospecha. Debe separar evidencia real, circunstancial y plantada. Cuando termine de leer, tome asiento frente al terminal.
+    subtitle: Su tarea no es confirmar una sospecha. Debe separar evidencia real,
+      circunstancial y plantada. Cuando termine de leer, tome asiento frente al terminal
+      (Haga click sobre la silla o Mesa).
     voiceClip: {fileID: 0}
     fallbackDuration: 6
   - step: 3
-    subtitle: Asiento confirmado. La pantalla esta lista para recibir entrada.
+    subtitle: "La pantalla esta lista para recibir entrada, p\xFAlsela para acceder
+      (Haga Click sobre la pantalla)."
     voiceClip: {fileID: 0}
     fallbackDuration: 3.2
   - step: 4
-    subtitle: "Acceso concedido. Use el terminal para revisar las opciones, all\xED
-      podr\xE1s modificar controles, audio e idioma de la experiencia. Una vez finalizado
-      monte una memoria en Expedientes."
+    subtitle: "Use el terminal para revisar las opciones, all\xED podr\xE1s modificar
+      controles, audio e idioma de la experiencia. Una vez finalizado monte la memoria
+      en [Expedientes]."
     voiceClip: {fileID: 0}
     fallbackDuration: 4.4
   - step: 5
-    subtitle: Puede apartarse del monitor para volver a la posicion de espera.
+    subtitle: "Puede apartarse del monitor para volver a la posicion de espera (P\xFAlse
+      Click Derecho del Mouse)."
     voiceClip: {fileID: 0}
     fallbackDuration: 3.5
   - step: 6
-    subtitle: Memoria montada. El visor esta preparado.
+    subtitle: "El visor est\xE1 preparado, puede encontrarlo a su izquierda, p\xFAlselo
+      para equipartelo."
     voiceClip: {fileID: 0}
     fallbackDuration: 3
   - step: 7
     subtitle: Sincronizacion iniciada. Cuando este preparado, ejecute la memoria
-      con Click o Enter.
+      (Pulsa Click o Enter).
     voiceClip: {fileID: 0}
     fallbackDuration: 3.6
 --- !u!1001 &1675663788
