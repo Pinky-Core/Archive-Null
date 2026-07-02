@@ -9,7 +9,7 @@ public static class RuntimeConfirmationDialog
 {
     public static bool IsOpen { get; private set; }
 
-    public static void Show(string title, string message, string confirmLabel, string cancelLabel, UnityAction onConfirm)
+    public static void Show(string title, string message, string confirmLabel, string cancelLabel, UnityAction onConfirm, UnityAction onCancel = null)
     {
         GameObject existing = GameObject.Find("ConfirmationDialog");
         if (existing != null)
@@ -54,7 +54,11 @@ public static class RuntimeConfirmationDialog
         TMP_Text messageText = CreateText("Message", panel, message, 22f, FontStyles.Normal, TextAlignmentOptions.TopLeft);
         SetRect(messageText.rectTransform, Vector2.zero, Vector2.one, Vector2.zero, new Vector2(42f, 112f), new Vector2(-42f, -118f));
 
-        Button cancelButton = CreateButton(panel, cancelLabel, new Vector2(-170f, 48f), () => Object.Destroy(canvasObject));
+        Button cancelButton = CreateButton(panel, cancelLabel, new Vector2(-170f, 48f), () =>
+        {
+            Object.Destroy(canvasObject);
+            onCancel?.Invoke();
+        });
         Button confirmButton = CreateButton(panel, confirmLabel, new Vector2(170f, 48f), () =>
         {
             Object.Destroy(canvasObject);

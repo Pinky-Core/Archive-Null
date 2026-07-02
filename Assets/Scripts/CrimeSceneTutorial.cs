@@ -407,7 +407,7 @@ public sealed class CrimeSceneTutorial : MonoBehaviour
         canvasObject.transform.SetParent(transform, false);
         Canvas canvas = canvasObject.GetComponent<Canvas>();
         canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-        canvas.sortingOrder = 4100;
+        canvas.sortingOrder = 16000;
 
         CanvasScaler scaler = canvasObject.GetComponent<CanvasScaler>();
         scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;

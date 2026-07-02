@@ -49,6 +49,10 @@ namespace ArchiveNull.InvestigationBoard
             evidenceData = data;
 
             Sprite photo = data != null ? data.photoSprite : null;
+            if (photo == null && data != null)
+            {
+                photo = CreatePlaceholderSprite(data.category);
+            }
             if (photoImage != null)
             {
                 photoImage.sprite = photo;
@@ -80,6 +84,33 @@ namespace ArchiveNull.InvestigationBoard
             {
                 descriptionText.text = data != null ? data.description : string.Empty;
             }
+        }
+
+        private static Sprite CreatePlaceholderSprite(EvidenceCategory category)
+        {
+            const int width = 320;
+            const int height = 220;
+            Texture2D texture = new(width, height, TextureFormat.RGBA32, false);
+            Color paper = new(0.76f, 0.72f, 0.61f, 1f);
+            Color ink = category == EvidenceCategory.Document
+                ? new Color(0.1f, 0.28f, 0.24f, 1f)
+                : new Color(0.24f, 0.2f, 0.16f, 1f);
+            Color[] pixels = new Color[width * height];
+            for (int y = 0; y < height; y++)
+            {
+                for (int x = 0; x < width; x++)
+                {
+                    bool border = x < 7 || x >= width - 7 || y < 7 || y >= height - 7;
+                    bool documentLine = y > 42 && y < 178 && y % 28 < 5 && x > 52 && x < 268;
+                    bool phone = category == EvidenceCategory.Document && x > 112 && x < 208 && y > 30 && y < 190;
+                    pixels[y * width + x] = border || documentLine || phone ? ink : paper;
+                }
+            }
+            texture.SetPixels(pixels);
+            texture.Apply(false, false);
+            Sprite sprite = Sprite.Create(texture, new Rect(0f, 0f, width, height), new Vector2(0.5f, 0.5f), 100f);
+            sprite.name = "EvidencePlaceholder_" + category;
+            return sprite;
         }
 
         private void NormalizeFrameFacing()

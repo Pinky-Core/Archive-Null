@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using ArchiveNull.UI;
 using TMPro;
 using UnityEngine;
@@ -97,6 +98,7 @@ public sealed class GlobalPauseMenu : MonoBehaviour
     private bool isPaused;
     private bool isBusy;
     private bool awaitingRebind;
+    private readonly List<Canvas> suppressedCanvases = new();
     private GameInputAction pendingRebindAction;
     public static bool IsPaused => instance != null && instance.isPaused;
 
@@ -112,6 +114,7 @@ public sealed class GlobalPauseMenu : MonoBehaviour
         BuildUi();
         ApplySavedSettings();
         SetVisible(false);
+        RestoreGameplayCanvases();
     }
 
     private void Update()
@@ -161,6 +164,7 @@ public sealed class GlobalPauseMenu : MonoBehaviour
     public void Resume()
     {
         SetVisible(false);
+        RestoreGameplayCanvases();
         Time.timeScale = 1f;
         isPaused = false;
         bool inspecting = InspectObject.IsAnyInspecting;
@@ -180,6 +184,7 @@ public sealed class GlobalPauseMenu : MonoBehaviour
         RefreshPauseCaseSummary();
         awaitingRebind = false;
         SetVisible(true);
+        SuppressGameplayCanvases();
         Time.timeScale = 0f;
         isPaused = true;
     }
@@ -204,12 +209,14 @@ public sealed class GlobalPauseMenu : MonoBehaviour
             return;
         }
 
+        Time.timeScale = 1f;
         RuntimeConfirmationDialog.Show(
             L("VOLVER AL MENU", "RETURN TO MENU"),
             L("Vas a volver a la oficina. Se conservaran evidencias, notas y pizarra guardadas.", "You are returning to the office. Saved evidence, notes and board data will be kept."),
             L("IR A LA OFICINA", "GO TO OFFICE"),
             L("CANCELAR", "CANCEL"),
-            () => StartCoroutine(ExitRoutine()));
+            () => StartCoroutine(ExitRoutine()),
+            () => Time.timeScale = 0f);
     }
 
     private IEnumerator ExitRoutine()
@@ -308,7 +315,7 @@ public sealed class GlobalPauseMenu : MonoBehaviour
         title.color = new Color(0.9f, 0.87f, 0.75f, 1f);
 
         TMP_Text section = CreateText("Section", leftRail, L("ARCHIVE: NULL  /  SESION EN PAUSA", "ARCHIVE: NULL  /  SESSION PAUSED"), 16, FontStyles.Normal, TextAlignmentOptions.Left);
-        SetPoint(section.rectTransform, new Vector2(0f, 1f), new Vector2(0f, -112f), new Vector2(560f, 30f));
+        SetPoint(section.rectTransform, new Vector2(0f, 1f), new Vector2(280f, -112f), new Vector2(560f, 30f));
         section.color = new Color(0.58f, 0.61f, 0.55f, 1f);
 
         CreateLeftButton(leftRail, L("CONTINUAR INVESTIGACION", "CONTINUE INVESTIGATION"), new Vector2(0f, -190f), Resume);
@@ -320,7 +327,7 @@ public sealed class GlobalPauseMenu : MonoBehaviour
         caseRect.anchoredPosition = new Vector2(-128f, 8f);
         AddOutline(caseSummaryRoot, new Color(0.58f, 0.55f, 0.42f, 0.3f));
         TMP_Text caseHeader = CreateText("CaseHeader", caseRect, L("EXPEDIENTE ACTIVO", "ACTIVE CASE"), 17, FontStyles.Bold, TextAlignmentOptions.Left);
-        SetPoint(caseHeader.rectTransform, new Vector2(0f, 1f), new Vector2(34f, -34f), new Vector2(500f, 28f));
+        SetPoint(caseHeader.rectTransform, new Vector2(0f, 1f), new Vector2(284f, -34f), new Vector2(500f, 28f));
         caseHeader.color = new Color(0.65f, 0.61f, 0.46f, 1f);
         caseSummaryText = CreateText("CaseSummaryText", caseRect, string.Empty, 23, FontStyles.Normal, TextAlignmentOptions.TopLeft);
         Stretch(caseSummaryText.rectTransform);
@@ -329,7 +336,7 @@ public sealed class GlobalPauseMenu : MonoBehaviour
         caseSummaryText.color = new Color(0.86f, 0.86f, 0.79f, 1f);
 
         TMP_Text footer = CreateText("Footer", canvasRect, L("ESC  CONTINUAR     CLICK  SELECCIONAR", "ESC  CONTINUE     CLICK  SELECT"), 15, FontStyles.Normal, TextAlignmentOptions.Left);
-        SetPoint(footer.rectTransform, new Vector2(0f, 0f), new Vector2(116f, 42f), new Vector2(760f, 30f));
+        SetPoint(footer.rectTransform, new Vector2(0f, 0f), new Vector2(496f, 42f), new Vector2(760f, 30f));
         footer.color = new Color(0.52f, 0.54f, 0.49f, 1f);
 
         optionsPanel = CreatePanel("OptionsPanel", canvasRect, new Vector2(930f, 660f), new Vector2(1f, 0.5f), new Color(0.022f, 0.026f, 0.023f, 0.97f)).gameObject;
@@ -369,6 +376,28 @@ public sealed class GlobalPauseMenu : MonoBehaviour
         caseSummaryText.text = L(
             $"LA LLAVE POR DENTRO\n\nUBICACION  {sceneName.ToUpperInvariant()}\nEVIDENCIAS REGISTRADAS  {evidenceCount:00}\n\nOBJETIVO ACTUAL\nDocumentar la escena, contrastar los registros y volver a la oficina cuando exista una hipotesis sostenible.",
             $"THE KEY FROM INSIDE\n\nLOCATION  {sceneName.ToUpperInvariant()}\nREGISTERED EVIDENCE  {evidenceCount:00}\n\nCURRENT OBJECTIVE\nDocument the scene, compare records, and return to the office once a defensible hypothesis exists.");
+    }
+
+    private void SuppressGameplayCanvases()
+    {
+        suppressedCanvases.Clear();
+        Canvas[] canvases = FindObjectsOfType<Canvas>(true);
+        for (int i = 0; i < canvases.Length; i++)
+        {
+            Canvas canvas = canvases[i];
+            if (canvas == null || !canvas.enabled || canvas.transform.IsChildOf(transform)) continue;
+            suppressedCanvases.Add(canvas);
+            canvas.enabled = false;
+        }
+    }
+
+    private void RestoreGameplayCanvases()
+    {
+        for (int i = 0; i < suppressedCanvases.Count; i++)
+        {
+            if (suppressedCanvases[i] != null) suppressedCanvases[i].enabled = true;
+        }
+        suppressedCanvases.Clear();
     }
 
     private void ApplySavedSettings()
@@ -942,7 +971,7 @@ public sealed class GlobalPauseMenu : MonoBehaviour
             glitchBlocks[i] = block;
         }
 
-        glitchTextLines = new TMP_Text[5];
+        glitchTextLines = new TMP_Text[0];
         for (int i = 0; i < glitchTextLines.Length; i++)
         {
             TMP_Text line = CreateText("GlitchText" + i, parent, string.Empty, Random.Range(13f, 22f), FontStyles.Bold, TextAlignmentOptions.Left);

@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -110,6 +111,7 @@ namespace ArchiveNull.UI
         private bool hasMountedMemory;
         private float activeTime;
         private Coroutine lineRoutine;
+        private readonly HashSet<TutorialStep> shownSteps = new();
 
         private void Awake()
         {
@@ -249,7 +251,7 @@ namespace ArchiveNull.UI
 
             Canvas canvas = canvasObject.GetComponent<Canvas>();
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-            canvas.sortingOrder = 9000;
+            canvas.sortingOrder = 20000;
 
             CanvasScaler scaler = canvasObject.GetComponent<CanvasScaler>();
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
@@ -381,6 +383,12 @@ namespace ArchiveNull.UI
 
         private void PlayStep(TutorialStep step)
         {
+            if (shownSteps.Contains(step))
+            {
+                return;
+            }
+
+            shownSteps.Add(step);
             if (lineRoutine != null)
             {
                 StopCoroutine(lineRoutine);
@@ -476,8 +484,8 @@ namespace ArchiveNull.UI
                 return 2f;
             }
 
-            float textDuration = string.IsNullOrWhiteSpace(line.subtitle) ? 0f : line.subtitle.Length * 0.045f;
-            return Mathf.Max(line.fallbackDuration, textDuration, 1.25f);
+            float textDuration = string.IsNullOrWhiteSpace(line.subtitle) ? 0f : 2.5f + line.subtitle.Length * 0.065f;
+            return Mathf.Clamp(Mathf.Max(line.fallbackDuration, textDuration, 6f), 6f, 14f);
         }
 
         private void SetSubtitleVisible(bool visible, bool immediate)

@@ -282,6 +282,13 @@ namespace ArchiveNull.Evidence
                     data.narrativeLine = pickupNarration;
                 }
 
+                if (data != null && data.photoSprite == null)
+                {
+                    data.photoSprite = inventoryIcon != null
+                        ? inventoryIcon
+                        : CreateDigitalEvidenceSprite("TELEFONO", new Color(0.12f, 0.48f, 0.4f));
+                }
+
                 EvidenceInventory.Instance.RegisterEvidence(data);
             }
         }
@@ -998,7 +1005,42 @@ namespace ArchiveNull.Evidence
                 data.sourceSceneName = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
             }
 
+            if (data.photoSprite == null)
+            {
+                bool calls = fallbackId == "phone_call_log";
+                data.photoSprite = CreateDigitalEvidenceSprite(
+                    calls ? "LLAMADAS" : "MENSAJES",
+                    calls ? new Color(0.18f, 0.42f, 0.35f) : new Color(0.12f, 0.52f, 0.38f));
+            }
+
             EvidenceInventory.Instance.RegisterEvidence(data);
+        }
+
+        private static Sprite CreateDigitalEvidenceSprite(string label, Color accent)
+        {
+            const int width = 512;
+            const int height = 320;
+            Texture2D texture = new(width, height, TextureFormat.RGBA32, false);
+            Color background = new(0.025f, 0.032f, 0.03f, 1f);
+            Color screen = new(0.055f, 0.075f, 0.068f, 1f);
+            Color[] pixels = new Color[width * height];
+            for (int y = 0; y < height; y++)
+            {
+                for (int x = 0; x < width; x++)
+                {
+                    bool frame = x < 12 || x >= width - 12 || y < 12 || y >= height - 12;
+                    bool phoneScreen = x > 145 && x < 367 && y > 48 && y < 272;
+                    bool speaker = y > 248 && y < 258 && x > 220 && x < 292;
+                    pixels[y * width + x] = frame || speaker ? accent : phoneScreen ? screen : background;
+                }
+            }
+
+            texture.SetPixels(pixels);
+            texture.Apply(false, false);
+            texture.name = "DigitalEvidence_" + label;
+            Sprite sprite = Sprite.Create(texture, new Rect(0f, 0f, width, height), new Vector2(0.5f, 0.5f), 100f);
+            sprite.name = label;
+            return sprite;
         }
 
         private void BuildConversation()

@@ -13,7 +13,7 @@ namespace ArchiveNull.Evidence
         private const string MainMenuScene = "MainMenu";
 
         [SerializeField] private float inactivityHintDelay = DefaultHintDelay;
-        [SerializeField] private float subtitleDuration = 6f;
+        [SerializeField] private float subtitleDuration = 9f;
         [SerializeField] private float hintDuration = 12f;
 
         private CanvasGroup subtitleGroup;
@@ -29,6 +29,7 @@ namespace ArchiveNull.Evidence
         private float lastProgressTime;
         private Coroutine subtitleRoutine;
         private Coroutine hintRoutine;
+        private Coroutine followUpRoutine;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void Install()
@@ -57,6 +58,31 @@ namespace ArchiveNull.Evidence
             lastProgressTime = Time.unscaledTime;
             BuildUi();
             RefreshObjective();
+            string followUp = GetInvestigationFollowUp(EvidenceInventory.Instance.GetAllEvidence().Count);
+            if (!string.IsNullOrWhiteSpace(followUp))
+            {
+                if (followUpRoutine != null) StopCoroutine(followUpRoutine);
+                followUpRoutine = StartCoroutine(ShowFollowUpAfterDelay(followUp));
+            }
+        }
+
+        private IEnumerator ShowFollowUpAfterDelay(string message)
+        {
+            yield return new WaitForSecondsRealtime(subtitleDuration + 0.6f);
+            ShowSubtitle(message);
+            followUpRoutine = null;
+        }
+
+        private static string GetInvestigationFollowUp(int evidenceCount)
+        {
+            return evidenceCount switch
+            {
+                2 => "La escena ya ofrece dos lecturas: una muerte voluntaria y una explicación construida para que parezca voluntaria. Necesito buscar qué objeto fue limpiado o manipulado.",
+                4 => "El conflicto familiar explica sospechas, pero todavía no explica el método. La cocina puede conservar lo que alguien intentó borrar de la sala.",
+                6 => "Ya puedo sostener que varias pistas fueron acomodadas. Falta conectar método, acceso y motivo antes de señalar a una persona.",
+                8 => "Hay evidencia suficiente para volver a la oficina y ordenar una hipótesis provisional. Una acusación correcta debe explicar también por qué los otros sospechosos parecen culpables.",
+                _ => string.Empty
+            };
         }
 
         private void OnEnable()
@@ -112,7 +138,7 @@ namespace ArchiveNull.Evidence
         {
             lastProgressTime = Time.unscaledTime;
             HideHint();
-            string line = data != null ? data.narrativeLine : string.Empty;
+            string line = BuildNarrativeLine(data);
             if (string.IsNullOrWhiteSpace(line) && data != null)
             {
                 line = string.IsNullOrWhiteSpace(data.description)
@@ -126,6 +152,46 @@ namespace ArchiveNull.Evidence
             }
 
             RefreshObjective();
+        }
+
+        private static string BuildNarrativeLine(EvidenceData data)
+        {
+            if (data == null)
+            {
+                return string.Empty;
+            }
+
+            if (!string.IsNullOrWhiteSpace(data.narrativeLine))
+            {
+                return data.narrativeLine;
+            }
+
+            string identity = ((data.evidenceId ?? string.Empty) + " " + (data.evidenceName ?? string.Empty)).ToLowerInvariant();
+            if (identity.Contains("pastilla") || identity.Contains("frasco"))
+                return "El frasco está demasiado expuesto, casi colocado para ser encontrado. Si Julián lo manipuló, deberían quedar huellas claras.";
+            if (identity.Contains("phone_messages") || identity.Contains("mensaje"))
+                return "Julián escribía mensajes largos y explicativos. Esta despedida es breve, terminante y ajena a su forma habitual de hablar.";
+            if (identity.Contains("phone_call") || identity.Contains("llamada"))
+                return "El registro de llamadas fija contactos y horarios. Tengo que compararlo con la ventana probable de muerte, no leerlo como una acusación aislada.";
+            if (identity.Contains("telefono") || identity.Contains("celular"))
+                return "Es el teléfono de Julián. El mensaje final puede explicar la escena o demostrar que alguien intentó explicarla por él.";
+            if (identity.Contains("copa") || identity.Contains("vaso"))
+                return "Una huella en una copa demuestra presencia, no asesinato. Sofía estuvo aquí antes; necesito determinar cuándo y por qué.";
+            if (identity.Contains("foto") || identity.Contains("fotograf"))
+                return "La fotografía dañada confirma un conflicto familiar, pero un conflicto no establece quién estuvo aquí durante la muerte.";
+            if (identity.Contains("barro") || identity.Contains("huella"))
+                return "La marca conserva un patrón parcial. Si encuentro un calzado compatible, podré vincular movimiento y acceso, no solo una identidad.";
+            if (identity.Contains("taza"))
+                return "La taza fue lavada después de usarse. Limpiar un objeto de la escena también es una decisión y deja una secuencia detrás.";
+            if (identity.Contains("azucar") || identity.Contains("polvo"))
+                return "Esto no parece azúcar pura. Si el medicamento fue triturado y mezclado, el frasco junto al cuerpo sería una puesta en escena.";
+            if (identity.Contains("guante"))
+                return "Los guantes explican la ausencia de huellas en otros objetos. Todavía no indican quién los utilizó.";
+            if (identity.Contains("farmacia") || identity.Contains("recibo"))
+                return "La compra fue en efectivo y no identifica al cliente. Sirve para reconstruir el método, no para cerrar al culpable.";
+            if (identity.Contains("utensilio") || identity.Contains("tritur"))
+                return "Hay restos de medicación triturada. Esto conecta preparación, bebida y una intoxicación que debía parecer voluntaria.";
+            return string.Empty;
         }
 
         private void ShowNextHint()
@@ -277,6 +343,9 @@ namespace ArchiveNull.Evidence
             scaler.referenceResolution = new Vector2(1920f, 1080f);
 
             subtitleGroup = CreatePanel("NarrativeSubtitle", canvasObject.transform as RectTransform, new Vector2(0.5f, 0f), new Vector2(980f, 92f), new Vector2(0f, 52f));
+            Canvas subtitleCanvas = subtitleGroup.gameObject.AddComponent<Canvas>();
+            subtitleCanvas.overrideSorting = true;
+            subtitleCanvas.sortingOrder = 20000;
             subtitleText = CreateText(subtitleGroup.transform as RectTransform, 25f, TextAlignmentOptions.Center);
 
             hintGroup = CreatePanel("InactivityHint", canvasObject.transform as RectTransform, new Vector2(0f, 1f), new Vector2(520f, 112f), new Vector2(42f, -42f));
