@@ -338,6 +338,8 @@ public sealed class GlobalPauseMenu : MonoBehaviour
             QualitySettings.SetQualityLevel(Mathf.Clamp(savedQuality, 0, QualitySettings.names.Length - 1), true);
         }
 
+        GraphicsSettingsManager.ApplySaved();
+
         ApplySensitivity(sensitivity);
 
         if (sensitivitySlider != null)
@@ -528,8 +530,14 @@ public sealed class GlobalPauseMenu : MonoBehaviour
                 break;
 
             case PauseOptionsCategory.Video:
-                CreateValueButton(optionsContentRoot, L("CALIDAD GRAFICA", "GRAPHICS QUALITY"), GetQualityLabel(), new Vector2(0f, -58f), CycleQuality);
-                CreateInfoLine(optionsContentRoot, L("La calidad se guarda para el menu principal y las memorias.", "Quality is saved for the main menu and memories."), new Vector2(0f, -146f));
+                CreateCompactValueButton(optionsContentRoot, L("PRESET", "PRESET"), GetQualityLabel(), new Vector2(-205f, -54f), CycleQuality);
+                CreateCompactValueButton(optionsContentRoot, L("SOMBRAS", "SHADOWS"), GraphicsSettingsManager.ShadowLabel(IsSpanish()), new Vector2(205f, -54f), ChangeShadows);
+                CreateCompactValueButton(optionsContentRoot, L("TEXTURAS", "TEXTURES"), GraphicsSettingsManager.TextureLabel(IsSpanish()), new Vector2(-205f, -146f), ChangeTextures);
+                CreateCompactValueButton(optionsContentRoot, L("ANTIALIASING", "ANTI-ALIASING"), GraphicsSettingsManager.AntiAliasingLabel(), new Vector2(205f, -146f), ChangeAntiAliasing);
+                CreateCompactValueButton(optionsContentRoot, L("DISTANCIA SOMBRAS", "SHADOW DISTANCE"), GraphicsSettingsManager.ShadowDistanceLabel(), new Vector2(-205f, -238f), ChangeShadowDistance);
+                CreateCompactValueButton(optionsContentRoot, L("ESCALA DE RENDER", "RENDER SCALE"), GraphicsSettingsManager.RenderScaleLabel(), new Vector2(205f, -238f), ChangeRenderScale);
+                CreateCompactValueButton(optionsContentRoot, "VSYNC", GraphicsSettingsManager.VSyncLabel(), new Vector2(-205f, -330f), ChangeVSync);
+                CreateCompactValueButton(optionsContentRoot, L("LIMITE FPS", "FPS LIMIT"), GraphicsSettingsManager.FpsLabel(), new Vector2(205f, -330f), ChangeFpsLimit);
                 break;
 
             case PauseOptionsCategory.Controls:
@@ -570,6 +578,26 @@ public sealed class GlobalPauseMenu : MonoBehaviour
 
         TMP_Text valueText = CreateText("ValueText", rect, value, 18, FontStyles.Bold, TextAlignmentOptions.Center);
         Stretch(valueText.rectTransform);
+    }
+
+    private void CreateCompactValueButton(RectTransform parent, string label, string value, Vector2 anchoredPosition, UnityEngine.Events.UnityAction action)
+    {
+        RectTransform rect = CreatePanel(label + "CompactValue", parent, new Vector2(380f, 72f), new Vector2(0.5f, 1f), new Color(0.045f, 0.085f, 0.078f, 1f));
+        rect.anchoredPosition = anchoredPosition;
+        Button button = rect.gameObject.AddComponent<Button>();
+        button.targetGraphic = rect.GetComponent<Image>();
+        button.onClick.AddListener(action);
+
+        TMP_Text labelText = CreateText("Label", rect, label, 15, FontStyles.Bold, TextAlignmentOptions.Left);
+        Stretch(labelText.rectTransform);
+        labelText.rectTransform.offsetMin = new Vector2(16f, 36f);
+        labelText.rectTransform.offsetMax = new Vector2(-16f, -8f);
+        labelText.color = new Color(0.55f, 0.78f, 0.73f, 1f);
+
+        TMP_Text valueText = CreateText("Value", rect, value, 20, FontStyles.Bold, TextAlignmentOptions.Left);
+        Stretch(valueText.rectTransform);
+        valueText.rectTransform.offsetMin = new Vector2(16f, 8f);
+        valueText.rectTransform.offsetMax = new Vector2(-16f, -32f);
     }
 
     private void CreateInfoLine(RectTransform parent, string value, Vector2 anchoredPosition)
@@ -807,13 +835,7 @@ public sealed class GlobalPauseMenu : MonoBehaviour
 
     private void CycleQuality()
     {
-        string[] names = QualitySettings.names;
-        if (names == null || names.Length == 0)
-        {
-            return;
-        }
-
-        OnQualityChanged((QualitySettings.GetQualityLevel() + 1) % names.Length);
+        GraphicsSettingsManager.CyclePreset();
         if (currentOptionsCategory == PauseOptionsCategory.Video)
         {
             BuildOptionsCategory(PauseOptionsCategory.Video);
@@ -827,15 +849,21 @@ public sealed class GlobalPauseMenu : MonoBehaviour
             return;
         }
 
-        string[] names = QualitySettings.names;
-        qualityValueText.text = names != null && names.Length > 0 ? names[Mathf.Clamp(QualitySettings.GetQualityLevel(), 0, names.Length - 1)].ToUpperInvariant() : "N/A";
+        qualityValueText.text = GetQualityLabel();
     }
 
     private static string GetQualityLabel()
     {
-        string[] names = QualitySettings.names;
-        return names != null && names.Length > 0 ? names[Mathf.Clamp(QualitySettings.GetQualityLevel(), 0, names.Length - 1)].ToUpperInvariant() : "N/A";
+        return GraphicsSettingsManager.PresetLabel(IsSpanish());
     }
+
+    private void ChangeShadows() { GraphicsSettingsManager.CycleShadows(); BuildOptionsCategory(PauseOptionsCategory.Video); }
+    private void ChangeTextures() { GraphicsSettingsManager.CycleTextures(); BuildOptionsCategory(PauseOptionsCategory.Video); }
+    private void ChangeAntiAliasing() { GraphicsSettingsManager.CycleAntiAliasing(); BuildOptionsCategory(PauseOptionsCategory.Video); }
+    private void ChangeShadowDistance() { GraphicsSettingsManager.CycleShadowDistance(); BuildOptionsCategory(PauseOptionsCategory.Video); }
+    private void ChangeRenderScale() { GraphicsSettingsManager.CycleRenderScale(); BuildOptionsCategory(PauseOptionsCategory.Video); }
+    private void ChangeVSync() { GraphicsSettingsManager.ToggleVSync(); BuildOptionsCategory(PauseOptionsCategory.Video); }
+    private void ChangeFpsLimit() { GraphicsSettingsManager.CycleFps(); BuildOptionsCategory(PauseOptionsCategory.Video); }
 
     private void BuildGlitchBackdrop(RectTransform parent)
     {

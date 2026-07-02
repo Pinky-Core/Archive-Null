@@ -1654,6 +1654,13 @@ namespace ArchiveNull.UI
 
                 case SettingsPage.Video:
                     _settingsItems.Add(new MenuItem { Label = BuildQualityLabel(), Action = CycleQuality, AdjustAction = AdjustQuality, PreferAdjustWithHorizontal = true });
+                    _settingsItems.Add(new MenuItem { Label = BuildGraphicsValueLabel(Localize("SOMBRAS", "SHADOWS"), GraphicsSettingsManager.ShadowLabel(_languageIndex == 0)), Action = ChangeGraphicsShadows });
+                    _settingsItems.Add(new MenuItem { Label = BuildGraphicsValueLabel(Localize("TEXTURAS", "TEXTURES"), GraphicsSettingsManager.TextureLabel(_languageIndex == 0)), Action = ChangeGraphicsTextures });
+                    _settingsItems.Add(new MenuItem { Label = BuildGraphicsValueLabel("ANTIALIASING", GraphicsSettingsManager.AntiAliasingLabel()), Action = ChangeGraphicsAntiAliasing });
+                    _settingsItems.Add(new MenuItem { Label = BuildGraphicsValueLabel(Localize("DISTANCIA SOMBRAS", "SHADOW DISTANCE"), GraphicsSettingsManager.ShadowDistanceLabel()), Action = ChangeGraphicsShadowDistance });
+                    _settingsItems.Add(new MenuItem { Label = BuildGraphicsValueLabel(Localize("ESCALA RENDER", "RENDER SCALE"), GraphicsSettingsManager.RenderScaleLabel()), Action = ChangeGraphicsRenderScale });
+                    _settingsItems.Add(new MenuItem { Label = BuildGraphicsValueLabel("VSYNC", GraphicsSettingsManager.VSyncLabel()), Action = ChangeGraphicsVSync });
+                    _settingsItems.Add(new MenuItem { Label = BuildGraphicsValueLabel(Localize("LIMITE FPS", "FPS LIMIT"), GraphicsSettingsManager.FpsLabel()), Action = ChangeGraphicsFps });
                     _settingsItems.Add(new MenuItem { Label = BuildScanlinesLabel(), Action = ToggleScanlines });
                     _settingsItems.Add(new MenuItem { Label = BuildChromaticLabel(), Action = ToggleChromatic });
                     _settingsItems.Add(new MenuItem { Label = BuildFlickerLabel(), Action = CycleFlicker });
@@ -2108,6 +2115,8 @@ namespace ArchiveNull.UI
                 QualitySettings.SetQualityLevel(qualityIndex, true);
             }
 
+            GraphicsSettingsManager.ApplySaved();
+
             ApplyRuntimeSettings();
         }
 
@@ -2221,25 +2230,7 @@ namespace ArchiveNull.UI
 
         private void AdjustQuality(int direction)
         {
-            string[] qualityNames = QualitySettings.names;
-            if (qualityNames == null || qualityNames.Length == 0)
-            {
-                SetStatus(Localize("NO HAY PRESETS DE CALIDAD DISPONIBLES.", "NO QUALITY PRESETS AVAILABLE."));
-                return;
-            }
-
-            int nextIndex = QualitySettings.GetQualityLevel() + direction;
-            if (nextIndex < 0)
-            {
-                nextIndex = qualityNames.Length - 1;
-            }
-            else if (nextIndex >= qualityNames.Length)
-            {
-                nextIndex = 0;
-            }
-
-            QualitySettings.SetQualityLevel(nextIndex, true);
-            PlayerPrefs.SetInt("global.pause.quality", nextIndex);
+            GraphicsSettingsManager.CyclePreset(direction);
             SavePreferences();
             RebuildSettingsPage(_settingsPage, false);
             SetStatus(Localize($"CALIDAD CAMBIADA A {GetQualityLabel()}.", $"QUALITY SET TO {GetQualityLabel()}."));
@@ -2558,6 +2549,11 @@ namespace ArchiveNull.UI
             return $"{Localize("CALIDAD", "QUALITY")} ................ {GetQualityLabel()}";
         }
 
+        private static string BuildGraphicsValueLabel(string title, string value)
+        {
+            return $"{title} ................ {value}";
+        }
+
         private string BuildScanlinesLabel()
         {
             return $"{Localize("SCANLINES CRT", "CRT SCANLINES")} ...... {(_scanlinesEnabled ? "ON" : "OFF")}";
@@ -2792,14 +2788,22 @@ namespace ArchiveNull.UI
 
         private string GetQualityLabel()
         {
-            string[] qualityNames = QualitySettings.names;
-            if (qualityNames == null || qualityNames.Length == 0)
-            {
-                return "---";
-            }
+            return GraphicsSettingsManager.PresetLabel(_languageIndex == 0);
+        }
 
-            int currentIndex = Mathf.Clamp(QualitySettings.GetQualityLevel(), 0, qualityNames.Length - 1);
-            return qualityNames[currentIndex].ToUpperInvariant();
+        private void ChangeGraphicsShadows() { GraphicsSettingsManager.CycleShadows(); RefreshGraphicsSettings(); }
+        private void ChangeGraphicsTextures() { GraphicsSettingsManager.CycleTextures(); RefreshGraphicsSettings(); }
+        private void ChangeGraphicsAntiAliasing() { GraphicsSettingsManager.CycleAntiAliasing(); RefreshGraphicsSettings(); }
+        private void ChangeGraphicsShadowDistance() { GraphicsSettingsManager.CycleShadowDistance(); RefreshGraphicsSettings(); }
+        private void ChangeGraphicsRenderScale() { GraphicsSettingsManager.CycleRenderScale(); RefreshGraphicsSettings(); }
+        private void ChangeGraphicsVSync() { GraphicsSettingsManager.ToggleVSync(); RefreshGraphicsSettings(); }
+        private void ChangeGraphicsFps() { GraphicsSettingsManager.CycleFps(); RefreshGraphicsSettings(); }
+
+        private void RefreshGraphicsSettings()
+        {
+            RebuildSettingsPage(_settingsPage, false);
+            SavePreferences();
+            SetStatus(Localize("CONFIGURACION GRAFICA APLICADA.", "GRAPHICS SETTINGS APPLIED."));
         }
 
         private string GetLanguageLabel()

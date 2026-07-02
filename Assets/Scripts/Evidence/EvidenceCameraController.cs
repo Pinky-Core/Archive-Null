@@ -13,7 +13,9 @@ namespace ArchiveNull.Evidence
         [Header("Capture")]
         [SerializeField] private Camera playerCamera;
         [SerializeField] private float maxCaptureDistance = 4f;
+        [SerializeField, Min(1f)] private float minimumUnzoomedCaptureDistance = 6f;
         [SerializeField] private float zoomedCaptureDistanceMultiplier = 2.25f;
+        [SerializeField, Min(0f)] private float captureAssistRadius = 0.18f;
         [SerializeField] private int capturedPhotoWidth = 1024;
         [SerializeField] private bool createNotebookIfMissing = true;
         [SerializeField] private Key notebookToggleKey = Key.Tab;
@@ -556,7 +558,9 @@ namespace ArchiveNull.Evidence
                 ToolSlot.Hand => handWheelIcon,
                 ToolSlot.Camera => cameraWheelIcon,
                 ToolSlot.UvLight => uvWheelIcon,
-                ToolSlot.InventoryItem => inventoryWheelIcon,
+                ToolSlot.InventoryItem => collectedPhone != null && collectedPhone.InventoryIcon != null
+                    ? collectedPhone.InventoryIcon
+                    : inventoryWheelIcon,
                 _ => null
             };
         }
@@ -983,7 +987,10 @@ namespace ArchiveNull.Evidence
             target = null;
             blocked = false;
 
-            int hitCount = Physics.RaycastNonAlloc(ray, captureHits, GetEffectiveCaptureDistance(), ~0, QueryTriggerInteraction.Collide);
+            float distance = GetEffectiveCaptureDistance();
+            int hitCount = captureAssistRadius > 0.001f
+                ? Physics.SphereCastNonAlloc(ray, captureAssistRadius, captureHits, distance, ~0, QueryTriggerInteraction.Collide)
+                : Physics.RaycastNonAlloc(ray, captureHits, distance, ~0, QueryTriggerInteraction.Collide);
             if (hitCount <= 0)
             {
                 return false;
@@ -1023,12 +1030,12 @@ namespace ArchiveNull.Evidence
         {
             if (playerCamera == null || defaultFov <= 0.001f || maxCaptureDistance <= 0f)
             {
-                return maxCaptureDistance;
+                return Mathf.Max(maxCaptureDistance, minimumUnzoomedCaptureDistance);
             }
 
             float zoom01 = Mathf.InverseLerp(defaultFov, minZoomFov, playerCamera.fieldOfView);
             float multiplier = Mathf.Lerp(1f, Mathf.Max(1f, zoomedCaptureDistanceMultiplier), zoom01);
-            return maxCaptureDistance * multiplier;
+            return Mathf.Max(maxCaptureDistance, minimumUnzoomedCaptureDistance) * multiplier;
         }
 
         private static void SortHitsByDistance(RaycastHit[] hits, int count)

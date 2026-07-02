@@ -115,6 +115,10 @@ namespace ArchiveNull.Evidence
             "MISSED|Numero desconocido|17:56|Llamada perdida"
         };
 
+        [Header("Digital Evidence")]
+        [SerializeField] private EvidenceData messagesEvidence;
+        [SerializeField] private EvidenceData callsEvidence;
+
         [Header("Presentation")]
         [SerializeField] private float powerOnDuration = 0.32f;
         [SerializeField] private Color accentColor = new(0.2f, 0.82f, 0.72f, 1f);
@@ -495,6 +499,12 @@ namespace ArchiveNull.Evidence
             }
 
             currentScreen = screen;
+            if (screen == PhoneScreen.Calls)
+            {
+                RegisterDigitalEvidence(callsEvidence, "phone_call_log", "Registro de llamadas de Julián",
+                    "El historial permite contrastar horarios, contactos y llamadas perdidas durante las horas previas a la muerte.",
+                    "El registro de llamadas puede ubicar contactos dentro de la línea temporal del caso.");
+            }
             selectedItem = 0;
             RefreshScreen();
         }
@@ -963,10 +973,32 @@ namespace ArchiveNull.Evidence
 
         private void OpenChat(int index)
         {
+            RegisterDigitalEvidence(messagesEvidence, "phone_messages", "Mensajes del teléfono de Julián",
+                "Los mensajes conservan el tono habitual de Julián y permiten compararlo con el supuesto mensaje final enviado a Sofía.",
+                "Este mensaje final es demasiado breve y directo. No coincide con la forma habitual de escribir de Julián.");
             selectedChat = Mathf.Clamp(index, 0, Mathf.Max(0, (chats?.Length ?? 1) - 1));
             currentScreen = PhoneScreen.Chat;
             selectedItem = 0;
             RefreshScreen();
+        }
+
+        private static void RegisterDigitalEvidence(EvidenceData configuredData, string fallbackId, string fallbackName,
+            string fallbackDescription, string fallbackNarrative)
+        {
+            EvidenceData data = configuredData;
+            if (data == null)
+            {
+                data = ScriptableObject.CreateInstance<EvidenceData>();
+                data.name = fallbackId;
+                data.evidenceId = fallbackId;
+                data.evidenceName = fallbackName;
+                data.description = fallbackDescription;
+                data.narrativeLine = fallbackNarrative;
+                data.category = EvidenceCategory.Document;
+                data.sourceSceneName = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
+            }
+
+            EvidenceInventory.Instance.RegisterEvidence(data);
         }
 
         private void BuildConversation()

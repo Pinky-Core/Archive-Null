@@ -22,6 +22,7 @@ public class InspectObject : MonoBehaviour
     public float holdRadius = 0.18f;
     public float obstructionPadding = 0.03f;
     public LayerMask obstructionLayers = ~0;
+    public bool avoidObstructionsWhileInspecting;
     public bool disableObjectCollisionWhileInspecting = true;
     public bool climbToVisualRoot = true;
 
@@ -42,6 +43,7 @@ public class InspectObject : MonoBehaviour
     private Rigidbody inspectedRigidbody;
     private RigidbodyConstraints originalConstraints;
     private float inspectDistance;
+    private float inspectAnchorDistance;
     private float heldCollisionRadius;
     private Vector3 heldLocalCenterOffset;
     private readonly RaycastHit[] obstructionHits = new RaycastHit[16];
@@ -52,11 +54,41 @@ public class InspectObject : MonoBehaviour
 
     public static bool IsAnyInspecting { get; private set; }
 
+    void Awake()
+    {
+        // En escenas antiguas este componente quedo copiado en cada objeto inspeccionable.
+        // Solo el componente colocado en el punto de inspeccion debe procesar input.
+        bool isInspectionController = inspectPosition != null && gameObject == inspectPosition.gameObject;
+        if (!isInspectionController)
+        {
+            enabled = false;
+            return;
+        }
+
+        SpriteRenderer marker = GetComponent<SpriteRenderer>();
+        if (marker != null)
+        {
+            marker.enabled = false;
+        }
+    }
+
     void Start()
     {
-        playerCamera = Camera.main;
-        playerRigidbody = player.GetComponent<Rigidbody>();
-        originalConstraints = playerRigidbody.constraints;
+        if (!enabled)
+        {
+            return;
+        }
+
+        playerCamera = inspectPosition != null ? inspectPosition.GetComponentInParent<Camera>() : null;
+        if (playerCamera == null)
+        {
+            playerCamera = Camera.main;
+        }
+        playerRigidbody = player != null ? player.GetComponent<Rigidbody>() : null;
+        if (playerRigidbody != null)
+        {
+            originalConstraints = playerRigidbody.constraints;
+        }
         if (inspectText != null)
         {
             inspectText.gameObject.SetActive(false);
@@ -172,7 +204,8 @@ public class InspectObject : MonoBehaviour
         }
 
         CacheAndDisableInspectedColliders();
-        inspectDistance = Mathf.Clamp(Vector3.Distance(playerCamera.transform.position, inspectPosition.position), minInspectDistance, maxInspectDistance);
+        inspectAnchorDistance = Vector3.Distance(playerCamera.transform.position, inspectPosition.position);
+        inspectDistance = Mathf.Clamp(inspectAnchorDistance, GetMinimumSafeInspectDistance(), Mathf.Max(maxInspectDistance, inspectAnchorDistance));
         currentObject.transform.rotation = inspectPosition.rotation;
         currentObject.transform.position = GetSafeInspectObjectPosition();
         isInspecting = true;
@@ -300,8 +333,10 @@ public class InspectObject : MonoBehaviour
         float rotateX = mouseDelta.x * rotationSpeed * Time.deltaTime * 0.1f;
         float rotateY = mouseDelta.y * rotationSpeed * Time.deltaTime * 0.1f;
 
-        currentObject.transform.Rotate(playerCamera.transform.up, -rotateX, Space.World);
-        currentObject.transform.Rotate(playerCamera.transform.right, rotateY, Space.World);
+        Vector3 visualCenter = GetSafeInspectCenterPosition();
+        currentObject.transform.RotateAround(visualCenter, playerCamera.transform.up, -rotateX);
+        currentObject.transform.RotateAround(visualCenter, playerCamera.transform.right, rotateY);
+        UpdateHeldObjectPosition();
     }
 
     void UpdateZoom()
@@ -317,7 +352,8 @@ public class InspectObject : MonoBehaviour
             return;
         }
 
-        inspectDistance = Mathf.Clamp(inspectDistance - scroll * zoomSpeed * 0.01f, GetMinimumSafeInspectDistance(), maxInspectDistance);
+        float maximumDistance = Mathf.Max(maxInspectDistance, inspectAnchorDistance, GetMinimumSafeInspectDistance());
+        inspectDistance = Mathf.Clamp(inspectDistance - scroll * zoomSpeed * 0.01f, GetMinimumSafeInspectDistance(), maximumDistance);
         UpdateHeldObjectPosition();
     }
 
@@ -340,11 +376,19 @@ public class InspectObject : MonoBehaviour
     Vector3 GetSafeInspectCenterPosition()
     {
         Vector3 origin = playerCamera.transform.position;
-        Vector3 direction = playerCamera.transform.forward;
-        float distance = Mathf.Clamp(inspectDistance, GetMinimumSafeInspectDistance(), maxInspectDistance);
+        Vector3 anchorOffset = inspectPosition.position - origin;
+        Vector3 direction = anchorOffset.sqrMagnitude > 0.0001f ? anchorOffset.normalized : playerCamera.transform.forward;
+        float maximumDistance = Mathf.Max(maxInspectDistance, inspectAnchorDistance);
+        float distance = Mathf.Clamp(inspectDistance, GetMinimumSafeInspectDistance(), maximumDistance);
+        if (!avoidObstructionsWhileInspecting)
+        {
+            return origin + direction * distance;
+        }
+
         float radius = Mathf.Max(holdRadius, heldCollisionRadius);
         int hitCount = Physics.SphereCastNonAlloc(origin, radius, direction, obstructionHits, distance, obstructionLayers, QueryTriggerInteraction.Ignore);
         float nearestDistance = distance;
+        bool obstructed = false;
         for (int i = 0; i < hitCount; i++)
         {
             Collider hitCollider = obstructionHits[i].collider;
@@ -354,15 +398,18 @@ public class InspectObject : MonoBehaviour
             }
 
             nearestDistance = Mathf.Min(nearestDistance, obstructionHits[i].distance);
+            obstructed = true;
         }
 
-        return origin + direction * Mathf.Max(0.02f, nearestDistance - obstructionPadding);
+        float safeDistance = obstructed ? nearestDistance - obstructionPadding : nearestDistance;
+        return origin + direction * Mathf.Max(0.02f, safeDistance);
     }
 
     float GetMinimumSafeInspectDistance()
     {
         float cameraNear = playerCamera != null ? playerCamera.nearClipPlane : 0.03f;
-        return Mathf.Max(minInspectDistance, cameraNear + heldCollisionRadius + cameraClipPadding);
+        float objectRadius = avoidObstructionsWhileInspecting ? heldCollisionRadius : holdRadius;
+        return Mathf.Max(minInspectDistance, cameraNear + objectRadius + cameraClipPadding);
     }
 
     void CacheAndDisableInspectedColliders()

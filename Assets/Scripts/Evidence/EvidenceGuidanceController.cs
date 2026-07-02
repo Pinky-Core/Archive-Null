@@ -87,6 +87,20 @@ namespace ArchiveNull.Evidence
                 return;
             }
 
+            if (CrimeSceneTutorial.IsActive)
+            {
+                if (objectiveGroup != null)
+                {
+                    objectiveGroup.gameObject.SetActive(false);
+                }
+                return;
+            }
+
+            if (objectiveGroup != null && !objectiveGroup.gameObject.activeSelf)
+            {
+                RefreshObjective();
+            }
+
             if (Time.unscaledTime - lastProgressTime >= inactivityHintDelay)
             {
                 lastProgressTime = Time.unscaledTime;

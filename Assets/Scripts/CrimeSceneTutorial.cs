@@ -24,9 +24,11 @@ public sealed class CrimeSceneTutorial : MonoBehaviour
     private Transform evidenceWaypointTarget;
     private int step;
     private bool evidenceRegistered;
+    private float nextWaypointRefreshTime;
+    public static bool IsActive { get; private set; }
 
     [Header("Debug")]
-    [SerializeField] private bool alwaysShowInEditor = true;
+    [SerializeField] private bool alwaysShowInEditor;
     [SerializeField] private bool resetOnPlayInEditor = false;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -54,13 +56,7 @@ public sealed class CrimeSceneTutorial : MonoBehaviour
             return;
         }
 
-#if UNITY_EDITOR
-        bool skipByCompletion = false;
-#else
-        bool skipByCompletion = true;
-#endif
-
-        if (skipByCompletion && PlayerPrefs.GetInt(CompletedPref, 0) == 1)
+        if (PlayerPrefs.GetInt(CompletedPref, 0) == 1)
         {
             return;
         }
@@ -76,6 +72,7 @@ public sealed class CrimeSceneTutorial : MonoBehaviour
 
     private void Awake()
     {
+        IsActive = true;
 #if UNITY_EDITOR
         if (resetOnPlayInEditor)
         {
@@ -94,6 +91,11 @@ public sealed class CrimeSceneTutorial : MonoBehaviour
         CacheWaypointTargets();
         SetVisible(true);
         RefreshText();
+    }
+
+    private void OnDestroy()
+    {
+        IsActive = false;
     }
 
     private void OnEnable()
@@ -202,11 +204,11 @@ public sealed class CrimeSceneTutorial : MonoBehaviour
 
         text.text = step switch
         {
-            0 => "AYUDA // MEMORIA ACTIVA\nExplora el lugar. Puedes ocultar estas ayudas desde Pausa > General.",
-            1 => "AYUDA // INSPECCION\nMira un objeto marcado para examinarlo. Puedes girarlo y acercarlo mientras lo inspeccionas.",
-            2 => "AYUDA // HERRAMIENTAS\nAbre la rueda para elegir mano, camara, luz UV u objetos recogidos.",
-            3 => "AYUDA // REGISTRO\nEnfoca una evidencia con la camara y registra una fotografia.",
-            4 => "AYUDA // LIBRETA Y GALERIA\nLa galeria conserva evidencias; la libreta es un espacio separado para tus notas.",
+            0 => "OBJETIVO // RECONSTRUIR LA ESCENA\nJulián Herrera apareció muerto en esta casa. La escena sugiere suicidio, pero el expediente señala inconsistencias. Busca qué fue real y qué pudo ser colocado.",
+            1 => "ANALISIS // OBJETOS\nExamina objetos relevantes. Su posición, estado y contexto pueden contradecir la primera lectura de la escena.",
+            2 => "EQUIPO // REGISTRO FORENSE\nLa mano interactúa, la cámara documenta, la luz UV revela rastros y la cuarta ranura guarda objetos recogidos.",
+            3 => "OBJETIVO // REGISTRAR EVIDENCIA\nDocumenta el frasco, el teléfono, la copa y cualquier rastro físico. Una pista aislada no demuestra culpabilidad.",
+            4 => "REVISION // EXPEDIENTE\nLa galería contiene evidencia registrada. La libreta conserva tus notas. Vuelve a la oficina cuando puedas sostener una hipótesis.",
             _ => string.Empty
         };
 
@@ -273,13 +275,15 @@ public sealed class CrimeSceneTutorial : MonoBehaviour
             }
         }
 
-        if (step == 1)
+        if (Time.unscaledTime >= nextWaypointRefreshTime && step == 1)
         {
             inspectWaypointTarget = FindNearestInspectableTarget();
+            nextWaypointRefreshTime = Time.unscaledTime + 0.5f;
         }
-        else if (step == 3)
+        else if (Time.unscaledTime >= nextWaypointRefreshTime && step == 3)
         {
             evidenceWaypointTarget = FindNearestEvidenceTarget();
+            nextWaypointRefreshTime = Time.unscaledTime + 0.5f;
         }
 
         bool showInspect = step == 1 && inspectWaypointTarget != null;

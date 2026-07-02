@@ -13065,7 +13065,7 @@ MonoBehaviour:
   subtitleText: {fileID: 0}
   subtitleGroup: {fileID: 0}
   playOnlyFirstTime: 1
-  alwaysShowInEditor: 1
+  alwaysShowInEditor: 0
   resetTutorialOnStart: 0
   lineGap: 0.35
   subtitleFadeDuration: 0.2
@@ -13074,18 +13074,17 @@ MonoBehaviour:
   sitPromptDelay: 2.2
   lines:
   - step: 0
-    subtitle: Bienvenido, Operador #253...
+    subtitle: 'Operador 253, se le asigno el caso de Julian Herrera, 41 anos. Fue hallado muerto en la sala de su casa familiar, cerrada desde adentro.'
     voiceClip: {fileID: 0}
-    fallbackDuration: 3.5
+    fallbackDuration: 6
   - step: 1
-    subtitle: Antes de abrir un expediente, familiaricese con la oficina. Use W A
-      S D para moverse y el mouse para mirar.
+    subtitle: 'La escena fue clasificada como posible suicidio: un frasco de pastillas y un mensaje final sostienen esa lectura. Hay inconsistencias. Lea el expediente sobre la mesa antes de entrar.'
     voiceClip: {fileID: 0}
-    fallbackDuration: 5
+    fallbackDuration: 7
   - step: 2
-    subtitle: Cuando este listo, tome asiento frente al terminal.
+    subtitle: Su tarea no es confirmar una sospecha. Debe separar evidencia real, circunstancial y plantada. Cuando termine de leer, tome asiento frente al terminal.
     voiceClip: {fileID: 0}
-    fallbackDuration: 3.2
+    fallbackDuration: 6
   - step: 3
     subtitle: Asiento confirmado. La pantalla esta lista para recibir entrada.
     voiceClip: {fileID: 0}

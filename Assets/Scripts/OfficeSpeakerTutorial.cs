@@ -56,20 +56,20 @@ namespace ArchiveNull.UI
             new()
             {
                 step = TutorialStep.Welcome,
-                subtitle = "Bienvenido, Operador 253. Hay un expediente preliminar sobre la mesa.",
-                fallbackDuration = 3.5f
+                subtitle = "Operador 253, se le asignó el caso de Julián Herrera, 41 años. Fue hallado muerto en la sala de su casa familiar, cerrada desde adentro.",
+                fallbackDuration = 6f
             },
             new()
             {
                 step = TutorialStep.Movement,
-                subtitle = "Lealo antes de montar una memoria. Use W A S D para moverse, el mouse para mirar y click para interactuar.",
-                fallbackDuration = 5f
+                subtitle = "La escena fue clasificada como posible suicidio: un frasco de pastillas y un mensaje final sostienen esa lectura. Hay inconsistencias. Lea el expediente sobre la mesa antes de entrar.",
+                fallbackDuration = 7f
             },
             new()
             {
                 step = TutorialStep.SitPrompt,
-                subtitle = "Cuando termine de revisar la carpeta, tome asiento frente al terminal.",
-                fallbackDuration = 3.2f
+                subtitle = "Su tarea no es confirmar una sospecha. Debe separar evidencia real, circunstancial y plantada. Cuando termine de leer, tome asiento frente al terminal.",
+                fallbackDuration = 6f
             },
             new()
             {
