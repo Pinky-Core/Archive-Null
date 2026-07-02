@@ -36,6 +36,10 @@ public class InspectObject : MonoBehaviour
     private bool isInspecting = false;
     private Vector3 originalPosition;
     private Quaternion originalRotation;
+    private Transform originalParent;
+    private int originalSiblingIndex;
+    private Vector3 originalInspectLocalPosition;
+    private Quaternion originalInspectLocalRotation;
     private bool originalKinematic;
     private Collider[] inspectedColliders;
     private bool[] inspectedColliderStates;
@@ -104,13 +108,12 @@ public class InspectObject : MonoBehaviour
     {
         if (isInspecting)
         {
-            UpdateHeldObjectPosition();
-
-            if (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
+            if (GlobalPauseMenu.IsPaused)
             {
-                ReleaseObject();
                 return;
             }
+
+            UpdateHeldObjectPosition();
 
             if (GlobalInputBindings.WasPressed(GameInputAction.ReleaseInspect))
             {
@@ -194,6 +197,10 @@ public class InspectObject : MonoBehaviour
 #endif
         originalPosition = currentObject.transform.position;
         originalRotation = currentObject.transform.rotation;
+        originalParent = currentObject.transform.parent;
+        originalSiblingIndex = currentObject.transform.GetSiblingIndex();
+        originalInspectLocalPosition = inspectPosition.localPosition;
+        originalInspectLocalRotation = inspectPosition.localRotation;
         inspectedRigidbody = currentObject.GetComponent<Rigidbody>();
         if (inspectedRigidbody != null)
         {
@@ -208,6 +215,7 @@ public class InspectObject : MonoBehaviour
         inspectDistance = Mathf.Clamp(inspectAnchorDistance, GetMinimumSafeInspectDistance(), Mathf.Max(maxInspectDistance, inspectAnchorDistance));
         currentObject.transform.rotation = inspectPosition.rotation;
         currentObject.transform.position = GetSafeInspectObjectPosition();
+        currentObject.transform.SetParent(inspectPosition, true);
         isInspecting = true;
         IsAnyInspecting = true;
         if (movementScript != null) movementScript.enabled = false;
@@ -307,8 +315,15 @@ public class InspectObject : MonoBehaviour
             }
 
             RestoreInspectedColliders();
+            currentObject.transform.SetParent(originalParent, true);
+            if (originalParent != null)
+            {
+                currentObject.transform.SetSiblingIndex(Mathf.Clamp(originalSiblingIndex, 0, originalParent.childCount - 1));
+            }
             currentObject.transform.position = originalPosition;
             currentObject.transform.rotation = originalRotation;
+            inspectPosition.localPosition = originalInspectLocalPosition;
+            inspectPosition.localRotation = originalInspectLocalRotation;
             currentObject = null;
             inspectedRigidbody = null;
             isInspecting = false;
@@ -333,9 +348,8 @@ public class InspectObject : MonoBehaviour
         float rotateX = mouseDelta.x * rotationSpeed * Time.deltaTime * 0.1f;
         float rotateY = mouseDelta.y * rotationSpeed * Time.deltaTime * 0.1f;
 
-        Vector3 visualCenter = GetSafeInspectCenterPosition();
-        currentObject.transform.RotateAround(visualCenter, playerCamera.transform.up, -rotateX);
-        currentObject.transform.RotateAround(visualCenter, playerCamera.transform.right, rotateY);
+        inspectPosition.Rotate(playerCamera.transform.up, -rotateX, Space.World);
+        inspectPosition.Rotate(playerCamera.transform.right, rotateY, Space.World);
         UpdateHeldObjectPosition();
     }
 
@@ -354,6 +368,10 @@ public class InspectObject : MonoBehaviour
 
         float maximumDistance = Mathf.Max(maxInspectDistance, inspectAnchorDistance, GetMinimumSafeInspectDistance());
         inspectDistance = Mathf.Clamp(inspectDistance - scroll * zoomSpeed * 0.01f, GetMinimumSafeInspectDistance(), maximumDistance);
+        Vector3 localDirection = originalInspectLocalPosition.sqrMagnitude > 0.0001f
+            ? originalInspectLocalPosition.normalized
+            : Vector3.forward;
+        inspectPosition.localPosition = localDirection * inspectDistance;
         UpdateHeldObjectPosition();
     }
 

@@ -1005,18 +1005,14 @@ namespace ArchiveNull.Evidence
                     continue;
                 }
 
-                target = hitCollider.GetComponent<EvidenceTarget>();
-                if (target == null)
-                {
-                    target = hitCollider.GetComponentInParent<EvidenceTarget>();
-                }
+                target = ResolveEvidenceTarget(hitCollider, captureHits[i].point);
 
                 if (target != null)
                 {
                     return true;
                 }
 
-                if (!hitCollider.isTrigger)
+                if (!hitCollider.isTrigger && !IsPlayerOrToolCollider(hitCollider))
                 {
                     blocked = true;
                     return false;
@@ -1024,6 +1020,70 @@ namespace ArchiveNull.Evidence
             }
 
             return false;
+        }
+
+        private static EvidenceTarget ResolveEvidenceTarget(Collider hitCollider, Vector3 hitPoint)
+        {
+            if (hitCollider == null)
+            {
+                return null;
+            }
+
+            EvidenceTarget direct = hitCollider.GetComponent<EvidenceTarget>() ??
+                                    hitCollider.GetComponentInParent<EvidenceTarget>() ??
+                                    hitCollider.GetComponentInChildren<EvidenceTarget>(true);
+            if (direct != null)
+            {
+                return direct;
+            }
+
+            Transform ancestor = hitCollider.transform.parent;
+            for (int depth = 0; depth < 3 && ancestor != null; depth++, ancestor = ancestor.parent)
+            {
+                EvidenceTarget[] candidates = ancestor.GetComponentsInChildren<EvidenceTarget>(true);
+                EvidenceTarget nearest = null;
+                float nearestSqrDistance = 0.45f * 0.45f;
+                for (int i = 0; i < candidates.Length; i++)
+                {
+                    EvidenceTarget candidate = candidates[i];
+                    if (candidate == null || !candidate.gameObject.activeInHierarchy)
+                    {
+                        continue;
+                    }
+
+                    float sqrDistance = (candidate.transform.position - hitPoint).sqrMagnitude;
+                    if (sqrDistance <= nearestSqrDistance)
+                    {
+                        nearestSqrDistance = sqrDistance;
+                        nearest = candidate;
+                    }
+                }
+
+                if (nearest != null)
+                {
+                    return nearest;
+                }
+            }
+
+            return null;
+        }
+
+        private bool IsPlayerOrToolCollider(Collider candidate)
+        {
+            if (candidate == null)
+            {
+                return true;
+            }
+
+            Transform candidateTransform = candidate.transform;
+            if (playerCamera != null && candidateTransform.IsChildOf(playerCamera.transform.root))
+            {
+                return true;
+            }
+
+            return (cameraToolObject != null && candidateTransform.IsChildOf(cameraToolObject.transform)) ||
+                   (uvLightToolObject != null && candidateTransform.IsChildOf(uvLightToolObject.transform)) ||
+                   (handToolObject != null && candidateTransform.IsChildOf(handToolObject.transform));
         }
 
         private float GetEffectiveCaptureDistance()

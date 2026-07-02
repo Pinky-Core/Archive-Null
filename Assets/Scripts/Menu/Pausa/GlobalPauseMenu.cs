@@ -80,6 +80,8 @@ public sealed class GlobalPauseMenu : MonoBehaviour
     private TMP_Text[] rebindValueTexts;
     private RectTransform optionsContentRoot;
     private TMP_Text optionsHeaderText;
+    private GameObject caseSummaryRoot;
+    private TMP_Text caseSummaryText;
     private PauseOptionsCategory currentOptionsCategory;
     private Image[] glitchBars;
     private Image[] glitchBlocks;
@@ -96,6 +98,7 @@ public sealed class GlobalPauseMenu : MonoBehaviour
     private bool isBusy;
     private bool awaitingRebind;
     private GameInputAction pendingRebindAction;
+    public static bool IsPaused => instance != null && instance.isPaused;
 
     private void Awake()
     {
@@ -137,8 +140,7 @@ public sealed class GlobalPauseMenu : MonoBehaviour
 
         if (GlobalInputBindings.WasPressed(GameInputAction.Pause))
         {
-            if (InspectObject.IsAnyInspecting ||
-                ArchiveNull.Evidence.EvidenceNotebookUI.IsAnyNotebookOpen ||
+            if (ArchiveNull.Evidence.EvidenceNotebookUI.IsAnyNotebookOpen ||
                 ArchiveNull.Evidence.PhoneEvidenceReader.IsAnyOpen ||
                 Keypad.IsAnyOpen)
             {
@@ -161,9 +163,10 @@ public sealed class GlobalPauseMenu : MonoBehaviour
         SetVisible(false);
         Time.timeScale = 1f;
         isPaused = false;
-        SetPlayerInputEnabled(true);
-        Cursor.lockState = CursorLockMode.Locked;
-        Cursor.visible = false;
+        bool inspecting = InspectObject.IsAnyInspecting;
+        SetPlayerInputEnabled(!inspecting);
+        Cursor.lockState = inspecting ? CursorLockMode.None : CursorLockMode.Locked;
+        Cursor.visible = inspecting;
     }
 
     public void Pause()
@@ -173,6 +176,8 @@ public sealed class GlobalPauseMenu : MonoBehaviour
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
         optionsPanel.SetActive(false);
+        if (caseSummaryRoot != null) caseSummaryRoot.SetActive(true);
+        RefreshPauseCaseSummary();
         awaitingRebind = false;
         SetVisible(true);
         Time.timeScale = 0f;
@@ -182,12 +187,14 @@ public sealed class GlobalPauseMenu : MonoBehaviour
     public void ShowOptions()
     {
         optionsPanel.SetActive(true);
+        if (caseSummaryRoot != null) caseSummaryRoot.SetActive(false);
         BuildOptionsCategory(currentOptionsCategory);
     }
 
     public void HideOptions()
     {
         optionsPanel.SetActive(false);
+        if (caseSummaryRoot != null) caseSummaryRoot.SetActive(true);
     }
 
     public void ExitToMainMenu()
@@ -279,28 +286,56 @@ public sealed class GlobalPauseMenu : MonoBehaviour
         rootGroup = canvasObject.AddComponent<CanvasGroup>();
 
         RectTransform canvasRect = canvasObject.GetComponent<RectTransform>();
-        Image backdrop = CreateImage("Backdrop", canvasRect, new Color(0f, 0f, 0f, 0.72f));
+        Image backdrop = CreateImage("Backdrop", canvasRect, new Color(0.018f, 0.021f, 0.019f, 0.91f));
         Stretch(backdrop.rectTransform);
         BuildGlitchBackdrop(canvasRect);
 
-        RectTransform leftRail = CreatePanel("PauseLeftRail", canvasRect, new Vector2(560f, 560f), new Vector2(0f, 0.5f), new Color(0f, 0f, 0f, 0f));
-        leftRail.anchoredPosition = new Vector2(96f, 0f);
+        Image topRule = CreateImage("TopRule", canvasRect, new Color(0.66f, 0.62f, 0.48f, 0.5f));
+        topRule.rectTransform.anchorMin = new Vector2(0f, 1f);
+        topRule.rectTransform.anchorMax = new Vector2(1f, 1f);
+        topRule.rectTransform.pivot = new Vector2(0.5f, 1f);
+        topRule.rectTransform.anchoredPosition = new Vector2(0f, -102f);
+        topRule.rectTransform.sizeDelta = new Vector2(0f, 1f);
 
-        RectTransform titleBar = CreatePanel("PauseTitleBar", leftRail, new Vector2(520f, 58f), new Vector2(0f, 1f), new Color(0.035f, 0.15f, 0.135f, 0.82f));
-        titleBar.anchoredPosition = new Vector2(0f, -18f);
-        AddOutline(titleBar.gameObject, new Color(0.45f, 1f, 0.9f, 0.35f));
-        TMP_Text title = CreateText("Title", titleBar, L("MENU DE PAUSA", "PAUSE MENU"), 31, FontStyles.Bold, TextAlignmentOptions.Left);
+        RectTransform leftRail = CreatePanel("PauseLeftRail", canvasRect, new Vector2(600f, 690f), new Vector2(0f, 0.5f), new Color(0f, 0f, 0f, 0f));
+        leftRail.anchoredPosition = new Vector2(116f, 6f);
+
+        RectTransform titleBar = CreatePanel("PauseTitleBar", leftRail, new Vector2(560f, 92f), new Vector2(0f, 1f), new Color(0f, 0f, 0f, 0f));
+        titleBar.anchoredPosition = new Vector2(0f, -4f);
+        TMP_Text title = CreateText("Title", titleBar, L("SISTEMA", "SYSTEM"), 42, FontStyles.Normal, TextAlignmentOptions.Left);
         Stretch(title.rectTransform);
-        title.rectTransform.offsetMin = new Vector2(28f, 0f);
+        title.rectTransform.offsetMin = new Vector2(0f, 8f);
+        title.color = new Color(0.9f, 0.87f, 0.75f, 1f);
 
-        CreateLeftButton(leftRail, L("REANUDAR", "RESUME"), new Vector2(0f, -120f), Resume);
-        CreateLeftButton(leftRail, L("OPCIONES", "OPTIONS"), new Vector2(0f, -204f), ShowOptions);
-        CreateLeftButton(leftRail, L("SALIR AL MENU", "QUIT TO MENU"), new Vector2(0f, -288f), ExitToMainMenu);
+        TMP_Text section = CreateText("Section", leftRail, L("ARCHIVE: NULL  /  SESION EN PAUSA", "ARCHIVE: NULL  /  SESSION PAUSED"), 16, FontStyles.Normal, TextAlignmentOptions.Left);
+        SetPoint(section.rectTransform, new Vector2(0f, 1f), new Vector2(0f, -112f), new Vector2(560f, 30f));
+        section.color = new Color(0.58f, 0.61f, 0.55f, 1f);
 
-        optionsPanel = CreatePanel("OptionsPanel", canvasRect, new Vector2(930f, 660f), new Vector2(1f, 0.5f), new Color(0.018f, 0.034f, 0.032f, 0.94f)).gameObject;
+        CreateLeftButton(leftRail, L("CONTINUAR INVESTIGACION", "CONTINUE INVESTIGATION"), new Vector2(0f, -190f), Resume);
+        CreateLeftButton(leftRail, L("CONFIGURACION", "SETTINGS"), new Vector2(0f, -274f), ShowOptions);
+        CreateLeftButton(leftRail, L("VOLVER A LA OFICINA", "RETURN TO OFFICE"), new Vector2(0f, -358f), ExitToMainMenu);
+
+        caseSummaryRoot = CreatePanel("CaseSummary", canvasRect, new Vector2(680f, 430f), new Vector2(1f, 0.5f), new Color(0.025f, 0.028f, 0.025f, 0.58f)).gameObject;
+        RectTransform caseRect = caseSummaryRoot.GetComponent<RectTransform>();
+        caseRect.anchoredPosition = new Vector2(-128f, 8f);
+        AddOutline(caseSummaryRoot, new Color(0.58f, 0.55f, 0.42f, 0.3f));
+        TMP_Text caseHeader = CreateText("CaseHeader", caseRect, L("EXPEDIENTE ACTIVO", "ACTIVE CASE"), 17, FontStyles.Bold, TextAlignmentOptions.Left);
+        SetPoint(caseHeader.rectTransform, new Vector2(0f, 1f), new Vector2(34f, -34f), new Vector2(500f, 28f));
+        caseHeader.color = new Color(0.65f, 0.61f, 0.46f, 1f);
+        caseSummaryText = CreateText("CaseSummaryText", caseRect, string.Empty, 23, FontStyles.Normal, TextAlignmentOptions.TopLeft);
+        Stretch(caseSummaryText.rectTransform);
+        caseSummaryText.rectTransform.offsetMin = new Vector2(34f, 34f);
+        caseSummaryText.rectTransform.offsetMax = new Vector2(-34f, -82f);
+        caseSummaryText.color = new Color(0.86f, 0.86f, 0.79f, 1f);
+
+        TMP_Text footer = CreateText("Footer", canvasRect, L("ESC  CONTINUAR     CLICK  SELECCIONAR", "ESC  CONTINUE     CLICK  SELECT"), 15, FontStyles.Normal, TextAlignmentOptions.Left);
+        SetPoint(footer.rectTransform, new Vector2(0f, 0f), new Vector2(116f, 42f), new Vector2(760f, 30f));
+        footer.color = new Color(0.52f, 0.54f, 0.49f, 1f);
+
+        optionsPanel = CreatePanel("OptionsPanel", canvasRect, new Vector2(930f, 660f), new Vector2(1f, 0.5f), new Color(0.022f, 0.026f, 0.023f, 0.97f)).gameObject;
         RectTransform optionsRect = optionsPanel.GetComponent<RectTransform>();
         optionsRect.anchoredPosition = new Vector2(-96f, 0f);
-        AddOutline(optionsPanel, new Color(0.4f, 1f, 0.9f, 0.3f));
+        AddOutline(optionsPanel, new Color(0.62f, 0.58f, 0.43f, 0.32f));
 
         optionsHeaderText = CreateText("OptionsTitle", optionsRect, L("OPCIONES", "OPTIONS"), 31, FontStyles.Bold, TextAlignmentOptions.Left);
         SetPoint(optionsHeaderText.rectTransform, new Vector2(0f, 1f), new Vector2(36f, -42f), new Vector2(320f, 42f));
@@ -320,6 +355,20 @@ public sealed class GlobalPauseMenu : MonoBehaviour
         CreateButton(optionsRect, L("CERRAR OPCIONES", "CLOSE OPTIONS"), new Vector2(0f, -604f), HideOptions);
         currentOptionsCategory = PauseOptionsCategory.General;
         BuildOptionsCategory(currentOptionsCategory);
+    }
+
+    private void RefreshPauseCaseSummary()
+    {
+        if (caseSummaryText == null)
+        {
+            return;
+        }
+
+        int evidenceCount = ArchiveNull.Evidence.EvidenceInventory.Instance.GetAllEvidence().Count;
+        string sceneName = SceneManager.GetActiveScene().name;
+        caseSummaryText.text = L(
+            $"LA LLAVE POR DENTRO\n\nUBICACION  {sceneName.ToUpperInvariant()}\nEVIDENCIAS REGISTRADAS  {evidenceCount:00}\n\nOBJETIVO ACTUAL\nDocumentar la escena, contrastar los registros y volver a la oficina cuando exista una hipotesis sostenible.",
+            $"THE KEY FROM INSIDE\n\nLOCATION  {sceneName.ToUpperInvariant()}\nREGISTERED EVIDENCE  {evidenceCount:00}\n\nCURRENT OBJECTIVE\nDocument the scene, compare records, and return to the office once a defensible hypothesis exists.");
     }
 
     private void ApplySavedSettings()
@@ -456,13 +505,13 @@ public sealed class GlobalPauseMenu : MonoBehaviour
 
     private Button CreateLeftButton(RectTransform parent, string label, Vector2 anchoredPosition, UnityEngine.Events.UnityAction action)
     {
-        RectTransform rect = CreatePanel(label + "Button", parent, new Vector2(520f, 58f), new Vector2(0f, 1f), new Color(0.015f, 0.026f, 0.025f, 0.9f));
+        RectTransform rect = CreatePanel(label + "Button", parent, new Vector2(560f, 62f), new Vector2(0f, 1f), new Color(0.055f, 0.057f, 0.049f, 0.72f));
         rect.anchoredPosition = anchoredPosition;
         Button button = rect.gameObject.AddComponent<Button>();
         button.targetGraphic = rect.GetComponent<Image>();
         button.onClick.AddListener(action);
 
-        TMP_Text bullet = CreateText("Bullet", rect, ">", 22, FontStyles.Bold, TextAlignmentOptions.Left);
+        TMP_Text bullet = CreateText("Bullet", rect, "|", 22, FontStyles.Bold, TextAlignmentOptions.Left);
         SetPoint(bullet.rectTransform, new Vector2(0f, 0.5f), new Vector2(18f, 0f), new Vector2(30f, 30f));
 
         TMP_Text text = CreateText("Label", rect, label, 23, FontStyles.Bold, TextAlignmentOptions.Left);
@@ -867,10 +916,10 @@ public sealed class GlobalPauseMenu : MonoBehaviour
 
     private void BuildGlitchBackdrop(RectTransform parent)
     {
-        glitchBars = new Image[24];
+        glitchBars = new Image[12];
         for (int i = 0; i < glitchBars.Length; i++)
         {
-            Image bar = CreateImage("GlitchBar" + i, parent, new Color(0.3f, 0.95f, 0.85f, 0.045f));
+            Image bar = CreateImage("GlitchBar" + i, parent, new Color(0.68f, 0.63f, 0.46f, 0.025f));
             RectTransform rect = bar.rectTransform;
             rect.anchorMin = new Vector2(0f, 0f);
             rect.anchorMax = new Vector2(1f, 0f);
@@ -880,7 +929,7 @@ public sealed class GlobalPauseMenu : MonoBehaviour
             glitchBars[i] = bar;
         }
 
-        glitchBlocks = new Image[18];
+        glitchBlocks = new Image[8];
         for (int i = 0; i < glitchBlocks.Length; i++)
         {
             Image block = CreateImage("GlitchBlock" + i, parent, new Color(0.1f, 0.95f, 0.84f, 0f));
