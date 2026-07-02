@@ -31,7 +31,7 @@ namespace ArchiveNull.Evidence
         [System.Serializable]
         private sealed class PhoneChat
         {
-            public string contact = "Sofia Roldan";
+            public string contact = "Sofía Roldán";
             public string status = "ultima vez hoy a las 22:16";
             public string preview = "Necesito que hablemos.";
             [TextArea(2, 5)] public string[] conversation =
@@ -55,13 +55,13 @@ namespace ArchiveNull.Evidence
         [Header("Unlock")]
         [SerializeField] private UnlockMode unlockMode = UnlockMode.Pin;
         [SerializeField] private string pin = "2530";
-        [SerializeField] private string ownerName = "Julian Herrera";
+        [SerializeField] private string ownerName = "Julián Herrera";
         [SerializeField] private string lockDate = "17 OCT";
 
         [Header("Evidence")]
         [SerializeField] private EvidenceTarget evidenceTarget;
         [TextArea(2, 4)]
-        [SerializeField] private string pickupNarration = "Este telefono parece pertenecer a Julian. Si puedo desbloquearlo, tal vez conserve algo util.";
+        [SerializeField] private string pickupNarration = "Este teléfono parece pertenecer a Julián. Si puedo desbloquearlo, tal vez conserve algo útil.";
         [SerializeField] private Collider[] pickupColliders;
 
         [Header("Messages")]
@@ -658,12 +658,12 @@ namespace ArchiveNull.Evidence
             headerText.text = currentScreen switch
             {
                 PhoneScreen.Lock => ownerName.ToUpperInvariant(),
-                PhoneScreen.Pin => "DESBLOQUEAR",
+                PhoneScreen.Pin => GameLocalization.Text("DESBLOQUEAR", "UNLOCK"),
                 PhoneScreen.Home => ownerName,
-                PhoneScreen.ChatList => "Mensajes",
+                PhoneScreen.ChatList => GameLocalization.Text("Mensajes", "Messages"),
                 PhoneScreen.Chat => chats != null && chats.Length > 0 ? chats[Mathf.Clamp(selectedChat, 0, chats.Length - 1)].contact : "Chat",
-                PhoneScreen.Calls => "Registro de llamadas",
-                PhoneScreen.Recents => "Aplicaciones recientes",
+                PhoneScreen.Calls => GameLocalization.Text("Registro de llamadas", "Call log"),
+                PhoneScreen.Recents => GameLocalization.Text("Aplicaciones recientes", "Recent apps"),
                 _ => ownerName
             };
 
@@ -759,7 +759,7 @@ namespace ArchiveNull.Evidence
             contentBody = CreateText("ContentBody", screen, 21f, FontStyles.Normal, TextAlignmentOptions.TopLeft);
             SetRect(contentBody.rectTransform, Vector2.zero, Vector2.one, Vector2.zero, new Vector2(24f, 118f), new Vector2(-24f, -210f));
 
-            unlockButton = CreateButton("Unlock", screen, "TOCAR PARA DESBLOQUEAR", accentColor, OpenUnlock);
+            unlockButton = CreateButton("Unlock", screen, GameLocalization.Text("TOCAR PARA DESBLOQUEAR", "TAP TO UNLOCK"), accentColor, OpenUnlock);
             SetRect(unlockButton.transform as RectTransform, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(-145f, 102f), new Vector2(145f, 160f));
 
             pinDots = CreateText("PinDots", screen, 30f, FontStyles.Bold, TextAlignmentOptions.Center);
@@ -780,7 +780,7 @@ namespace ArchiveNull.Evidence
 
             CreateButton("Empty", pinGrid, "", Color.clear, null).interactable = false;
             pinButtons.Add(CreateButton("Digit0", pinGrid, "0", new Color(0.12f, 0.15f, 0.17f, 1f), () => EnterPinDigit(0)));
-            pinButtons.Add(CreateButton("Delete", pinGrid, "BORRAR", new Color(0.16f, 0.11f, 0.11f, 1f), DeletePinDigit));
+            pinButtons.Add(CreateButton("Delete", pinGrid, GameLocalization.Text("BORRAR", "DELETE"), new Color(0.16f, 0.11f, 0.11f, 1f), DeletePinDigit));
 
             homeGrid = CreateRect("HomeGrid", screen);
             SetRect(homeGrid, Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), new Vector2(30f, 156f), new Vector2(-30f, -142f));
@@ -789,12 +789,12 @@ namespace ArchiveNull.Evidence
             homeLayout.spacing = new Vector2(30f, 28f);
             homeLayout.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
             homeLayout.constraintCount = 2;
-            homeButtons.Add(CreateAppButton(homeGrid, "MENSAJES", chats?.Length.ToString() ?? "0", messagesIcon, new Color(0.14f, 0.66f, 0.42f), () => OpenScreen(PhoneScreen.ChatList)));
-            homeButtons.Add(CreateAppButton(homeGrid, "LLAMADAS", callRecords?.Length.ToString() ?? "0", callsIcon, new Color(0.18f, 0.55f, 0.38f), () => OpenScreen(PhoneScreen.Calls)));
-            CreateLockedApp(homeGrid, "GALERIA", galleryIcon, new Color(0.28f, 0.48f, 0.82f));
-            CreateLockedApp(homeGrid, "CORREO", mailIcon, new Color(0.72f, 0.34f, 0.22f));
-            CreateLockedApp(homeGrid, "NOTAS", notesIcon, new Color(0.72f, 0.62f, 0.18f));
-            CreateLockedApp(homeGrid, "AJUSTES", settingsIcon, new Color(0.34f, 0.38f, 0.44f));
+            homeButtons.Add(CreateAppButton(homeGrid, GameLocalization.Text("MENSAJES", "MESSAGES"), chats?.Length.ToString() ?? "0", messagesIcon, new Color(0.14f, 0.66f, 0.42f), () => OpenScreen(PhoneScreen.ChatList)));
+            homeButtons.Add(CreateAppButton(homeGrid, GameLocalization.Text("LLAMADAS", "CALLS"), callRecords?.Length.ToString() ?? "0", callsIcon, new Color(0.18f, 0.55f, 0.38f), () => OpenScreen(PhoneScreen.Calls)));
+            CreateLockedApp(homeGrid, GameLocalization.Text("GALERÍA", "GALLERY"), galleryIcon, new Color(0.28f, 0.48f, 0.82f));
+            CreateLockedApp(homeGrid, GameLocalization.Text("CORREO", "MAIL"), mailIcon, new Color(0.72f, 0.34f, 0.22f));
+            CreateLockedApp(homeGrid, GameLocalization.Text("NOTAS", "NOTES"), notesIcon, new Color(0.72f, 0.62f, 0.18f));
+            CreateLockedApp(homeGrid, GameLocalization.Text("AJUSTES", "SETTINGS"), settingsIcon, new Color(0.34f, 0.38f, 0.44f));
 
             chatListRoot = CreateListRoot("ChatList", screen, new Vector2(18f, 82f), new Vector2(-18f, -108f), out chatListViewport);
             callsRoot = CreateListRoot("CallList", screen, new Vector2(18f, 82f), new Vector2(-18f, -108f), out callsViewport);

@@ -204,11 +204,11 @@ public sealed class CrimeSceneTutorial : MonoBehaviour
 
         text.text = step switch
         {
-            0 => "OBJETIVO // RECONSTRUIR LA ESCENA\nJulián Herrera apareció muerto en esta casa. La escena sugiere suicidio, pero el expediente señala inconsistencias. Busca qué fue real y qué pudo ser colocado.",
-            1 => "ANALISIS // OBJETOS\nExamina objetos relevantes. Su posición, estado y contexto pueden contradecir la primera lectura de la escena.",
-            2 => "EQUIPO // REGISTRO FORENSE\nLa mano interactúa, la cámara documenta, la luz UV revela rastros y la cuarta ranura guarda objetos recogidos.",
-            3 => "OBJETIVO // REGISTRAR EVIDENCIA\nDocumenta el frasco, el teléfono, la copa y cualquier rastro físico. Una pista aislada no demuestra culpabilidad.",
-            4 => "REVISION // EXPEDIENTE\nLa galería contiene evidencia registrada. La libreta conserva tus notas. Vuelve a la oficina cuando puedas sostener una hipótesis.",
+            0 => GameLocalization.Text("OBJETIVO // RECONSTRUIR LA ESCENA\nJulián Herrera apareció muerto en esta casa. La escena sugiere suicidio, pero el expediente señala inconsistencias. Busque qué fue real y qué pudo ser colocado.", "OBJECTIVE // RECONSTRUCT THE SCENE\nJulián Herrera died in this house. The scene suggests suicide, but the file identifies inconsistencies. Determine what was real and what may have been planted."),
+            1 => GameLocalization.Text("ANÁLISIS // OBJETOS\nExamine objetos relevantes. Su posición, estado y contexto pueden contradecir la primera lectura de la escena.", "ANALYSIS // OBJECTS\nExamine relevant objects. Their position, condition, and context may contradict the scene's initial reading."),
+            2 => GameLocalization.Text("EQUIPO // REGISTRO FORENSE\nLa mano interactúa, la cámara documenta, la luz UV revela rastros y la cuarta ranura guarda objetos recogidos.", "EQUIPMENT // FORENSIC RECORD\nThe hand interacts, the camera documents, UV light reveals traces, and the fourth slot stores collected objects."),
+            3 => GameLocalization.Text("OBJETIVO // REGISTRAR EVIDENCIA\nDocumente el frasco, el teléfono, la copa y cualquier rastro físico. Una pista aislada no demuestra culpabilidad.", "OBJECTIVE // RECORD EVIDENCE\nDocument the bottle, phone, glass, and any physical trace. A single clue does not prove guilt."),
+            4 => GameLocalization.Text("REVISIÓN // EXPEDIENTE\nLa galería contiene evidencia registrada. La libreta conserva sus notas. Vuelva a la oficina cuando pueda sostener una hipótesis.", "REVIEW // CASE FILE\nThe gallery contains recorded evidence. The notebook stores your notes. Return to the office when you can support a hypothesis."),
             _ => string.Empty
         };
 
@@ -239,15 +239,15 @@ public sealed class CrimeSceneTutorial : MonoBehaviour
             1 => new[]
             {
                 GlobalInputBindings.GetDisplayName(GameInputAction.Inspect),
-                "CLICK IZQ",
-                "RUEDA"
+                GameLocalization.Text("CLIC IZQ.", "LEFT CLICK"),
+                GameLocalization.Text("RUEDA", "WHEEL")
             },
             2 => new[]
             {
                 "G",
                 GlobalInputBindings.GetDisplayName(GameInputAction.Camera)
             },
-            3 => new[] { "CLICK IZQ" },
+            3 => new[] { GameLocalization.Text("CLIC IZQ.", "LEFT CLICK") },
             4 => new[] { GlobalInputBindings.GetDisplayName(GameInputAction.Notebook) },
             _ => System.Array.Empty<string>()
         };

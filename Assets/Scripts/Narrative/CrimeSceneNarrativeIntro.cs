@@ -47,11 +47,11 @@ namespace ArchiveNull.Narrative
         private IEnumerator PlayIntroduction()
         {
             yield return new WaitForSecondsRealtime(1.2f);
-            yield return ShowLine("SISTEMA", "Memoria 01 estabilizada. Sala principal de la residencia Herrera. Reconstrucción correspondiente a la noche del 14 de junio.", 5.5f);
-            yield return ShowLine("OPERADOR 253", "Julián Herrera, 41 años. Arquitecto. Fue encontrado muerto aquí, con la puerta principal cerrada desde adentro.", 5.5f);
-            yield return ShowLine("SISTEMA", "La hipótesis inicial indica suicidio: un frasco de pastillas junto al cuerpo y un mensaje final enviado a Sofía Roldán.", 6f);
-            yield return ShowLine("OPERADOR 253", "Pero la escena parece demasiado ordenada. Si alguien quiso imponer una explicación, tuvo que dejar rastros al construirla.", 6f);
-            yield return ShowLine("SISTEMA", "Objetivo: registrar la escena, revisar el teléfono y separar evidencia real, circunstancial y posiblemente plantada. No acuse por una sola pista.", 7f);
+            yield return ShowLine(GameLocalization.Text("SISTEMA", "SYSTEM"), GameLocalization.Text("Memoria 01 estabilizada. Sala principal de la residencia Herrera. Reconstrucción correspondiente a la noche del 14 de junio.", "Memory 01 stabilized. Main room of the Herrera residence. Reconstruction corresponding to the night of June 14."), 5.5f);
+            yield return ShowLine(GameLocalization.Text("OPERADOR 253", "OPERATOR 253"), GameLocalization.Text("Julián Herrera, 41 años. Arquitecto. Fue encontrado muerto aquí, con la puerta principal cerrada desde adentro.", "Julián Herrera, age 41. Architect. He was found dead here, with the front door locked from the inside."), 5.5f);
+            yield return ShowLine(GameLocalization.Text("SISTEMA", "SYSTEM"), GameLocalization.Text("La hipótesis inicial indica suicidio: un frasco de pastillas junto al cuerpo y un mensaje final enviado a Sofía Roldán.", "The initial hypothesis indicates suicide: a pill bottle beside the body and a final message sent to Sofía Roldán."), 6f);
+            yield return ShowLine(GameLocalization.Text("OPERADOR 253", "OPERATOR 253"), GameLocalization.Text("Pero la escena parece demasiado ordenada. Si alguien quiso imponer una explicación, tuvo que dejar rastros al construirla.", "But the scene looks too orderly. If someone tried to impose an explanation, they must have left traces while constructing it."), 6f);
+            yield return ShowLine(GameLocalization.Text("SISTEMA", "SYSTEM"), GameLocalization.Text("Objetivo: registrar la escena, revisar el teléfono y separar evidencia real, circunstancial y posiblemente plantada. No acuse por una sola pista.", "Objective: record the scene, inspect the phone, and separate real, circumstantial, and possibly planted evidence. Do not accuse based on a single clue."), 7f);
             PlayerPrefs.SetInt(CompletedPref, 1);
             PlayerPrefs.Save();
             Destroy(gameObject);

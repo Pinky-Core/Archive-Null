@@ -408,7 +408,7 @@ namespace ArchiveNull.UI
             {
                 if (subtitleText != null)
                 {
-                    subtitleText.text = line.subtitle;
+                    subtitleText.text = GetLocalizedSubtitle(step, line.subtitle);
                 }
 
                 SetSubtitleVisible(true, false);
@@ -475,6 +475,28 @@ namespace ArchiveNull.UI
             }
 
             return null;
+        }
+
+        private static string GetLocalizedSubtitle(TutorialStep step, string fallback)
+        {
+            return step switch
+            {
+                TutorialStep.Welcome => GameLocalization.Text(
+                    "Operador 253, se le asignó el caso de Julián Herrera, 41 años. Fue hallado muerto en la sala de su casa familiar, cerrada desde adentro.",
+                    "Operator 253, you have been assigned the case of Julián Herrera, age 41. He was found dead in the living room of his family home, locked from the inside."),
+                TutorialStep.Movement => GameLocalization.Text(
+                    "La escena fue clasificada como posible suicidio: un frasco de pastillas y un mensaje final sostienen esa lectura. Hay inconsistencias. Lea el expediente sobre la mesa antes de entrar.",
+                    "The scene was classified as a possible suicide: a pill bottle and a final message support that reading. There are inconsistencies. Read the file on the desk before entering."),
+                TutorialStep.SitPrompt => GameLocalization.Text(
+                    "Su tarea no es confirmar una sospecha. Debe separar evidencia real, circunstancial y plantada. Cuando termine de leer, tome asiento frente al terminal.",
+                    "Your task is not to confirm a suspicion. Separate real, circumstantial, and planted evidence. When you finish reading, sit at the terminal."),
+                TutorialStep.TerminalReady => GameLocalization.Text("Asiento confirmado. El terminal está listo.", "Seat confirmed. The terminal is ready."),
+                TutorialStep.TerminalFocus => GameLocalization.Text("Use el terminal para revisar expedientes, opciones y memorias montadas.", "Use the terminal to review files, settings, and mounted memories."),
+                TutorialStep.ReturnToFar => GameLocalization.Text("Puede apartarse del monitor para volver a la posición de espera.", "You can move away from the monitor and return to the waiting position."),
+                TutorialStep.MemoryMounted => GameLocalization.Text("Memoria montada. El visor está preparado.", "Memory mounted. The headset is ready."),
+                TutorialStep.VrEquipped => GameLocalization.Text("Sincronización iniciada. Ejecute la memoria cuando esté preparado.", "Synchronization started. Run the memory when ready."),
+                _ => fallback
+            };
         }
 
         private static float GetFallbackDuration(TutorialLine line)

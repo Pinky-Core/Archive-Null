@@ -72,7 +72,7 @@ namespace ArchiveNull.InvestigationBoard
 
             if (titleText != null)
             {
-                titleText.text = data != null ? data.evidenceName : "Evidence";
+                titleText.text = data != null ? EvidenceTextLocalization.Name(data) : GameLocalization.Text("Evidencia", "Evidence");
             }
 
             if (categoryText != null)
@@ -82,7 +82,7 @@ namespace ArchiveNull.InvestigationBoard
 
             if (descriptionText != null)
             {
-                descriptionText.text = data != null ? data.description : string.Empty;
+                descriptionText.text = data != null ? EvidenceTextLocalization.Description(data) : string.Empty;
             }
         }
 

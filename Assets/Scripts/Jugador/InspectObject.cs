@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;
 using ArchiveNull.Evidence;
+using ArchiveNull.Narrative;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
@@ -152,7 +153,7 @@ public class InspectObject : MonoBehaviour
                     if (inspectText != null)
                     {
                         inspectText.gameObject.SetActive(true);
-                        inspectText.text = "(" + GlobalInputBindings.GetDisplayName(GameInputAction.Inspect) + ") Inspeccionar";
+                        inspectText.text = "(" + GlobalInputBindings.GetDisplayName(GameInputAction.Inspect) + ") " + GameLocalization.Text("Inspeccionar", "Inspect");
                     }
 
                     if (GlobalInputBindings.WasPressed(GameInputAction.Inspect))
@@ -216,6 +217,7 @@ public class InspectObject : MonoBehaviour
         currentObject.transform.rotation = inspectPosition.rotation;
         currentObject.transform.position = GetSafeInspectObjectPosition();
         currentObject.transform.SetParent(inspectPosition, true);
+        ShowInspectionNarration(currentObject);
         isInspecting = true;
         IsAnyInspecting = true;
         if (movementScript != null) movementScript.enabled = false;
@@ -228,6 +230,46 @@ public class InspectObject : MonoBehaviour
         {
             inspectText.gameObject.SetActive(false);
         }
+    }
+
+    private static void ShowInspectionNarration(GameObject inspectedObject)
+    {
+        if (inspectedObject == null || EvidenceGuidanceController.ExistingInstance == null)
+        {
+            return;
+        }
+
+        InspectableNarration custom = inspectedObject.GetComponent<InspectableNarration>() ??
+                                       inspectedObject.GetComponentInParent<InspectableNarration>() ??
+                                       inspectedObject.GetComponentInChildren<InspectableNarration>(true);
+        if (custom != null && !string.IsNullOrWhiteSpace(custom.GetText()))
+        {
+            EvidenceGuidanceController.ExistingInstance.ShowInspectionSubtitle(custom.GetText());
+            return;
+        }
+
+        EvidenceTarget evidence = inspectedObject.GetComponent<EvidenceTarget>() ??
+                                  inspectedObject.GetComponentInParent<EvidenceTarget>() ??
+                                  inspectedObject.GetComponentInChildren<EvidenceTarget>(true);
+        if (evidence != null && evidence.EvidenceData != null)
+        {
+            EvidenceData data = evidence.EvidenceData;
+            string name = EvidenceTextLocalization.Name(data);
+            string description = EvidenceTextLocalization.Description(data);
+            string text = GameLocalization.Text("Esto parece ser ", "This appears to be ") + name.ToLowerInvariant() + ".";
+            if (!string.IsNullOrWhiteSpace(description)) text += " " + description;
+            EvidenceGuidanceController.ExistingInstance.ShowInspectionSubtitle(text);
+            return;
+        }
+
+        string readableName = inspectedObject.name.Replace('_', ' ').Trim();
+        if (string.IsNullOrWhiteSpace(readableName) || readableName.StartsWith("Cube", System.StringComparison.OrdinalIgnoreCase))
+        {
+            readableName = GameLocalization.Text("un objeto sin identificar", "an unidentified object");
+        }
+
+        EvidenceGuidanceController.ExistingInstance.ShowInspectionSubtitle(
+            GameLocalization.Text("Esto parece ser ", "This appears to be ") + readableName.ToLowerInvariant() + ".");
     }
 
     GameObject ResolveInspectableObject(Collider hitCollider)

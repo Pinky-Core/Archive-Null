@@ -184,7 +184,7 @@ namespace ArchiveNull.Evidence
 
             if (descriptionText != null)
             {
-                descriptionText.text = data != null ? data.description : "Las fotos de evidencia tomadas en esta sesion apareceran aqui.";
+                descriptionText.text = data != null ? data.description : GameLocalization.Text("Las fotografías de evidencia tomadas en esta sesión aparecerán aquí.", "Evidence photographs taken during this session will appear here.");
             }
 
             if (counterText != null)
@@ -480,7 +480,7 @@ namespace ArchiveNull.Evidence
             TMP_Text noteLabel = CreateText("NoteLabel", notesRoot, "LIBRETA DEL OPERADOR", 24f, TextAlignmentOptions.TopLeft);
             noteLabel.color = new Color(0.48f, 0.86f, 0.77f, 1f);
             SetRect(noteLabel.rectTransform, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0f, 1f), new Vector2(70f, -108f), new Vector2(-70f, -66f));
-            TMP_Text noteHint = CreateText("NoteHint", notesRoot, "Anotaciones libres. No modifican la descripcion oficial de las evidencias.", 18f, TextAlignmentOptions.TopLeft);
+            TMP_Text noteHint = CreateText("NoteHint", notesRoot, GameLocalization.Text("Anotaciones libres. No modifican la descripción oficial de las evidencias.", "Free-form notes. They do not modify the official evidence descriptions."), 18f, TextAlignmentOptions.TopLeft);
             noteHint.color = new Color(0.7f, 0.84f, 0.81f, 0.82f);
             SetRect(noteHint.rectTransform, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0f, 1f), new Vector2(70f, -146f), new Vector2(-70f, -108f));
             noteInput = CreateNoteInput(notesRoot);

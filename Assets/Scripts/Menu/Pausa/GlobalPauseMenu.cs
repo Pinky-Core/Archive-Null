@@ -211,8 +211,8 @@ public sealed class GlobalPauseMenu : MonoBehaviour
 
         Time.timeScale = 1f;
         RuntimeConfirmationDialog.Show(
-            L("VOLVER AL MENU", "RETURN TO MENU"),
-            L("Vas a volver a la oficina. Se conservaran evidencias, notas y pizarra guardadas.", "You are returning to the office. Saved evidence, notes and board data will be kept."),
+            L("VOLVER AL MENÚ", "RETURN TO MENU"),
+            L("Va a volver a la oficina. Se conservarán las evidencias, notas y conexiones guardadas.", "You are returning to the office. Saved evidence, notes and board data will be kept."),
             L("IR A LA OFICINA", "GO TO OFFICE"),
             L("CANCELAR", "CANCEL"),
             () => StartCoroutine(ExitRoutine()),
@@ -314,12 +314,12 @@ public sealed class GlobalPauseMenu : MonoBehaviour
         title.rectTransform.offsetMin = new Vector2(0f, 8f);
         title.color = new Color(0.9f, 0.87f, 0.75f, 1f);
 
-        TMP_Text section = CreateText("Section", leftRail, L("ARCHIVE: NULL  /  SESION EN PAUSA", "ARCHIVE: NULL  /  SESSION PAUSED"), 16, FontStyles.Normal, TextAlignmentOptions.Left);
+        TMP_Text section = CreateText("Section", leftRail, L("ARCHIVE: NULL  /  SESIÓN EN PAUSA", "ARCHIVE: NULL  /  SESSION PAUSED"), 16, FontStyles.Normal, TextAlignmentOptions.Left);
         SetPoint(section.rectTransform, new Vector2(0f, 1f), new Vector2(280f, -112f), new Vector2(560f, 30f));
         section.color = new Color(0.58f, 0.61f, 0.55f, 1f);
 
         CreateLeftButton(leftRail, L("CONTINUAR INVESTIGACION", "CONTINUE INVESTIGATION"), new Vector2(0f, -190f), Resume);
-        CreateLeftButton(leftRail, L("CONFIGURACION", "SETTINGS"), new Vector2(0f, -274f), ShowOptions);
+        CreateLeftButton(leftRail, L("CONFIGURACIÓN", "SETTINGS"), new Vector2(0f, -274f), ShowOptions);
         CreateLeftButton(leftRail, L("VOLVER A LA OFICINA", "RETURN TO OFFICE"), new Vector2(0f, -358f), ExitToMainMenu);
 
         caseSummaryRoot = CreatePanel("CaseSummary", canvasRect, new Vector2(680f, 430f), new Vector2(1f, 0.5f), new Color(0.025f, 0.028f, 0.025f, 0.58f)).gameObject;
@@ -374,7 +374,7 @@ public sealed class GlobalPauseMenu : MonoBehaviour
         int evidenceCount = ArchiveNull.Evidence.EvidenceInventory.Instance.GetAllEvidence().Count;
         string sceneName = SceneManager.GetActiveScene().name;
         caseSummaryText.text = L(
-            $"LA LLAVE POR DENTRO\n\nUBICACION  {sceneName.ToUpperInvariant()}\nEVIDENCIAS REGISTRADAS  {evidenceCount:00}\n\nOBJETIVO ACTUAL\nDocumentar la escena, contrastar los registros y volver a la oficina cuando exista una hipotesis sostenible.",
+            $"LA LLAVE POR DENTRO\n\nUBICACIÓN  {sceneName.ToUpperInvariant()}\nEVIDENCIAS REGISTRADAS  {evidenceCount:00}\n\nOBJETIVO ACTUAL\nDocumentar la escena, contrastar los registros y volver a la oficina cuando exista una hipótesis sostenible.",
             $"THE KEY FROM INSIDE\n\nLOCATION  {sceneName.ToUpperInvariant()}\nREGISTERED EVIDENCE  {evidenceCount:00}\n\nCURRENT OBJECTIVE\nDocument the scene, compare records, and return to the office once a defensible hypothesis exists.");
     }
 
@@ -589,7 +589,7 @@ public sealed class GlobalPauseMenu : MonoBehaviour
                 CreateValueButton(optionsContentRoot, L("AYUDAS CONTEXTUALES", "CONTEXT HELP"), GetHelpLabel(), new Vector2(0f, -136f), ToggleContextHelp);
                 CreateValueButton(optionsContentRoot, L("TEXTOS DE ACCIONES", "ACTION MESSAGES"), GetActionFeedbackLabel(), new Vector2(0f, -214f), ToggleActionFeedback);
                 CreateValueButton(optionsContentRoot, L("REINICIAR AYUDAS", "RESET HELP"), L("REINICIAR", "RESET"), new Vector2(0f, -292f), ResetContextHelp);
-                CreateInfoLine(optionsContentRoot, L("Los subtitulos narrativos permanecen activos aunque ocultes los textos de acciones.", "Narrative subtitles remain active when action messages are hidden."), new Vector2(0f, -372f));
+                CreateInfoLine(optionsContentRoot, L("Los subtítulos narrativos permanecen activos aunque oculte los textos de acciones.", "Narrative subtitles remain active when action messages are hidden."), new Vector2(0f, -372f));
                 if (sensitivitySlider != null) sensitivitySlider.value = Mathf.InverseLerp(0.25f, 8f, PlayerPrefs.GetFloat(PrefLookSensitivity, look != null ? look.sensitivity : 2f));
                 break;
 

@@ -26,7 +26,7 @@ namespace ArchiveNull.Evidence
         [Tooltip("Fallback opcional. La camara reemplaza esto por la foto real capturada en la sesion.")]
         [SerializeField] private Sprite photoSprite;
         [SerializeField] private bool validEvidence = true;
-        [SerializeField] private string invalidMessage = "No hay evidencia util en este objetivo.";
+        [SerializeField] private string invalidMessage = "No hay evidencia útil en este objetivo.";
 
         private EvidenceData runtimeEvidenceData;
 
@@ -44,13 +44,13 @@ namespace ArchiveNull.Evidence
 
             if (string.IsNullOrWhiteSpace(data.evidenceId))
             {
-                message = "Esta evidencia no tiene id.";
+                message = GameLocalization.Text("Esta evidencia no tiene identificador.", "This evidence has no identifier.");
                 return false;
             }
 
             if (EvidenceInventory.Instance.HasEvidence(data.evidenceId))
             {
-                message = "Evidencia ya registrada.";
+                message = GameLocalization.Text("Evidencia ya registrada.", "Evidence already recorded.");
                 return false;
             }
 

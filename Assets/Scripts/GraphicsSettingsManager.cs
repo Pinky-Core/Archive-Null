@@ -80,7 +80,7 @@ public static class GraphicsSettingsManager
     public static string ShadowDistanceLabel() => new[] { "15 M", "30 M", "50 M", "75 M", "100 M" }[ShadowDistanceIndex];
     public static string RenderScaleLabel() => Mathf.RoundToInt(RenderScales[RenderScaleIndex] * 100f) + "%";
     public static string VSyncLabel() => VSync ? "ON" : "OFF";
-    public static string FpsLabel() => FpsValues[FpsIndex] < 0 ? "SIN LIMITE" : FpsValues[FpsIndex].ToString();
+    public static string FpsLabel() => FpsValues[FpsIndex] < 0 ? GameLocalization.Text("SIN LÍMITE", "UNLIMITED") : FpsValues[FpsIndex].ToString();
 
     private static void SetCustomInt(string key, int value)
     {

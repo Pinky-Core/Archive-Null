@@ -16,6 +16,7 @@ namespace ArchiveNull.Evidence
         [SerializeField, Min(1f)] private float minimumUnzoomedCaptureDistance = 6f;
         [SerializeField] private float zoomedCaptureDistanceMultiplier = 2.25f;
         [SerializeField, Min(0f)] private float captureAssistRadius = 0.18f;
+        [SerializeField, Range(0.02f, 0.35f)] private float captureScreenAssistRadius = 0.16f;
         [SerializeField] private int capturedPhotoWidth = 1024;
         [SerializeField] private bool createNotebookIfMissing = true;
         [SerializeField] private Key notebookToggleKey = Key.Tab;
@@ -944,14 +945,16 @@ namespace ArchiveNull.Evidence
 
             if (playerCamera == null)
             {
-                ShowMessage("Camara no disponible.");
+                ShowMessage(GameLocalization.Text("Cámara no disponible.", "Camera unavailable."));
                 return;
             }
 
             Ray ray = playerCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
             if (!TryGetCaptureTarget(ray, out EvidenceTarget target, out bool blocked))
             {
-                ShowMessage(blocked ? "Objetivo no registrable." : "No hay evidencia en foco.");
+                ShowMessage(blocked
+                    ? GameLocalization.Text("Objetivo no registrable.", "Target cannot be recorded.")
+                    : GameLocalization.Text("No hay evidencia enfocada.", "No evidence in focus."));
                 return;
             }
 
@@ -964,22 +967,24 @@ namespace ArchiveNull.Evidence
             Sprite capturedPhoto = CaptureCameraPhoto();
             EvidenceData capturedEvidence = target.CreateCapturedEvidence(capturedPhoto);
             bool registered = EvidenceInventory.Instance.RegisterEvidence(capturedEvidence);
-            ShowMessage(registered ? BuildEvidenceSubtitle(capturedEvidence) : "Evidencia ya registrada.");
+            ShowMessage(registered ? BuildEvidenceSubtitle(capturedEvidence) : GameLocalization.Text("Evidencia ya registrada.", "Evidence already recorded."));
         }
 
         private static string BuildEvidenceSubtitle(EvidenceData data)
         {
             if (data == null)
             {
-                return "Evidencia registrada.";
+                return GameLocalization.Text("Evidencia registrada.", "Evidence recorded.");
             }
 
-            if (string.IsNullOrWhiteSpace(data.description))
+            string localizedName = EvidenceTextLocalization.Name(data);
+            string localizedDescription = EvidenceTextLocalization.Description(data);
+            if (string.IsNullOrWhiteSpace(localizedDescription))
             {
-                return "Evidencia registrada: " + data.evidenceName;
+                return GameLocalization.Text("Evidencia registrada: ", "Evidence recorded: ") + localizedName;
             }
 
-            return data.evidenceName + "\n" + data.description;
+            return localizedName + "\n" + localizedDescription;
         }
 
         private bool TryGetCaptureTarget(Ray ray, out EvidenceTarget target, out bool blocked)
@@ -991,35 +996,121 @@ namespace ArchiveNull.Evidence
             int hitCount = captureAssistRadius > 0.001f
                 ? Physics.SphereCastNonAlloc(ray, captureAssistRadius, captureHits, distance, ~0, QueryTriggerInteraction.Collide)
                 : Physics.RaycastNonAlloc(ray, captureHits, distance, ~0, QueryTriggerInteraction.Collide);
-            if (hitCount <= 0)
+            if (hitCount > 0)
+            {
+                SortHitsByDistance(captureHits, hitCount);
+                for (int i = 0; i < hitCount; i++)
+                {
+                    Collider hitCollider = captureHits[i].collider;
+                    if (hitCollider == null)
+                    {
+                        continue;
+                    }
+
+                    target = ResolveEvidenceTarget(hitCollider, captureHits[i].point);
+
+                    if (target != null)
+                    {
+                        return true;
+                    }
+
+                    if (!hitCollider.isTrigger && !IsPlayerOrToolCollider(hitCollider))
+                    {
+                        blocked = true;
+                        break;
+                    }
+                }
+            }
+
+            if (TryGetFramedEvidenceTarget(distance, out target))
+            {
+                blocked = false;
+                return true;
+            }
+
+            return false;
+        }
+
+        private bool TryGetFramedEvidenceTarget(float maxDistance, out EvidenceTarget bestTarget)
+        {
+            bestTarget = null;
+            if (playerCamera == null)
             {
                 return false;
             }
 
-            SortHitsByDistance(captureHits, hitCount);
-            for (int i = 0; i < hitCount; i++)
+            EvidenceTarget[] candidates = FindObjectsOfType<EvidenceTarget>(true);
+            float bestScore = float.PositiveInfinity;
+            Vector3 cameraPosition = playerCamera.transform.position;
+            for (int i = 0; i < candidates.Length; i++)
             {
-                Collider hitCollider = captureHits[i].collider;
-                if (hitCollider == null)
+                EvidenceTarget candidate = candidates[i];
+                if (candidate == null || !candidate.gameObject.activeInHierarchy || !candidate.CanRegister(out _))
                 {
                     continue;
                 }
 
-                target = ResolveEvidenceTarget(hitCollider, captureHits[i].point);
-
-                if (target != null)
+                Vector3 aimPoint = GetEvidenceAimPoint(candidate);
+                float worldDistance = Vector3.Distance(cameraPosition, aimPoint);
+                if (worldDistance > maxDistance)
                 {
-                    return true;
+                    continue;
                 }
 
-                if (!hitCollider.isTrigger && !IsPlayerOrToolCollider(hitCollider))
+                Vector3 viewport = playerCamera.WorldToViewportPoint(aimPoint);
+                if (viewport.z <= 0f)
                 {
-                    blocked = true;
-                    return false;
+                    continue;
+                }
+
+                float screenDistance = Vector2.Distance(new Vector2(viewport.x, viewport.y), new Vector2(0.5f, 0.5f));
+                if (screenDistance > captureScreenAssistRadius)
+                {
+                    continue;
+                }
+
+                float score = screenDistance * 10f + worldDistance / Mathf.Max(1f, maxDistance);
+                if (score < bestScore)
+                {
+                    bestScore = score;
+                    bestTarget = candidate;
                 }
             }
 
-            return false;
+            return bestTarget != null;
+        }
+
+        private static Vector3 GetEvidenceAimPoint(EvidenceTarget target)
+        {
+            Renderer[] renderers = target.GetComponentsInChildren<Renderer>(true);
+            Bounds bounds = default;
+            bool hasBounds = false;
+            for (int i = 0; i < renderers.Length; i++)
+            {
+                Renderer renderer = renderers[i];
+                if (renderer == null || !renderer.enabled)
+                {
+                    continue;
+                }
+
+                if (!hasBounds)
+                {
+                    bounds = renderer.bounds;
+                    hasBounds = true;
+                }
+                else
+                {
+                    bounds.Encapsulate(renderer.bounds);
+                }
+            }
+
+            if (hasBounds)
+            {
+                return bounds.center;
+            }
+
+            Collider collider = target.GetComponentInChildren<Collider>(true);
+            return collider != null ? collider.bounds.center : target.transform.position;
         }
 
         private static EvidenceTarget ResolveEvidenceTarget(Collider hitCollider, Vector3 hitPoint)

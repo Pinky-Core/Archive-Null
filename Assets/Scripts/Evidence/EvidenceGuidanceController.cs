@@ -30,6 +30,7 @@ namespace ArchiveNull.Evidence
         private Coroutine subtitleRoutine;
         private Coroutine hintRoutine;
         private Coroutine followUpRoutine;
+        public static EvidenceGuidanceController ExistingInstance { get; private set; }
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void Install()
@@ -54,6 +55,7 @@ namespace ArchiveNull.Evidence
 
         private void Awake()
         {
+            ExistingInstance = this;
             playerCamera = Camera.main;
             lastProgressTime = Time.unscaledTime;
             BuildUi();
@@ -98,6 +100,17 @@ namespace ArchiveNull.Evidence
             }
         }
 
+        private void OnDestroy()
+        {
+            if (ExistingInstance == this) ExistingInstance = null;
+        }
+
+        public void ShowInspectionSubtitle(string message)
+        {
+            if (string.IsNullOrWhiteSpace(message)) return;
+            ShowSubtitle(message);
+        }
+
         private void Update()
         {
             if (hintedTarget != null)
@@ -138,7 +151,7 @@ namespace ArchiveNull.Evidence
         {
             lastProgressTime = Time.unscaledTime;
             HideHint();
-            string line = BuildNarrativeLine(data);
+            string line = EvidenceTextLocalization.Narrative(data);
             if (string.IsNullOrWhiteSpace(line) && data != null)
             {
                 line = string.IsNullOrWhiteSpace(data.description)
@@ -159,6 +172,11 @@ namespace ArchiveNull.Evidence
             if (data == null)
             {
                 return string.Empty;
+            }
+
+            if (!GameLocalization.IsSpanish)
+            {
+                return BuildEnglishNarrativeLine(data);
             }
 
             if (!string.IsNullOrWhiteSpace(data.narrativeLine))
@@ -194,12 +212,30 @@ namespace ArchiveNull.Evidence
             return string.Empty;
         }
 
+        private static string BuildEnglishNarrativeLine(EvidenceData data)
+        {
+            string identity = ((data.evidenceId ?? string.Empty) + " " + (data.evidenceName ?? string.Empty)).ToLowerInvariant();
+            if (identity.Contains("pastilla") || identity.Contains("frasco")) return "The bottle is too exposed, almost placed to be found. If Julián handled it, clear fingerprints should remain.";
+            if (identity.Contains("phone_messages") || identity.Contains("mensaje")) return "Julián wrote long, explanatory messages. This farewell is brief, final, and unlike his usual voice.";
+            if (identity.Contains("phone_call") || identity.Contains("llamada")) return "The call log establishes contacts and times. I must compare it with the probable time of death.";
+            if (identity.Contains("telefono") || identity.Contains("teléfono") || identity.Contains("celular")) return "This is Julián's phone. The final message may explain the scene, or prove someone tried to explain it for him.";
+            if (identity.Contains("copa") || identity.Contains("vaso")) return "A fingerprint on a glass proves presence, not murder. Sofía was here earlier; I need to determine when and why.";
+            if (identity.Contains("foto") || identity.Contains("fotograf")) return "The damaged photograph confirms family conflict, but conflict does not establish who was present at the time of death.";
+            if (identity.Contains("barro") || identity.Contains("huella")) return "The mark preserves a partial pattern. Compatible footwear could connect movement and access.";
+            if (identity.Contains("taza")) return "The cup was washed after use. Cleaning an object from the scene is also a decision, and it leaves a sequence behind.";
+            if (identity.Contains("azucar") || identity.Contains("azúcar") || identity.Contains("polvo")) return "This does not look like pure sugar. If medication was crushed and mixed, the bottle beside the body was staged.";
+            if (identity.Contains("guante")) return "The gloves explain the lack of fingerprints. They do not yet indicate who used them.";
+            if (identity.Contains("farmacia") || identity.Contains("recibo")) return "The cash purchase does not identify the customer. It reconstructs the method, not the culprit.";
+            if (identity.Contains("utensilio") || identity.Contains("tritur")) return "Traces of crushed medication connect preparation, drink, and a poisoning intended to look voluntary.";
+            return !string.IsNullOrWhiteSpace(data.description) ? data.description : "This may be important: " + data.evidenceName + ".";
+        }
+
         private void ShowNextHint()
         {
             hintedTarget = FindNearestPendingEvidence();
             if (hintedTarget == null)
             {
-                ShowHint("No parece quedar evidencia directa por registrar. Revisa la galeria y conecta lo que ya encontraste.");
+                ShowHint(GameLocalization.Text("No parece quedar evidencia directa por registrar. Revise la galería y conecte lo que ya encontró.", "There appears to be no direct evidence left to record. Review the gallery and connect what you found."));
                 return;
             }
 
@@ -210,7 +246,7 @@ namespace ArchiveNull.Evidence
                 string evidenceName = data != null && !string.IsNullOrWhiteSpace(data.evidenceName)
                     ? data.evidenceName
                     : hintedTarget.gameObject.name;
-                clue = "Todavia no revisaste todo. Busca cerca de " + evidenceName + ".";
+                clue = GameLocalization.Text("Todavía no revisó todo. Busque cerca de ", "You have not examined everything. Search near ") + evidenceName + ".";
             }
 
             ShowHint(clue);
@@ -385,9 +421,9 @@ namespace ArchiveNull.Evidence
             objectiveGroup.gameObject.SetActive(true);
             objectiveText.text = evidenceCount switch
             {
-                0 => "OBJETIVO ACTUAL\nExplora la casa y registra la primera evidencia.",
-                1 => "OBJETIVO ACTUAL\nBusca relaciones: revisa objetos, mensajes y rastros ocultos.",
-                _ => $"OBJETIVO ACTUAL\nEvidencias registradas: {evidenceCount}. Revisa la galeria y sigue explorando."
+                0 => GameLocalization.Text("OBJETIVO ACTUAL\nExplore la casa y registre la primera evidencia.", "CURRENT OBJECTIVE\nExplore the house and record the first piece of evidence."),
+                1 => GameLocalization.Text("OBJETIVO ACTUAL\nBusque relaciones: revise objetos, mensajes y rastros ocultos.", "CURRENT OBJECTIVE\nLook for relationships: examine objects, messages, and hidden traces."),
+                _ => GameLocalization.Text($"OBJETIVO ACTUAL\nEvidencias registradas: {evidenceCount}. Revise la galería y continúe explorando.", $"CURRENT OBJECTIVE\nRecorded evidence: {evidenceCount}. Review the gallery and keep exploring.")
             };
         }
 
