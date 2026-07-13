@@ -261,11 +261,11 @@ public class InspectObject : MonoBehaviour
         if (evidence != null && evidence.EvidenceData != null)
         {
             EvidenceData data = evidence.EvidenceData;
-            string name = EvidenceTextLocalization.Name(data);
-            string description = EvidenceTextLocalization.Description(data);
-            string text = GameLocalization.Text("Esto parece ser ", "This appears to be ") + name.ToLowerInvariant() + ".";
-            if (!string.IsNullOrWhiteSpace(description)) text += " " + description;
-            EvidenceGuidanceController.ExistingInstance.ShowInspectionSubtitle(text);
+            string narrativeLine = EvidenceTextLocalization.Narrative(data);
+            if (!string.IsNullOrWhiteSpace(narrativeLine))
+            {
+                EvidenceGuidanceController.ExistingInstance.ShowInspectionSubtitle(narrativeLine);
+            }
             return;
         }
 

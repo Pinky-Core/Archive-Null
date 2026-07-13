@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace ArchiveNull.Evidence
@@ -5,6 +6,8 @@ namespace ArchiveNull.Evidence
     [DisallowMultipleComponent]
     public sealed class UvRevealTarget : MonoBehaviour
     {
+        private static readonly HashSet<UvRevealTarget> activeTargets = new();
+
         [SerializeField] private Renderer[] revealRenderers;
         [SerializeField] private CanvasGroup optionalCanvasGroup;
         [SerializeField] private Transform revealPoint;
@@ -13,12 +16,15 @@ namespace ArchiveNull.Evidence
         [SerializeField] private float hideDelay = 0.45f;
         [SerializeField] private float fadeSpeed = 8f;
         [SerializeField] private bool hideOnStart = true;
+        [SerializeField] private bool preserveRevealedAmount = true;
 
         private float visibility;
         private float exposure;
         private float lastRevealTime = -999f;
         private MaterialPropertyBlock propertyBlock;
         private Color[] baseColors;
+
+        public static IReadOnlyCollection<UvRevealTarget> ActiveTargets => activeTargets;
 
         public Vector3 RevealPosition
         {
@@ -72,6 +78,16 @@ namespace ArchiveNull.Evidence
             }
         }
 
+        private void OnEnable()
+        {
+            activeTargets.Add(this);
+        }
+
+        private void OnDisable()
+        {
+            activeTargets.Remove(this);
+        }
+
         private void Update()
         {
             if (!hideOnStart)
@@ -79,7 +95,7 @@ namespace ArchiveNull.Evidence
                 return;
             }
 
-            if (Time.time - lastRevealTime > hideDelay)
+            if (!preserveRevealedAmount && Time.time - lastRevealTime > hideDelay)
             {
                 exposure = Mathf.MoveTowards(exposure, 0f, Time.deltaTime / Mathf.Max(0.05f, revealSeconds));
             }

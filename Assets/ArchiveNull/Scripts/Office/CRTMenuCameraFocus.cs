@@ -302,6 +302,8 @@ namespace ArchiveNull.UI
         {
             _isFocused = true;
             _currentPose = CameraPose.Focus;
+            Cursor.lockState = CursorLockMode.None;
+            Cursor.visible = true;
             StartMove(GetPosePosition(CameraPose.Focus), GetPoseRotation(CameraPose.Focus));
 
             if (_openMenuWhenFocused && _menuController != null)
@@ -320,6 +322,8 @@ namespace ArchiveNull.UI
         public void ReturnToFarPose()
         {
             _isFocused = false;
+            Cursor.lockState = CursorLockMode.Locked;
+            Cursor.visible = false;
             _pendingMenuOpen = false;
             _pendingFocusReleasedEvent = true;
             _menuController?.SuspendTerminalInteraction();
@@ -331,6 +335,8 @@ namespace ArchiveNull.UI
         public void MoveToStandPose()
         {
             _isFocused = false;
+            Cursor.lockState = CursorLockMode.Locked;
+            Cursor.visible = false;
             _pendingMenuOpen = false;
             _pendingFocusReleasedEvent = true;
             _menuController?.SuspendTerminalInteraction();
@@ -341,6 +347,8 @@ namespace ArchiveNull.UI
         public void MoveToFarPose()
         {
             _isFocused = false;
+            Cursor.lockState = CursorLockMode.Locked;
+            Cursor.visible = false;
             _pendingMenuOpen = false;
             _pendingFocusReleasedEvent = true;
             _currentPose = CameraPose.Far;

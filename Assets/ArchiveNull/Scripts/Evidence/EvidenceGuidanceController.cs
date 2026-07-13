@@ -152,12 +152,6 @@ namespace ArchiveNull.Evidence
             lastProgressTime = Time.unscaledTime;
             HideHint();
             string line = EvidenceTextLocalization.Narrative(data);
-            if (string.IsNullOrWhiteSpace(line) && data != null)
-            {
-                line = string.IsNullOrWhiteSpace(data.description)
-                    ? "Esto puede ser importante: " + data.evidenceName + "."
-                    : data.description;
-            }
 
             if (!string.IsNullOrWhiteSpace(line))
             {

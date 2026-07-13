@@ -116,7 +116,6 @@ namespace ArchiveNull.Evidence
         private bool phoneSlotHovered;
         private readonly RaycastHit[] captureHits = new RaycastHit[24];
         private readonly RaycastHit[] uvHits = new RaycastHit[24];
-        private readonly Collider[] uvOverlapHits = new Collider[64];
         private readonly Dictionary<GameObject, ToolPose> toolPoses = new Dictionary<GameObject, ToolPose>();
         private Coroutine equipRoutine;
         private Coroutine cameraPoseRoutine;
@@ -637,22 +636,9 @@ namespace ArchiveNull.Evidence
             Transform spotTransform = uvSpotlight.transform;
             float range = Mathf.Min(uvRevealDistance, uvSpotlight.range > 0f ? uvSpotlight.range : uvRevealDistance);
             float halfAngle = Mathf.Max(1f, uvSpotlight.spotAngle * 0.5f);
-            int hitCount = Physics.OverlapSphereNonAlloc(spotTransform.position, range, uvOverlapHits, uvRevealLayers, QueryTriggerInteraction.Collide);
-            for (int i = 0; i < hitCount; i++)
+            foreach (UvRevealTarget revealTarget in UvRevealTarget.ActiveTargets)
             {
-                Collider candidate = uvOverlapHits[i];
-                if (candidate == null)
-                {
-                    continue;
-                }
-
-                UvRevealTarget revealTarget = candidate.GetComponent<UvRevealTarget>();
-                if (revealTarget == null)
-                {
-                    revealTarget = candidate.GetComponentInParent<UvRevealTarget>();
-                }
-
-                if (revealTarget == null)
+                if (revealTarget == null || !revealTarget.isActiveAndEnabled || !revealTarget.gameObject.activeInHierarchy)
                 {
                     continue;
                 }
@@ -679,7 +665,11 @@ namespace ArchiveNull.Evidence
                         blockedTarget = blocker.collider.GetComponentInParent<UvRevealTarget>();
                     }
 
-                    if (blockedTarget != revealTarget)
+                    Transform blockerTransform = blocker.collider.transform;
+                    bool belongsToTargetHierarchy = blockerTransform == revealTarget.transform ||
+                                                    blockerTransform.IsChildOf(revealTarget.transform) ||
+                                                    revealTarget.transform.IsChildOf(blockerTransform);
+                    if (blockedTarget != revealTarget && !belongsToTargetHierarchy)
                     {
                         continue;
                     }

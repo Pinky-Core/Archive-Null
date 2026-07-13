@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using ArchiveNull.Accusation;
 using TMPro;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -598,11 +599,16 @@ namespace ArchiveNull.UI
             _mainMenuItems.Add(new MenuItem
             {
                 Label = GetLocalizedMainMenuLabel(2),
-                Action = ConfirmDeleteAllData
+                Action = AccusationPanel.OpenRuntime
             });
             _mainMenuItems.Add(new MenuItem
             {
                 Label = GetLocalizedMainMenuLabel(3),
+                Action = ConfirmDeleteAllData
+            });
+            _mainMenuItems.Add(new MenuItem
+            {
+                Label = GetLocalizedMainMenuLabel(4),
                 Action = QuitGame
             });
 
@@ -862,6 +868,11 @@ namespace ArchiveNull.UI
 
         private void HandleInput()
         {
+            if (AccusationPanel.IsAnyOpen)
+            {
+                return;
+            }
+
             if (_awaitingRebind)
             {
                 CaptureRebindInput();
@@ -2314,13 +2325,12 @@ namespace ArchiveNull.UI
 
         private void RefreshLocalizedLabels()
         {
-            if (_mainMenuItems.Count >= 4)
+            for (int i = 0; i < _mainMenuItems.Count; i++)
             {
-                _mainMenuItems[0].Label = GetLocalizedMainMenuLabel(0);
-                _mainMenuItems[1].Label = GetLocalizedMainMenuLabel(1);
-                _mainMenuItems[2].Label = GetLocalizedMainMenuLabel(2);
-                _mainMenuItems[3].Label = GetLocalizedMainMenuLabel(3);
+                _mainMenuItems[i].Label = GetLocalizedMainMenuLabel(i);
             }
+
+            RefreshMainMenuAvailability();
 
             RebuildSettingsPage(_settingsPage, false);
 
@@ -2385,6 +2395,21 @@ namespace ArchiveNull.UI
 
         private void RefreshMainMenuAvailability()
         {
+            if (_mainMenuItems.Count < 3)
+            {
+                return;
+            }
+
+            bool canPresent = AccusationPanel.CanPresentReport(out string reason);
+            _mainMenuItems[2].Enabled = canPresent;
+            _mainMenuItems[2].Label = canPresent
+                ? GetLocalizedMainMenuLabel(2)
+                : Localize("INFORME FINAL [BLOQUEADO]", "FINAL REPORT [LOCKED]");
+
+            if (!canPresent && _mainIndex == 2)
+            {
+                SetStatus(reason);
+            }
         }
 
         private void OpenMemoryBrowser(int caseIndex)
@@ -2600,8 +2625,9 @@ namespace ArchiveNull.UI
             {
                 0 => Localize("EXPEDIENTES", "CASE FILES"),
                 1 => Localize("OPCIONES", "SETTINGS"),
-                2 => Localize("ELIMINAR TODOS LOS DATOS", "DELETE ALL DATA"),
-                3 => Localize("SALIR", "QUIT"),
+                2 => Localize("PRESENTAR INFORME FINAL", "SUBMIT FINAL REPORT"),
+                3 => Localize("ELIMINAR TODOS LOS DATOS", "DELETE ALL DATA"),
+                4 => Localize("SALIR", "QUIT"),
                 _ => string.Empty
             };
         }
