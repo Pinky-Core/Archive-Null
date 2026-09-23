@@ -42,10 +42,17 @@ namespace ArchiveNull.Evidence
         private bool movementWasEnabled;
         private bool noteListenerRegistered;
         private Tab activeTab = Tab.Gallery;
+        private Image photosTabImage;
+        private GameObject deletePhotoButton;
+        private string noteKey = string.Empty;
+        private TMP_Text noteSectionTitle;
+        private CanvasGroup reconstructionGroup;
 
         private enum Tab
         {
             Gallery,
+            Photos,
+            Reconstruction,
             Notebook
         }
 
@@ -58,6 +65,22 @@ namespace ArchiveNull.Evidence
         }
 
         public static bool IsAnyNotebookOpen { get; private set; }
+        private static int lastClosedFrame = -1;
+        public static bool ClosedThisFrame => lastClosedFrame == Time.frameCount;
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+        private static void InstallOfficeNotebook()
+        {
+            SceneManager.sceneLoaded -= OnSceneLoaded;
+            SceneManager.sceneLoaded += OnSceneLoaded;
+            OnSceneLoaded(SceneManager.GetActiveScene(), LoadSceneMode.Single);
+        }
+
+        private static void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+        {
+            if (scene.name == "MainMenu" && FindAnyObjectByType<EvidenceNotebookUI>() == null)
+                new GameObject("OfficeNotebook").AddComponent<EvidenceNotebookUI>();
+        }
 
         private void Awake()
         {
@@ -77,6 +100,7 @@ namespace ArchiveNull.Evidence
 
         private void OnEnable()
         {
+            PhotoAlbum.Changed += RefreshEvidence;
             EvidenceInventory.Instance.OnInventoryChanged += RefreshEvidence;
             RegisterNoteListener();
             RefreshEvidence();
@@ -84,6 +108,7 @@ namespace ArchiveNull.Evidence
 
         private void OnDisable()
         {
+            PhotoAlbum.Changed -= RefreshEvidence;
             if (EvidenceInventory.ExistingInstance != null)
             {
                 EvidenceInventory.ExistingInstance.OnInventoryChanged -= RefreshEvidence;
@@ -106,9 +131,8 @@ namespace ArchiveNull.Evidence
 
         private void Update()
         {
-            if (SceneManager.GetActiveScene().name == mainMenuSceneName)
+            if (GlobalPauseMenu.IsPaused || RuntimeConfirmationDialog.IsOpen || ArchiveNull.Accusation.AccusationPanel.IsAnyOpen)
             {
-                SetVisible(false);
                 return;
             }
 
@@ -119,11 +143,15 @@ namespace ArchiveNull.Evidence
 
             if (GlobalInputBindings.WasPressed(GameInputAction.Notebook))
             {
+                if (!visible && (PhoneEvidenceReader.IsAnyOpen || InspectObject.IsAnyInspecting || Keypad.IsAnyOpen ||
+                    EvidenceCameraController.IsAnyRadialMenuOpen || ArchiveNull.UI.CaseFileReader.IsAnyCaseFileOpen)) return;
                 SetVisible(!visible);
                 return;
             }
 
-            if (!visible || activeTab != Tab.Gallery || evidence.Count == 0 || IsEditingNote())
+            if (visible && Keyboard.current.escapeKey.wasPressedThisFrame) { SetVisible(false); return; }
+
+            if (!visible || activeTab == Tab.Notebook || activeTab == Tab.Reconstruction || evidence.Count == 0 || IsEditingNote())
             {
                 return;
             }
@@ -141,7 +169,7 @@ namespace ArchiveNull.Evidence
         private void RefreshEvidence()
         {
             evidence.Clear();
-            evidence.AddRange(EvidenceInventory.Instance.GetAllEvidence());
+            evidence.AddRange(activeTab == Tab.Photos ? PhotoAlbum.Photos : EvidenceInventory.Instance.GetAllEvidence());
             currentIndex = Mathf.Clamp(currentIndex, 0, Mathf.Max(0, evidence.Count - 1));
             RefreshView();
         }
@@ -172,7 +200,7 @@ namespace ArchiveNull.Evidence
 
             if (titleText != null)
             {
-                titleText.text = data != null ? data.evidenceName : "Sin fotos";
+                titleText.text = data != null ? EvidenceTextLocalization.Name(data) : GameLocalization.Text("Sin registros", "No records");
             }
 
             if (categoryText != null)
@@ -182,7 +210,7 @@ namespace ArchiveNull.Evidence
 
             if (descriptionText != null)
             {
-                descriptionText.text = data != null ? data.description : GameLocalization.Text("Las fotografías de evidencia tomadas en esta sesión aparecerán aquí.", "Evidence photographs taken during this session will appear here.");
+                descriptionText.text = data != null ? EvidenceTextLocalization.Description(data) : CaseEvidenceCatalog.NextObjective();
             }
 
             if (counterText != null)
@@ -193,7 +221,8 @@ namespace ArchiveNull.Evidence
             if (noteInput != null)
             {
                 updatingNote = true;
-                noteInput.text = EvidenceInventory.Instance.GetOperatorNotes();
+                if (!noteInput.isFocused) noteInput.SetTextWithoutNotify(string.IsNullOrEmpty(noteKey)
+                    ? EvidenceInventory.Instance.GetOperatorNotes() : EvidenceInventory.Instance.GetNote(noteKey));
                 noteInput.interactable = true;
                 updatingNote = false;
             }
@@ -208,7 +237,8 @@ namespace ArchiveNull.Evidence
                 return;
             }
 
-            EvidenceInventory.Instance.SetOperatorNotes(value);
+            if (string.IsNullOrEmpty(noteKey)) EvidenceInventory.Instance.SetOperatorNotes(value);
+            else EvidenceInventory.Instance.SetNote(noteKey, value);
         }
 
         private void SetVisible(bool value)
@@ -222,6 +252,7 @@ namespace ArchiveNull.Evidence
             }
 
             visible = value;
+            if (!value) { lastClosedFrame = Time.frameCount; GameSaveSystem.SaveNow(); }
             IsAnyNotebookOpen = value;
             if (rootGroup == null)
             {
@@ -356,13 +387,34 @@ namespace ArchiveNull.Evidence
         private void SelectTab(Tab tab)
         {
             activeTab = tab;
-            RefreshTabs();
+            RefreshEvidence();
+        }
+
+        private void SelectNoteSection(string key, string label)
+        {
+            noteKey = key;
+            noteSectionTitle.text = label;
+            string value = string.IsNullOrEmpty(key) ? EvidenceInventory.Instance.GetOperatorNotes() : EvidenceInventory.Instance.GetNote(key);
+            if (string.IsNullOrEmpty(value) && key.StartsWith("suspect_"))
+                value = "Relación con Julián:\n\nCoartada y horarios:\n\nEvidencias relacionadas (#):\n\nHipótesis / contradicciones:\n";
+            noteInput.SetTextWithoutNotify(value);
+        }
+
+        private void DeleteCurrentPhoto()
+        {
+            if (activeTab != Tab.Photos || evidence.Count == 0) return;
+            string id = evidence[currentIndex].evidenceId;
+            RuntimeConfirmationDialog.Show("ELIMINAR FOTO", "Se eliminará esta toma de la galería. Las evidencias y conexiones del caso se conservan.",
+                "ELIMINAR", "CANCELAR", () => PhotoAlbum.Remove(id));
         }
 
         private void RefreshTabs()
         {
-            SetGroupVisible(galleryGroup, activeTab == Tab.Gallery);
+            SetGroupVisible(galleryGroup, activeTab == Tab.Gallery || activeTab == Tab.Photos);
+            SetGroupVisible(reconstructionGroup, activeTab == Tab.Reconstruction);
             SetGroupVisible(notebookGroup, activeTab == Tab.Notebook);
+            if (deletePhotoButton != null) deletePhotoButton.SetActive(activeTab == Tab.Photos && evidence.Count > 0);
+            if (photosTabImage != null) photosTabImage.color = activeTab == Tab.Photos ? new Color(0.18f, 0.28f, 0.26f, 1f) : new Color(0.075f, 0.1f, 0.095f, 1f);
 
             if (galleryTabImage != null)
             {
@@ -430,7 +482,7 @@ namespace ArchiveNull.Evidence
             CanvasScaler scaler = canvasObject.GetComponent<CanvasScaler>();
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
             scaler.referenceResolution = new Vector2(1920f, 1080f);
-            scaler.matchWidthOrHeight = 0.5f;
+            scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.Expand;
 
             RectTransform canvasRect = canvasObject.GetComponent<RectTransform>();
             Stretch(canvasRect);
@@ -449,6 +501,7 @@ namespace ArchiveNull.Evidence
 
             CreateTabButton("GalleryTab", panelRect, "GALERIA DE EVIDENCIAS", new Vector2(52f, 696f), new Vector2(310f, 44f), () => SelectTab(Tab.Gallery), out galleryTabImage);
             CreateTabButton("NotebookTab", panelRect, "LIBRETA", new Vector2(372f, 696f), new Vector2(180f, 44f), () => SelectTab(Tab.Notebook), out notebookTabImage);
+            CreateTabButton("PhotosTab", panelRect, "FOTOS / DESCARTE", new Vector2(562f, 696f), new Vector2(260f, 44f), () => SelectTab(Tab.Photos), out photosTabImage);
 
             RectTransform galleryRoot = CreateRectObject("GalleryRoot", panelRect).GetComponent<RectTransform>();
             Stretch(galleryRoot);
@@ -457,6 +510,11 @@ namespace ArchiveNull.Evidence
             RectTransform notesRoot = CreateRectObject("NotebookRoot", panelRect).GetComponent<RectTransform>();
             Stretch(notesRoot);
             notebookGroup = notesRoot.gameObject.AddComponent<CanvasGroup>();
+            RectTransform reconstructionRoot = CreateRectObject("ReconstructionRoot", panelRect).GetComponent<RectTransform>();
+            Stretch(reconstructionRoot);
+            reconstructionGroup = reconstructionRoot.gameObject.AddComponent<CanvasGroup>();
+            reconstructionRoot.gameObject.AddComponent<DoorReconstructionUI>().Build(reconstructionRoot);
+            CreateTabButton("ReconstructionTab", panelRect, "RECONSTRUIR", new Vector2(832f, 696f), new Vector2(270f, 44f), () => SelectTab(Tab.Reconstruction), out _);
 
             Image photoFrame = CreateImage("PhotoFrame", galleryRoot, new Color(0.015f, 0.018f, 0.018f, 1f));
             RectTransform photoRect = photoFrame.rectTransform;
@@ -466,14 +524,17 @@ namespace ArchiveNull.Evidence
             Stretch(photoImage.rectTransform, new Vector2(12f, 12f), new Vector2(-12f, -12f));
             photoImage.preserveAspect = true;
 
-            titleText = CreateText("Title", galleryRoot, "Sin fotos", 35f, TextAlignmentOptions.TopLeft);
-            SetRect(titleText.rectTransform, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0f, 1f), new Vector2(778f, -96f), new Vector2(-60f, -50f));
+            titleText = CreateText("Title", galleryRoot, "Sin fotos", 30f, TextAlignmentOptions.TopLeft);
+            titleText.enableAutoSizing = true;
+            titleText.fontSizeMin = 22f;
+            titleText.fontSizeMax = 30f;
+            SetRect(titleText.rectTransform, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0f, 1f), new Vector2(778f, -170f), new Vector2(-60f, -90f));
             categoryText = CreateText("Category", galleryRoot, "REGISTRO VACIO", 18f, TextAlignmentOptions.TopLeft);
             categoryText.color = new Color(0.48f, 0.86f, 0.77f, 1f);
-            SetRect(categoryText.rectTransform, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0f, 1f), new Vector2(780f, -142f), new Vector2(-60f, -112f));
+            SetRect(categoryText.rectTransform, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0f, 1f), new Vector2(780f, -204f), new Vector2(-60f, -178f));
 
             descriptionText = CreateText("Description", galleryRoot, string.Empty, 22f, TextAlignmentOptions.TopLeft);
-            SetPointRect(descriptionText.rectTransform, new Vector2(0f, 0f), new Vector2(780f, 292f), new Vector2(420f, 300f));
+            SetRect(descriptionText.rectTransform, Vector2.zero, Vector2.one, new Vector2(0f, 1f), new Vector2(780f, 90f), new Vector2(-60f, -228f));
 
             TMP_Text noteLabel = CreateText("NoteLabel", notesRoot, "LIBRETA DEL OPERADOR", 24f, TextAlignmentOptions.TopLeft);
             noteLabel.color = new Color(0.48f, 0.86f, 0.77f, 1f);
@@ -482,6 +543,15 @@ namespace ArchiveNull.Evidence
             noteHint.color = new Color(0.7f, 0.84f, 0.81f, 0.82f);
             SetRect(noteHint.rectTransform, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0f, 1f), new Vector2(70f, -146f), new Vector2(-70f, -108f));
             noteInput = CreateNoteInput(notesRoot);
+            noteSectionTitle = noteLabel;
+            CreateButton("OperatorNotes", notesRoot, "GENERAL", new Vector2(160f, 38f), new Vector2(70f, 554f), () => SelectNoteSection("", "OBSERVACIONES"));
+            CreateButton("SofiaNotes", notesRoot, "SOFÍA", new Vector2(160f, 38f), new Vector2(240f, 554f), () => SelectNoteSection("suspect_sofia", "SOSPECHOSA: SOFÍA ROLDÁN"));
+            CreateButton("NicolasNotes", notesRoot, "NICOLÁS", new Vector2(160f, 38f), new Vector2(410f, 554f), () => SelectNoteSection("suspect_nicolas", "SOSPECHOSO: NICOLÁS HERRERA"));
+            CreateButton("VictorNotes", notesRoot, "VÍCTOR", new Vector2(160f, 38f), new Vector2(580f, 554f), () => SelectNoteSection("suspect_victor", "SOSPECHOSO: VÍCTOR SALAS"));
+            CreateButton("EvidenceNotes", notesRoot, "EVIDENCIA", new Vector2(190f, 38f), new Vector2(750f, 554f), () =>
+            {
+                if (evidence.Count > 0) SelectNoteSection(evidence[currentIndex].evidenceId, EvidenceTextLocalization.Name(evidence[currentIndex]));
+            });
             RegisterNoteListener();
 
             counterText = CreateText("Counter", galleryRoot, "00/00", 20f, TextAlignmentOptions.Bottom);
@@ -489,6 +559,8 @@ namespace ArchiveNull.Evidence
 
             CreateButton("Previous", galleryRoot, "<", new Vector2(96f, 42f), new Vector2(160f, 40f), () => Select(currentIndex - 1));
             CreateButton("Next", galleryRoot, ">", new Vector2(96f, 42f), new Vector2(620f, 40f), () => Select(currentIndex + 1));
+            CreateButton("DeletePhoto", galleryRoot, "ELIMINAR FOTO", new Vector2(250f, 42f), new Vector2(780f, 80f), DeleteCurrentPhoto);
+            deletePhotoButton = galleryRoot.Find("DeletePhoto").gameObject;
             CreateButton("Close", panelRect, "X", new Vector2(52f, 42f), new Vector2(1180f, 696f), () => SetVisible(false));
 
             TMP_Text hint = CreateText("Hint", panelRect, "Q/E: FOTO ANTERIOR/SIGUIENTE  //  TAB: CERRAR", 16f, TextAlignmentOptions.BottomRight);
@@ -502,7 +574,8 @@ namespace ArchiveNull.Evidence
         {
             Image fieldImage = CreateImage("NoteInput", parent, new Color(0.018f, 0.024f, 0.023f, 1f));
             RectTransform fieldRect = fieldImage.rectTransform;
-            SetRect(fieldRect, Vector2.zero, Vector2.one, Vector2.zero, new Vector2(70f, 86f), new Vector2(-70f, -174f));
+            SetRect(fieldRect, Vector2.zero, Vector2.one, Vector2.zero, new Vector2(70f, 86f), new Vector2(-70f, -230f));
+            fieldImage.gameObject.AddComponent<RectMask2D>();
 
             TMP_InputField input = fieldImage.gameObject.AddComponent<TMP_InputField>();
             TMP_Text text = CreateText("Text", fieldRect, string.Empty, 20f, TextAlignmentOptions.TopLeft);

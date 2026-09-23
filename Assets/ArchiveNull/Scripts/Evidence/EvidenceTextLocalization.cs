@@ -10,6 +10,8 @@ namespace ArchiveNull.Evidence
             }
 
             string id = Normalize(data.evidenceId);
+            if (CaseEvidenceCatalog.Find(data.evidenceId) is CaseEvidenceCatalog.Entry entry)
+                return $"#{entry.Number:00} {entry.Name}";
             if (id.Contains("phone_messages")) return GameLocalization.Text("Mensajes de Julián", "Julián's messages");
             if (id.Contains("phone_call")) return GameLocalization.Text("Registro de llamadas", "Call log");
             if (id.Contains("phone")) return GameLocalization.Text("Teléfono de Julián", "Julián's phone");
@@ -28,6 +30,8 @@ namespace ArchiveNull.Evidence
             }
 
             string id = Normalize(data.evidenceId);
+            if (CaseEvidenceCatalog.Find(data.evidenceId) is CaseEvidenceCatalog.Entry entry)
+                return entry.Description;
             if (id.Contains("phone_messages")) return GameLocalization.Text("Conversaciones anteriores que permiten comparar el estilo de escritura de Julián con el mensaje final.", "Earlier conversations that allow Julián's writing style to be compared with the final message.");
             if (id.Contains("phone_call")) return GameLocalization.Text("Historial de contactos y horarios durante las horas previas a la muerte.", "History of contacts and times during the hours before the death.");
             if (id.Contains("phone")) return GameLocalization.Text("Teléfono personal de la víctima. Contiene el supuesto mensaje de despedida enviado a Sofía.", "The victim's personal phone. It contains the alleged farewell message sent to Sofía.");
@@ -40,6 +44,8 @@ namespace ArchiveNull.Evidence
 
         public static string Narrative(EvidenceData data)
         {
+            if (data != null && CaseEvidenceCatalog.Find(data.evidenceId) is CaseEvidenceCatalog.Entry entry)
+                return entry.Description;
             return data != null && !string.IsNullOrWhiteSpace(data.narrativeLine)
                 ? data.narrativeLine
                 : string.Empty;

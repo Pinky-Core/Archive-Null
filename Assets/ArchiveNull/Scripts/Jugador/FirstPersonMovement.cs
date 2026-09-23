@@ -108,6 +108,8 @@ public class FirstPersonMovement : MonoBehaviour
         cachedRigidbody.constraints |= RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
 
         initialPosition = movementTransform.position;
+        if (cachedRigidbody.GetComponent<FirstPersonHeadBob>() == null)
+            cachedRigidbody.gameObject.AddComponent<FirstPersonHeadBob>();
         initialRotation = movementTransform.rotation;
         lastSafePosition = initialPosition;
         lastSafeRotation = initialRotation;
@@ -124,6 +126,7 @@ public class FirstPersonMovement : MonoBehaviour
 
     void Update()
     {
+        if (ArchiveNull.UI.MemoryLoadingScreen.IsBusy || ArchiveNull.UI.SceneRebuildTransition.IsBusy) return;
         if (!string.IsNullOrEmpty(GetBlockReason()) || Cursor.lockState != CursorLockMode.Locked)
         {
             smoothedLookDelta = Vector2.zero;
@@ -145,6 +148,7 @@ public class FirstPersonMovement : MonoBehaviour
 
     void FixedUpdate()
     {
+        if (ArchiveNull.UI.MemoryLoadingScreen.IsBusy || ArchiveNull.UI.SceneRebuildTransition.IsBusy || ArchiveNull.UI.OfficeDissolveTransition.ActiveMemory != null && ArchiveNull.UI.OfficeDissolveTransition.ActiveMemory.IsReconstructing) return;
         UpdateSafetyState();
         string blockReason = GetBlockReason();
         if (!string.IsNullOrEmpty(blockReason))
@@ -200,6 +204,9 @@ public class FirstPersonMovement : MonoBehaviour
             planarDelta.x,
             verticalVelocity * Time.fixedDeltaTime,
             planarDelta.z);
+        if (ArchiveNull.UI.OfficeDissolveTransition.ActiveMemory != null)
+            movementDelta = ArchiveNull.UI.OfficeDissolveTransition.ActiveMemory.ConstrainPosition(
+                movementTransform.position + movementDelta, characterController.radius * Mathf.Max(Mathf.Abs(movementTransform.lossyScale.x), Mathf.Abs(movementTransform.lossyScale.z)) + 0.1f) - movementTransform.position;
         characterController.Move(movementDelta);
 
         float movedDistance = Vector3.Distance(movementTransform.position, lastPosition);
@@ -524,6 +531,9 @@ public class FirstPersonMovement : MonoBehaviour
 
     private string GetBlockReason()
     {
+        if (GlobalPauseMenu.IsPaused || RuntimeConfirmationDialog.IsOpen || ArchiveNull.Accusation.AccusationPanel.IsAnyOpen ||
+            InspectObject.IsAnyInspecting || ArchiveNull.UI.CaseFileReader.IsAnyCaseFileOpen || Cursor.lockState != CursorLockMode.Locked)
+            return "InterfaceOpen";
         if (EvidenceNotebookUI.IsAnyNotebookOpen)
         {
             return "NotebookOpen";

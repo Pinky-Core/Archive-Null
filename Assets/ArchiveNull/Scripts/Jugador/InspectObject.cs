@@ -9,6 +9,11 @@ using UnityEditor;
 
 public class InspectObject : MonoBehaviour
 {
+    [Header("Interaction animation")]
+    [Min(0.05f)] public float inspectTransitionDuration = 0.28f;
+    private bool transitioning;
+    private bool movementPreviouslyEnabled;
+    private bool lookPreviouslyEnabled;
     public float interactionDistance = 1f;
     public Transform inspectPosition;
     public Transform player;
@@ -36,6 +41,7 @@ public class InspectObject : MonoBehaviour
     private GameObject currentObject = null;
     private bool isInspecting = false;
     private Vector3 originalPosition;
+    private Vector3 originalLocalScale;
     private Quaternion originalRotation;
     private Transform originalParent;
     private int originalSiblingIndex;
@@ -107,6 +113,11 @@ public class InspectObject : MonoBehaviour
 
     void Update()
     {
+        if(ArchiveNull.Evidence.EvidenceMarkerPlacement.HandledInputThisFrame) return;
+        if (ArchiveNull.Evidence.TestingToolsController.IsPlacing || ArchiveNull.Evidence.TestingToolsController.BrushActive) return;
+        if (GlobalPauseMenu.IsPaused || RuntimeConfirmationDialog.IsOpen || EvidenceNotebookUI.IsAnyNotebookOpen ||
+            ArchiveNull.Accusation.AccusationPanel.IsAnyOpen || Keypad.IsAnyOpen) return;
+        if (transitioning) return;
         if (PhoneEvidenceReader.IsAnyOpen && !isInspecting)
         {
             SetReticleState(false, false);
@@ -150,7 +161,19 @@ public class InspectObject : MonoBehaviour
             }
 
             Vector2 mousePosition = Mouse.current != null ? Mouse.current.position.ReadValue() : new Vector2(Screen.width * 0.5f, Screen.height * 0.5f);
-            Ray ray = playerCamera.ScreenPointToRay(mousePosition);
+            if (playerCamera == null) return;
+            Ray ray = playerCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
+            var tools=playerCamera.GetComponentInParent<ArchiveNull.Evidence.TestingToolsController>();
+            if(tools!=null && Physics.Raycast(ray,out RaycastHit toolHit,3*ArchiveNull.Evidence.TestingToolsController.PlayerScale(tools.transform,playerCamera.transform),~(1<<31),QueryTriggerInteraction.Ignore))
+            {
+                var marker=toolHit.collider.GetComponentInParent<ArchiveNull.Evidence.EvidenceMarker>();
+                if(marker!=null || tools.OwnsTripod(toolHit.collider))
+                {
+                    SetReticleState(true,true);
+                    if(inspectText!=null) { inspectText.gameObject.SetActive(true); inspectText.text="("+GlobalInputBindings.GetDisplayName(GameInputAction.Interact)+") "+(marker!=null ? "Recoger marcador "+marker.Number : "Montar / recuperar herramienta"); }
+                    return;
+                }
+            }
             if (Physics.Raycast(ray, out RaycastHit hit, interactionDistance))
             {
                 GameObject inspectableObject = ResolveInspectableObject(hit.collider);
@@ -204,6 +227,7 @@ public class InspectObject : MonoBehaviour
         }
 #endif
         originalPosition = currentObject.transform.position;
+        originalLocalScale = currentObject.transform.localScale;
         originalRotation = currentObject.transform.rotation;
         originalParent = currentObject.transform.parent;
         originalSiblingIndex = currentObject.transform.GetSiblingIndex();
@@ -213,26 +237,30 @@ public class InspectObject : MonoBehaviour
         if (inspectedRigidbody != null)
         {
             originalKinematic = inspectedRigidbody.isKinematic;
+            if (!inspectedRigidbody.isKinematic)
+            {
+                inspectedRigidbody.linearVelocity = Vector3.zero;
+                inspectedRigidbody.angularVelocity = Vector3.zero;
+            }
             inspectedRigidbody.isKinematic = true;
-            inspectedRigidbody.linearVelocity = Vector3.zero;
-            inspectedRigidbody.angularVelocity = Vector3.zero;
         }
 
         CacheAndDisableInspectedColliders();
         inspectAnchorDistance = Vector3.Distance(playerCamera.transform.position, inspectPosition.position);
         inspectDistance = Mathf.Clamp(inspectAnchorDistance, GetMinimumSafeInspectDistance(), Mathf.Max(maxInspectDistance, inspectAnchorDistance));
-        currentObject.transform.rotation = inspectPosition.rotation;
-        currentObject.transform.position = GetSafeInspectObjectPosition();
         currentObject.transform.SetParent(inspectPosition, true);
         ShowInspectionNarration(currentObject);
         isInspecting = true;
         IsAnyInspecting = true;
+        movementPreviouslyEnabled = movementScript != null && movementScript.enabled;
+        lookPreviouslyEnabled = lookScript != null && lookScript.enabled;
         if (movementScript != null) movementScript.enabled = false;
         if (lookScript != null) lookScript.enabled = false;
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
         if (playerRigidbody != null) playerRigidbody.constraints = RigidbodyConstraints.FreezeAll;
         SetReticleState(false, false);
+        StartCoroutine(AnimateInspection(false));
         if (inspectText != null)
         {
             inspectText.gameObject.SetActive(false);
@@ -356,6 +384,44 @@ public class InspectObject : MonoBehaviour
 
     void ReleaseObject()
     {
+        if (!transitioning && currentObject != null) StartCoroutine(AnimateInspection(true));
+    }
+
+    private System.Collections.IEnumerator AnimateInspection(bool returning)
+    {
+        transitioning = true;
+        Vector3 from = currentObject.transform.position;
+        Quaternion rotation = currentObject.transform.rotation;
+        float elapsed = 0f;
+        while (elapsed < inspectTransitionDuration && currentObject != null)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.SmoothStep(0f, 1f, elapsed / Mathf.Max(0.05f, inspectTransitionDuration));
+            currentObject.transform.position = Vector3.Lerp(from, returning ? originalPosition : GetSafeInspectObjectPosition(), t);
+            currentObject.transform.rotation = Quaternion.Slerp(rotation, returning ? originalRotation : inspectPosition.rotation, t);
+            yield return null;
+        }
+        transitioning = false;
+        if (returning || currentObject == null) RestoreObject();
+    }
+
+    private void OnDisable()
+    {
+        StopAllCoroutines();
+        transitioning = false;
+        if (isInspecting) RestoreObject();
+    }
+
+    void RestoreObject()
+    {
+        if (currentObject == null)
+        {
+            isInspecting = false;
+            IsAnyInspecting = false;
+            if (movementScript != null) movementScript.enabled = movementPreviouslyEnabled;
+            if (lookScript != null) lookScript.enabled = lookPreviouslyEnabled;
+            return;
+        }
         if (currentObject != null)
         {
             if (inspectedRigidbody != null)
@@ -371,14 +437,15 @@ public class InspectObject : MonoBehaviour
             }
             currentObject.transform.position = originalPosition;
             currentObject.transform.rotation = originalRotation;
+            currentObject.transform.localScale = originalLocalScale;
             inspectPosition.localPosition = originalInspectLocalPosition;
             inspectPosition.localRotation = originalInspectLocalRotation;
             currentObject = null;
             inspectedRigidbody = null;
             isInspecting = false;
             IsAnyInspecting = false;
-            if (movementScript != null) movementScript.enabled = true;
-            if (lookScript != null) lookScript.enabled = true;
+            if (movementScript != null) movementScript.enabled = movementPreviouslyEnabled;
+            if (lookScript != null) lookScript.enabled = lookPreviouslyEnabled;
             Cursor.lockState = CursorLockMode.Locked;
             Cursor.visible = false;
             if (playerRigidbody != null) playerRigidbody.constraints = originalConstraints;

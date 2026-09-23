@@ -6,6 +6,12 @@ Shader "ArchiveNull/RoomDissolve"
         _BaseColor ("Base Color", Color) = (1, 1, 1, 1)
         _MainTex ("Base Texture", 2D) = "white" {}
         _DissolveAmount ("Dissolve Amount", Range(0, 1)) = 0
+        _WaveOrigin ("Shared world origin", Vector) = (0, 0, 0, 0)
+        _ReconstructionOrigin ("Wave origin", Vector) = (0, 0, 0, 0)
+        _WaveRadius ("World radius", Float) = 10000
+        _WaveWidth ("World edge width", Float) = 0.45
+        _MemoryRadius ("Fixed memory radius (0 disables)", Float) = 0
+        _BoundaryWidth ("Memory pixel border width", Float) = 0.65
         _PixelScale ("Pixel Dissolve Scale", Float) = 18
         _NoiseScale ("Noise Scale", Float) = 8
         _EdgeWidth ("Edge Width", Range(0.001, 0.25)) = 0.07
@@ -18,8 +24,8 @@ Shader "ArchiveNull/RoomDissolve"
     {
         Tags
         {
-            "RenderType"="Transparent"
-            "Queue"="Transparent"
+            "RenderType"="TransparentCutout"
+            "Queue"="AlphaTest"
             "RenderPipeline"="UniversalPipeline"
         }
 
@@ -28,9 +34,9 @@ Shader "ArchiveNull/RoomDissolve"
             Name "UniversalForward"
             Tags { "LightMode"="UniversalForward" }
 
-            Cull Back
-            ZWrite Off
-            Blend SrcAlpha OneMinusSrcAlpha
+            Cull Off
+            ZWrite On
+            Blend One Zero
             AlphaToMask Off
 
             HLSLPROGRAM
@@ -62,6 +68,12 @@ Shader "ArchiveNull/RoomDissolve"
                 half4 _Color;
                 half4 _BaseColor;
                 half _DissolveAmount;
+                float4 _WaveOrigin;
+                float4 _ReconstructionOrigin;
+                float _WaveRadius;
+                float _WaveWidth;
+                float _MemoryRadius;
+                float _BoundaryWidth;
                 half _PixelScale;
                 half _NoiseScale;
                 half _EdgeWidth;
@@ -93,8 +105,6 @@ Shader "ArchiveNull/RoomDissolve"
                 float3 worldPos = TransformObjectToWorld(input.positionOS.xyz);
                 float3 worldNormal = TransformObjectToWorldNormal(input.normalOS);
                 float noise = PixelNoise(worldPos);
-                float scatter = saturate((_DissolveAmount - 0.12) / 0.88);
-                worldPos += worldNormal * ((noise - 0.5) * _FragmentJitter * scatter);
 
                 output.positionCS = TransformWorldToHClip(worldPos);
                 output.uv = TRANSFORM_TEX(input.uv, _MainTex);
@@ -105,13 +115,27 @@ Shader "ArchiveNull/RoomDissolve"
             half4 frag(Varyings input) : SV_Target
             {
                 float noise = PixelNoise(input.worldPos);
-                half4 baseCol = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, input.uv) * _Color * _BaseColor;
-                half alpha = smoothstep(_DissolveAmount - _EdgeWidth, _DissolveAmount + _EdgeWidth, noise);
-                alpha *= 1.0 - smoothstep(0.995, 1.0, _DissolveAmount);
-                half edge = alpha * (1.0 - smoothstep(_DissolveAmount, _DissolveAmount + _EdgeWidth, noise));
+                half4 baseCol = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, input.uv) * _BaseColor;
+                float front = _WaveRadius - distance(input.worldPos, _ReconstructionOrigin.xyz);
+                float width = max(0.01, _WaveWidth);
+                half alpha = smoothstep(-width, width, front + (noise - 0.5) * width);
+                if (_DissolveAmount >= 0.9999) alpha = 0;
+                if (_DissolveAmount <= 0.0001) alpha = 1;
+                half edge = (1.0 - smoothstep(0.0, width * 2.0, abs(front))) * alpha;
+                if (_MemoryRadius > 0)
+                {
+                    float inside = _MemoryRadius - distance(input.worldPos.xz, _WaveOrigin.xz);
+                    clip(inside); // Hard cap: noise and proximity can never reveal beyond it.
+                    float band = saturate(inside / max(0.05, _BoundaryWidth));
+                    float cell = Hash(floor(input.worldPos * _PixelScale));
+                    cell *= 0.65 + 0.35 * sin(_Time.y * 2.2 + cell * 19.0);
+                    clip(band - cell * 0.95);
+                    edge = max(edge, (1.0 - band) * alpha);
+                }
                 half3 finalColor = baseCol.rgb + (_EdgeColor.rgb * edge * _EdgeEmission);
 
-                return half4(finalColor, baseCol.a * alpha);
+                clip(alpha - 0.35);
+                return half4(finalColor, 1);
             }
             ENDHLSL
         }

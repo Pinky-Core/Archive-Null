@@ -47,7 +47,8 @@ namespace ArchiveNull.Evidence
                 new(-0.002f, 0.036f), new(0.037f, 0.012f), new(0.006f, -0.039f)
             };
 
-            Shader shader = Shader.Find("Universal Render Pipeline/Unlit") ?? Shader.Find("Unlit/Color");
+            Shader shader = Resources.Load<Shader>("ArchiveTrace");
+            if (shader == null) { Debug.LogError("[UV] Missing ArchiveTrace shader resource."); return; }
             Material material = new(shader);
             material.color = new Color(0.72f, 0.92f, 1f, 0.92f);
             for (int i = 0; i < positions.Length; i++)

@@ -3,6 +3,7 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.SceneManagement;
+using UnityEngine.UI;
 
 namespace ArchiveNull.UI
 {
@@ -88,11 +89,50 @@ namespace ArchiveNull.UI
                 }
             }
 
+            BuildHeadsetUi();
             ResetVrUi();
             SetPromptVisible(false);
             SetUnequipPromptVisible(false);
         }
 
+        private GameObject sessionUi;
+        private TMP_Text archiveLabel;
+        private void BuildHeadsetUi()
+        {
+            if(_vrViewOverlay!=null) _vrViewOverlay.gameObject.SetActive(false);
+            if(_startPromptText!=null) _startPromptText.gameObject.SetActive(false);
+            if(_unequipPromptText!=null) _unequipPromptText.gameObject.SetActive(false);
+            sessionUi=new GameObject("Headset session visor",typeof(Canvas),typeof(CanvasScaler));
+            Canvas canvas=sessionUi.GetComponent<Canvas>(); canvas.renderMode=RenderMode.ScreenSpaceOverlay; canvas.sortingOrder=9400;
+            var scaler=sessionUi.GetComponent<CanvasScaler>(); scaler.uiScaleMode=CanvasScaler.ScaleMode.ScaleWithScreenSize; scaler.referenceResolution=new Vector2(1920,1080); scaler.screenMatchMode=CanvasScaler.ScreenMatchMode.Expand;
+            _vrViewOverlay=sessionUi.AddComponent<CanvasGroup>(); _vrViewOverlay.blocksRaycasts=false; _vrOverlayVisibleAlpha=1;
+            _blinkStartPrompt=false; _startPrompt="ENTER / CLIC    ENTRAR EN LA MEMORIA";
+            var root=(RectTransform)sessionUi.transform;
+            VisorPanel("Top frame",root,new Vector2(0,.90f),Vector2.one,new Color(.005f,.012f,.022f,.94f));
+            VisorPanel("Bottom frame",root,Vector2.zero,new Vector2(1,.23f),new Color(.005f,.012f,.022f,.94f));
+            VisorPanel("Left rim",root,Vector2.zero,new Vector2(.014f,1),new Color(.03f,.09f,.14f,.9f));
+            VisorPanel("Right rim",root,new Vector2(.986f,0),Vector2.one,new Color(.03f,.09f,.14f,.9f));
+            VisorText("Connection",root,"ARCHIVE: NULL  /  VISOR NEURAL",20,new Vector2(.05f,.925f),new Vector2(.55f,.97f),new Color(.62f,.79f,.92f));
+            VisorText("Signal",root,"ENLACE ESTABLE   ●",18,new Vector2(.73f,.925f),new Vector2(.95f,.97f),new Color(.5f,.85f,.74f));
+            archiveLabel=VisorText("Archive name",root,"MEMORIA PREPARADA",32,new Vector2(.05f,.13f),new Vector2(.60f,.195f),Color.white);
+            VisorText("Description",root,"Reconstruí el entorno. Registrá lo que encuentres.",19,new Vector2(.05f,.075f),new Vector2(.6f,.12f),new Color(.52f,.67f,.78f));
+            _startPromptText=VisorText("Enter memory",root,_startPrompt,22,new Vector2(.61f,.105f),new Vector2(.95f,.18f),new Color(.57f,.83f,1));
+            _unequipPromptText=VisorText("Remove visor",root,"ESC / CLIC DERECHO    QUITAR VISOR",17,new Vector2(.61f,.055f),new Vector2(.95f,.10f),new Color(.55f,.63f,.71f));
+            VisorText("Real world",root,"OFICINA  /  MUNDO REAL",14,new Vector2(.05f,.017f),new Vector2(.5f,.05f),new Color(.35f,.49f,.60f));
+        }
+        private static void VisorPanel(string name,Transform parent,Vector2 min,Vector2 max,Color color)
+        {
+            var go=new GameObject(name,typeof(RectTransform),typeof(Image)); go.transform.SetParent(parent,false);
+            var rect=(RectTransform)go.transform; rect.anchorMin=min; rect.anchorMax=max; rect.offsetMin=rect.offsetMax=Vector2.zero;
+            var image=go.GetComponent<Image>(); image.color=color; image.raycastTarget=false;
+        }
+        private static TMP_Text VisorText(string name,Transform parent,string value,float size,Vector2 min,Vector2 max,Color color)
+        {
+            var go=new GameObject(name,typeof(RectTransform),typeof(TextMeshProUGUI)); go.transform.SetParent(parent,false);
+            var text=go.GetComponent<TMP_Text>(); text.text=value; text.fontSize=size; text.color=color; text.raycastTarget=false; text.alignment=TextAlignmentOptions.Left;
+            text.rectTransform.anchorMin=min; text.rectTransform.anchorMax=max; text.rectTransform.offsetMin=text.rectTransform.offsetMax=Vector2.zero; return text;
+        }
+        private void OnDestroy() { if(sessionUi!=null) Destroy(sessionUi); }
         private void Update()
         {
             if (_busy || CaseFileReader.IsAnyCaseFileOpen)
@@ -146,6 +186,7 @@ namespace ArchiveNull.UI
         private IEnumerator EquipRoutine()
         {
             _busy = true;
+
             ResetVrUi();
             SetPromptVisible(false);
 
@@ -188,6 +229,7 @@ namespace ArchiveNull.UI
             yield return FadeCanvasGroup(_fadeToBlack, 1f, 0f, _equipRevealDuration, true, false);
 
             _equipped = true;
+            if(archiveLabel!=null) archiveLabel.text="MEMORIA PREPARADA  /  "+(_menuController!=null ? _menuController.MountedArchiveSceneName : "");
             _busy = false;
             SetPromptText(_startPrompt);
             SetPromptVisible(true);
@@ -241,7 +283,7 @@ namespace ArchiveNull.UI
                 yield break;
             }
 
-            SceneManager.LoadScene(sceneName);
+            MemoryLoadingScreen.Load(sceneName);
         }
 
         private void ApplyEquippedState()

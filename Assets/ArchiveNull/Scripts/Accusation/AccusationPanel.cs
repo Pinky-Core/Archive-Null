@@ -15,12 +15,12 @@ namespace ArchiveNull.Accusation
     public sealed class AccusationPanel : MonoBehaviour
     {
         public const string CaseCompletedPref = "archive.case01.completed";
-        private const int RequiredEvidenceCount = 8;
-        private const int RequiredSupportedConnections = 3;
+        
+        
 
         private static readonly string[][] SpanishOptions =
         {
-            new[] { "SIN SELECCION", "VICTOR SALAS", "SOFIA HERRERA", "NICOLAS HERRERA" },
+            new[] { "SIN SELECCION", "VICTOR SALAS", "SOFIA ROLDAN", "NICOLAS HERRERA" },
             new[] { "SIN SELECCION", "BEBIDA ENVENENADA", "SOBREDOSIS VOLUNTARIA", "GOLPE" },
             new[] { "SIN SELECCION", "EVITAR DENUNCIA POR LA OBRA", "HERENCIA", "CONFLICTO SENTIMENTAL" },
             new[] { "SIN SELECCION", "PUERTA CERRADA DESDE AFUERA", "MENSAJE ESPONTANEO", "SIN MANIPULACION" },
@@ -29,7 +29,7 @@ namespace ArchiveNull.Accusation
 
         private static readonly string[][] EnglishOptions =
         {
-            new[] { "NO SELECTION", "VICTOR SALAS", "SOFIA HERRERA", "NICOLAS HERRERA" },
+            new[] { "NO SELECTION", "VICTOR SALAS", "SOFIA ROLDAN", "NICOLAS HERRERA" },
             new[] { "NO SELECTION", "POISONED DRINK", "VOLUNTARY OVERDOSE", "BLUNT FORCE" },
             new[] { "NO SELECTION", "AVOID CONSTRUCTION FRAUD REPORT", "INHERITANCE", "ROMANTIC CONFLICT" },
             new[] { "NO SELECTION", "DOOR LOCKED FROM OUTSIDE", "SPONTANEOUS MESSAGE", "NO MANIPULATION" },
@@ -54,30 +54,15 @@ namespace ArchiveNull.Accusation
         private TMP_Text statusText;
         private int selectedRow;
         private bool completed;
+        private CursorLockMode previousCursor;
+        private bool previousCursorVisible;
 
         public static AccusationPanel ExistingInstance { get; private set; }
         public static bool IsAnyOpen => ExistingInstance != null && ExistingInstance.canvasGroup != null && ExistingInstance.canvasGroup.gameObject.activeSelf;
 
         public static bool CanPresentReport(out string reason)
         {
-            int evidenceCount = EvidenceInventory.Instance.GetAllEvidence().Count;
-            int supportedConnections = EvidenceConnectionNarration.CountSupportedConnections();
-            if (evidenceCount < RequiredEvidenceCount)
-            {
-                reason = GameLocalization.Text(
-                    $"Faltan evidencias: {evidenceCount:00}/{RequiredEvidenceCount:00}.",
-                    $"Missing evidence: {evidenceCount:00}/{RequiredEvidenceCount:00}.");
-                return false;
-            }
-
-            if (supportedConnections < RequiredSupportedConnections)
-            {
-                reason = GameLocalization.Text(
-                    $"Faltan conexiones respaldadas: {supportedConnections:00}/{RequiredSupportedConnections:00}.",
-                    $"Missing supported connections: {supportedConnections:00}/{RequiredSupportedConnections:00}.");
-                return false;
-            }
-
+            // A report is always reviewable; submission validates each argument separately.
             reason = string.Empty;
             return true;
         }
@@ -143,6 +128,8 @@ namespace ArchiveNull.Accusation
 
         private void Open()
         {
+            previousCursor = Cursor.lockState;
+            previousCursorVisible = Cursor.visible;
             completed = false;
             selectedRow = 0;
             titleText.text = GameLocalization.Text("INFORME FINAL // LA LLAVE POR DENTRO", "FINAL REPORT // THE KEY WITHIN");
@@ -156,13 +143,15 @@ namespace ArchiveNull.Accusation
             Cursor.visible = true;
             RefreshRows();
             statusText.text = GameLocalization.Text(
-                "Complete cada campo. Cada respuesta correcta vale 20 puntos.",
-                "Complete every field. Each correct answer is worth 20 points.");
+                "Completá cada campo y respaldalo con conexiones en la pizarra. Un nombre correcto sin pruebas no cierra el caso. ESC: volver a investigar.",
+                "Complete each field and support it with board connections. A correct name without evidence cannot close the case. ESC: investigate.");
         }
 
         private void Close()
         {
             canvasGroup.gameObject.SetActive(false);
+            Cursor.lockState = previousCursor;
+            Cursor.visible = previousCursorVisible;
         }
 
         private void HandleKeyboard()
@@ -255,13 +244,15 @@ namespace ArchiveNull.Accusation
             string[] labels = GameLocalization.IsSpanish ? SpanishLabels : EnglishLabels;
             for (int i = 0; i < selections.Length; i++)
             {
-                if (selections[i] == 1)
+                if (selections[i] == 1 && CaseEvidenceCatalog.HasArgument(i, out _))
                 {
                     correct++;
                 }
                 else
                 {
-                    mistakes.Add(labels[i]);
+                    CaseEvidenceCatalog.HasArgument(i, out string objection);
+                    mistakes.Add(labels[i] + ": " + (selections[i] != 1
+                        ? GameLocalization.Text("revisá tu interpretación", "review your interpretation") : objection));
                 }
             }
 
@@ -271,6 +262,7 @@ namespace ArchiveNull.Accusation
                 completed = true;
                 PlayerPrefs.SetInt(CaseCompletedPref, 1);
                 PlayerPrefs.Save();
+                GameSaveSystem.SaveNow();
                 titleText.text = GameLocalization.Text("CASO CERRADO // 100%", "CASE CLOSED // 100%");
                 statusText.text = GameLocalization.Text(
                     "La acusación explica responsable, método, motivo y manipulación. Informe aceptado. ESC para cerrar.",
@@ -286,8 +278,7 @@ namespace ArchiveNull.Accusation
             string message = GameLocalization.Text(
                 $"PRECISION DEL INFORME: {score}%. Revise conexiones relacionadas con: {failedAreas}.",
                 $"REPORT ACCURACY: {score}%. Review connections related to: {failedAreas}.");
-            EvidenceGuidanceController.ExistingInstance?.ShowInspectionSubtitle(message);
-            Close();
+            statusText.text = string.Join("\n", mistakes);
         }
 
         private void RefreshRows()
@@ -335,8 +326,11 @@ namespace ArchiveNull.Accusation
             }
 
             statusText = CreateText(canvasObject.transform, "Status", 21f, TextAlignmentOptions.TopLeft);
+            statusText.enableAutoSizing = true;
+            statusText.fontSizeMin = 16f;
+            statusText.fontSizeMax = 21f;
             statusText.color = new Color(0.72f, 0.72f, 0.58f);
-            SetRect(statusText.rectTransform, new Vector2(0.18f, 0.08f), new Vector2(0.82f, 0.22f), Vector2.zero, Vector2.zero);
+            SetRect(statusText.rectTransform, new Vector2(0.16f, 0.04f), new Vector2(0.86f, 0.25f), Vector2.zero, Vector2.zero);
         }
 
         private static Image CreateImage(Transform parent, string name, Color color)

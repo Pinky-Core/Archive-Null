@@ -33,6 +33,24 @@ namespace ArchiveNull.Evidence
         public EvidenceData EvidenceData => evidenceData != null ? evidenceData : GetOrCreateRuntimeData();
         public string InvalidMessage => invalidMessage;
 
+        private void Awake()
+        {
+            if (GetComponentInChildren<Collider>(true) != null) return;
+            Renderer renderer = GetComponentInChildren<Renderer>();
+            if (renderer == null) return;
+            // Some authored floor traces have a renderer but no selectable surface.
+            Bounds bounds = renderer.bounds;
+            BoxCollider collider = gameObject.AddComponent<BoxCollider>();
+            Bounds local = new(transform.InverseTransformPoint(bounds.center), Vector3.zero);
+            for (int x = -1; x <= 1; x += 2)
+                for (int y = -1; y <= 1; y += 2)
+                    for (int z = -1; z <= 1; z += 2)
+                        local.Encapsulate(transform.InverseTransformPoint(bounds.center + Vector3.Scale(bounds.extents, new Vector3(x, y, z))));
+            collider.center = local.center;
+            collider.size = Vector3.Max(local.size, Vector3.one * 0.015f);
+            collider.isTrigger = true;
+        }
+
         public bool CanRegister(out string message)
         {
             EvidenceData data = EvidenceData;

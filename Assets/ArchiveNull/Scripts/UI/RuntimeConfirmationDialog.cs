@@ -30,7 +30,7 @@ public static class RuntimeConfirmationDialog
         CanvasScaler scaler = canvasObject.GetComponent<CanvasScaler>();
         scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
         scaler.referenceResolution = new Vector2(1920f, 1080f);
-        scaler.matchWidthOrHeight = 0.5f;
+        scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.Expand;
 
         RectTransform canvasRect = canvasObject.GetComponent<RectTransform>();
         Stretch(canvasRect);
@@ -38,28 +38,21 @@ public static class RuntimeConfirmationDialog
         Image backdrop = CreateImage("Backdrop", canvasRect, new Color(0f, 0f, 0f, 0.78f));
         Stretch(backdrop.rectTransform);
 
-        RectTransform panel = CreateImage("Panel", canvasRect, new Color(0.025f, 0.04f, 0.038f, 0.98f)).rectTransform;
-        panel.anchorMin = new Vector2(0.5f, 0.5f);
-        panel.anchorMax = new Vector2(0.5f, 0.5f);
-        panel.pivot = new Vector2(0.5f, 0.5f);
-        panel.anchoredPosition = Vector2.zero;
-        panel.sizeDelta = new Vector2(720f, 340f);
-        Outline outline = panel.gameObject.AddComponent<Outline>();
-        outline.effectColor = new Color(0.6f, 0.95f, 0.86f, 0.35f);
-        outline.effectDistance = new Vector2(2f, -2f);
-
-        TMP_Text titleText = CreateText("Title", panel, title, 30f, FontStyles.Bold, TextAlignmentOptions.TopLeft);
-        SetRect(titleText.rectTransform, Vector2.zero, Vector2.one, Vector2.zero, new Vector2(42f, 236f), new Vector2(-42f, -34f));
-
-        TMP_Text messageText = CreateText("Message", panel, message, 22f, FontStyles.Normal, TextAlignmentOptions.TopLeft);
-        SetRect(messageText.rectTransform, Vector2.zero, Vector2.one, Vector2.zero, new Vector2(42f, 112f), new Vector2(-42f, -118f));
-
-        Button cancelButton = CreateButton(panel, cancelLabel, new Vector2(-170f, 48f), () =>
+        // Session sheet: generous spacing and a clear primary/secondary action hierarchy.
+        RectTransform panel=CreateImage("Session sheet",canvasRect,new Color(.025f,.046f,.07f,1)).rectTransform;
+        panel.anchorMin=panel.anchorMax=panel.pivot=new Vector2(.5f,.5f); panel.sizeDelta=new Vector2(960,450);
+        TMP_Text badge=CreateText("Session label",panel,"ARCHIVE: NULL   /   SESIÓN",16,FontStyles.Normal,TextAlignmentOptions.TopLeft);
+        SetRect(badge.rectTransform,Vector2.zero,Vector2.one,new Vector2(.5f,.5f),new Vector2(52,378),new Vector2(-52,-35)); badge.color=new Color(.43f,.74f,.96f);
+        TMP_Text titleText=CreateText("Title",panel,title,38,FontStyles.Normal,TextAlignmentOptions.TopLeft);
+        SetRect(titleText.rectTransform,Vector2.zero,Vector2.one,new Vector2(.5f,.5f),new Vector2(52,284),new Vector2(-52,-88));
+        TMP_Text messageText=CreateText("Message",panel,message,24,FontStyles.Normal,TextAlignmentOptions.TopLeft);
+        SetRect(messageText.rectTransform,Vector2.zero,Vector2.one,new Vector2(.5f,.5f),new Vector2(52,139),new Vector2(-52,-186)); messageText.color=new Color(.62f,.73f,.82f);
+        Button cancelButton = CreateButton(panel, cancelLabel, new Vector2(-218f, 67f), () =>
         {
             Object.Destroy(canvasObject);
             onCancel?.Invoke();
         });
-        Button confirmButton = CreateButton(panel, confirmLabel, new Vector2(170f, 48f), () =>
+        Button confirmButton = CreateButton(panel, confirmLabel, new Vector2(218f, 67f), () =>
         {
             Object.Destroy(canvasObject);
             onConfirm?.Invoke();
@@ -89,21 +82,21 @@ public static class RuntimeConfirmationDialog
 
     private static Button CreateButton(RectTransform parent, string label, Vector2 position, UnityAction action)
     {
-        RectTransform rect = CreateImage(label + "Button", parent, new Color(0.06f, 0.1f, 0.095f, 1f)).rectTransform;
+        RectTransform rect = CreateImage(label + "Button", parent, new Color(.15f,.28f,.4f,1)).rectTransform;
         rect.anchorMin = new Vector2(0.5f, 0f);
         rect.anchorMax = new Vector2(0.5f, 0f);
         rect.pivot = new Vector2(0.5f, 0.5f);
         rect.anchoredPosition = position;
-        rect.sizeDelta = new Vector2(260f, 54f);
+        rect.sizeDelta = new Vector2(408f, 64f);
 
         Button button = rect.gameObject.AddComponent<Button>();
         button.targetGraphic = rect.GetComponent<Image>();
         button.onClick.AddListener(action);
         ColorBlock colors = button.colors;
-        colors.normalColor = new Color(0.06f, 0.1f, 0.095f, 1f);
-        colors.highlightedColor = new Color(0.13f, 0.32f, 0.28f, 1f);
+        colors.normalColor = Color.white;
+        colors.highlightedColor = new Color(.3f,.5f,.7f,1);
         colors.selectedColor = colors.highlightedColor;
-        colors.pressedColor = new Color(0.08f, 0.5f, 0.4f, 1f);
+        colors.pressedColor = new Color(.4f,.65f,.9f,1);
         button.colors = colors;
 
         TMP_Text text = CreateText("Label", rect, label, 20f, FontStyles.Bold, TextAlignmentOptions.Center);
@@ -129,7 +122,7 @@ public static class RuntimeConfirmationDialog
         text.fontSize = size;
         text.fontStyle = style;
         text.alignment = alignment;
-        text.color = new Color(0.78f, 0.96f, 0.9f, 1f);
+        text.color = new Color(.9f,.95f,1,1);
         text.textWrappingMode = TextWrappingModes.Normal;
         return text;
     }

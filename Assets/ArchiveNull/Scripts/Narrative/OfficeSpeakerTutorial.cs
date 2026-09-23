@@ -269,15 +269,15 @@ namespace ArchiveNull.UI
             panelRect.anchorMin = new Vector2(0.5f, 0f);
             panelRect.anchorMax = new Vector2(0.5f, 0f);
             panelRect.pivot = new Vector2(0.5f, 0f);
-            panelRect.anchoredPosition = new Vector2(0f, 78f);
-            panelRect.sizeDelta = new Vector2(1040f, 92f);
+            panelRect.anchoredPosition = new Vector2(0f, 32f);
+            panelRect.sizeDelta = new Vector2(1100f, 150f);
 
             GameObject textObject = new("SubtitleText", typeof(RectTransform), typeof(CanvasRenderer), typeof(TextMeshProUGUI));
             textObject.transform.SetParent(panelObject.transform, false);
             subtitleText = textObject.GetComponent<TextMeshProUGUI>();
             subtitleText.alignment = TextAlignmentOptions.Center;
-            subtitleText.fontSize = 28f;
-            subtitleText.color = new Color(0.82f, 0.96f, 0.91f, 1f);
+            subtitleText.fontSize = 25f; subtitleText.lineSpacing=4;
+            subtitleText.color = new Color(.94f,.93f,.86f,1);
             subtitleText.textWrappingMode = TextWrappingModes.Normal;
 
             RectTransform textRect = subtitleText.rectTransform;
@@ -305,6 +305,7 @@ namespace ArchiveNull.UI
 
         private void Update()
         {
+            if(subtitleText!=null && subtitleText.transform.parent is RectTransform subtitlePanel) subtitlePanel.anchoredPosition=new Vector2(0,vrHeadsetStarter!=null && vrHeadsetStarter.IsEquipped ? 280 : 32);
             if (currentStep == TutorialStep.Completed || isPlayingLine)
             {
                 return;

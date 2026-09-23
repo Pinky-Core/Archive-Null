@@ -115,6 +115,14 @@ namespace ArchiveNull.InvestigationBoard
 
         public void RefreshConnections()
         {
+            var obsolete = new List<string>();
+            foreach (var pair in linesByKey)
+                if (!BoardSessionState.Connections.Contains(pair.Key))
+                {
+                    if (pair.Value != null) Destroy(pair.Value.gameObject);
+                    obsolete.Add(pair.Key);
+                }
+            foreach (string key in obsolete) linesByKey.Remove(key);
             foreach (string key in BoardSessionState.Connections)
             {
                 if (linesByKey.ContainsKey(key))
@@ -203,6 +211,7 @@ namespace ArchiveNull.InvestigationBoard
             }
 
             OnConnectionsChanged?.Invoke();
+            GameSaveSystem.SaveNow();
         }
 
         private bool TryGetLinePhotos(string key, out WorldEvidencePhoto a, out WorldEvidencePhoto b)

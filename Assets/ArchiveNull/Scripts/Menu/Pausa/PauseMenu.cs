@@ -92,6 +92,6 @@ public class PauseMenu : MonoBehaviour
         PlayerPrefs.SetInt(ArchiveNull.UI.OfficeDissolveTransition.PendingOfficeRebuildPref, 1);
         GameSaveSystem.MarkOfficeContext();
         PlayerPrefs.Save();
-        SceneManager.LoadScene(mainMenuSceneName, LoadSceneMode.Single);
+        ArchiveNull.UI.MemoryLoadingScreen.Load(mainMenuSceneName);
     }
 }

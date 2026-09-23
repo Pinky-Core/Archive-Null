@@ -36,6 +36,9 @@ namespace ArchiveNull.InvestigationBoard
 
         public static ConnectionQuality Evaluate(string evidenceA, string evidenceB)
         {
+            if (CaseEvidenceCatalog.IsSupportedPair(evidenceA, evidenceB)) return ConnectionQuality.Supported;
+            if (CaseEvidenceCatalog.Find(evidenceA) != null || CaseEvidenceCatalog.Find(evidenceB) != null)
+                return ConnectionQuality.Plausible;
             string a = Normalize(evidenceA);
             string b = Normalize(evidenceB);
             string pair = a + " " + b;
@@ -70,7 +73,8 @@ namespace ArchiveNull.InvestigationBoard
             foreach (string key in BoardSessionState.Connections)
             {
                 string[] ids = key.Split('|');
-                if (ids.Length == 2 && Evaluate(ids[0], ids[1]) == ConnectionQuality.Supported)
+                if (ids.Length == 2 && EvidenceInventory.Instance.HasEvidence(ids[0]) &&
+                    EvidenceInventory.Instance.HasEvidence(ids[1]) && Evaluate(ids[0], ids[1]) == ConnectionQuality.Supported)
                 {
                     count++;
                 }

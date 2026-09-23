@@ -342,7 +342,7 @@ namespace ArchiveNull.UI
 
         private void Update()
         {
-            if (RuntimeConfirmationDialog.IsOpen)
+            if (RuntimeConfirmationDialog.IsOpen || ArchiveNull.Evidence.EvidenceNotebookUI.IsAnyNotebookOpen || ArchiveNull.Evidence.EvidenceNotebookUI.ClosedThisFrame)
             {
                 return;
             }
@@ -2193,6 +2193,8 @@ namespace ArchiveNull.UI
         private void DeleteAllDataConfirmed()
         {
             GameSaveSystem.DeleteAllGameplayData();
+            _unlockedArchive = 1;
+            _mountedArchive = -1;
             SetStatus(Localize("DATOS DE GAMEPLAY ELIMINADOS.", "GAMEPLAY DATA DELETED."));
             RefreshMainMenuAvailability();
         }

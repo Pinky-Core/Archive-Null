@@ -150,6 +150,14 @@ namespace ArchiveNull.UI
 
         private void Awake()
         {
+            const string chronologyTitle = "CRONOLOGÍA PRELIMINAR";
+            if (pages != null && !System.Array.Exists(pages, page => page != null && page.title == chronologyTitle))
+            {
+                int count = pages.Length;
+                System.Array.Resize(ref pages, count + 1);
+                pages[count] = new CaseFilePage { title = chronologyTitle,
+                    body = "14 de junio. La reconstrucción sitúa la intoxicación y el montaje inicial entre las 19:35 y las 20:08.\n\nLa supuesta despedida figura a las 20:00. Hay que contrastarla con los planes previos de Julián.\n\nUna coartada debe verificarse con horarios y distancia de viaje; un conflicto previo no prueba presencia durante el crimen." };
+            }
             if (targetCamera == null)
             {
                 targetCamera = Camera.main;

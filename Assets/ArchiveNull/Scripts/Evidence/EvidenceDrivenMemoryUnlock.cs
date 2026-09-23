@@ -28,7 +28,7 @@ namespace ArchiveNull.Evidence
 
         private void Evaluate()
         {
-            if (EvidenceInventory.Instance.GetAllEvidence().Count < RequiredEvidence || PlayerPrefs.GetInt(ContractorOfficeUnlockedPref, 0) == 1) return;
+            if (!CaseEvidenceCatalog.CanVisitContractor || PlayerPrefs.GetInt(ContractorOfficeUnlockedPref, 0) == 1) return;
             PlayerPrefs.SetInt(ContractorOfficeUnlockedPref, 1);
             PlayerPrefs.SetInt("crt.archive.unlocked", Mathf.Max(2, PlayerPrefs.GetInt("crt.archive.unlocked", 1)));
             PlayerPrefs.Save();

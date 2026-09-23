@@ -16,9 +16,24 @@ namespace ArchiveNull.UI
         [SerializeField] private float blackHoldDuration = 0.1f;
         [SerializeField] private float blackFadeOutDuration = 1f;
         [SerializeField] private bool restoreOriginalMaterialsOnComplete = true;
+        private Material originalSky;
+        private Camera sceneCamera;
+        private CameraClearFlags originalClearFlags;
+        private Color originalBackground;
+        private static SceneRebuildTransition busyOwner;
+        public static bool IsBusy => busyOwner != null;
 
         private void Awake()
         {
+            if (UnityEngine.SceneManagement.SceneManager.GetActiveScene().name == "MainMenu") autoPlayOnStart = false;
+            if (autoPlayOnStart)
+            {
+                busyOwner = this;
+                originalSky = RenderSettings.skybox;
+                RenderSettings.skybox = null;
+                sceneCamera = Camera.main;
+                if (sceneCamera != null) { originalClearFlags = sceneCamera.clearFlags; originalBackground = sceneCamera.backgroundColor; sceneCamera.clearFlags = CameraClearFlags.SolidColor; sceneCamera.backgroundColor = Color.black; }
+            }
             SetCanvasGroup(fadeFromBlack, autoPlayOnStart ? 1f : 0f, autoPlayOnStart);
         }
 
@@ -33,20 +48,21 @@ namespace ArchiveNull.UI
         public IEnumerator PlayTransition()
         {
             SetCanvasGroup(fadeFromBlack, 1f, true);
+            while (MemoryLoadingScreen.IsLoadingAssets) yield return null;
 
-            if (blackHoldDuration > 0f)
+            if (!MemoryLoadingScreen.IsBusy && blackHoldDuration > 0f)
             {
                 yield return new WaitForSecondsRealtime(blackHoldDuration);
             }
 
+            // Hide the environment before removing either blackout, then start the
+            // wave only when the player can actually see it.
+            if (officeDissolveTransition != null) officeDissolveTransition.PrepareRebuildStart();
+            while (MemoryLoadingScreen.IsBusy) yield return null;
+            yield return FadeCanvasGroup(fadeFromBlack, 1f, 0f, Mathf.Min(.35f,blackFadeOutDuration), true, false);
+            yield return null;
             bool rebuildCompleted = officeDissolveTransition == null;
-            if (officeDissolveTransition != null)
-            {
-                officeDissolveTransition.PrepareRebuildStart();
-                StartCoroutine(PlayRebuildRoutine(() => rebuildCompleted = true));
-            }
-
-            yield return FadeCanvasGroup(fadeFromBlack, 1f, 0f, blackFadeOutDuration, true, false);
+            if (officeDissolveTransition != null) StartCoroutine(PlayRebuildRoutine(() => rebuildCompleted = true));
 
             while (!rebuildCompleted)
             {
@@ -54,7 +70,11 @@ namespace ArchiveNull.UI
             }
 
             SetCanvasGroup(fadeFromBlack, 0f, false);
+            RenderSettings.skybox = originalSky;
+            if (sceneCamera != null) { sceneCamera.clearFlags = originalClearFlags; sceneCamera.backgroundColor = originalBackground; }
+            if (busyOwner == this) busyOwner = null;
         }
+        private void OnDestroy() { if (busyOwner == this) busyOwner = null; }
 
         private IEnumerator PlayRebuildRoutine(System.Action onCompleted)
         {

@@ -233,6 +233,7 @@ namespace ArchiveNull.Evidence
 
         private void Update()
         {
+            if (GlobalPauseMenu.IsPaused || EvidenceNotebookUI.IsAnyNotebookOpen || RuntimeConfirmationDialog.IsOpen || InspectObject.IsAnyInspecting) return;
             if (collected || equipped || !GlobalInputBindings.WasPressed(GameInputAction.Interact))
             {
                 return;
@@ -723,7 +724,7 @@ namespace ArchiveNull.Evidence
             CanvasScaler scaler = canvasObject.GetComponent<CanvasScaler>();
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
             scaler.referenceResolution = new Vector2(1920f, 1080f);
-            scaler.matchWidthOrHeight = 0.5f;
+            scaler.matchWidthOrHeight = 1f;
             phoneGroup = canvasObject.GetComponent<CanvasGroup>();
 
             phoneRoot = CreateRect("Phone", canvasObject.transform as RectTransform);
@@ -741,6 +742,7 @@ namespace ArchiveNull.Evidence
             AddOutline(shell, new Color(0.34f, 0.38f, 0.42f, 1f), 3f);
 
             RectTransform screen = CreateRect("Screen", phoneRoot);
+            screen.gameObject.AddComponent<RectMask2D>();
             screen.anchorMin = Vector2.zero;
             screen.anchorMax = Vector2.one;
             screen.offsetMin = new Vector2(16f, 18f);
@@ -851,8 +853,8 @@ namespace ArchiveNull.Evidence
             content.anchorMin = new Vector2(0f, 1f);
             content.anchorMax = new Vector2(1f, 1f);
             content.pivot = new Vector2(0.5f, 1f);
-            content.anchoredPosition = Vector2.zero;
             content.sizeDelta = Vector2.zero;
+            content.anchoredPosition = Vector2.zero;
             VerticalLayoutGroup layout = content.gameObject.AddComponent<VerticalLayoutGroup>();
             layout.spacing = 8f;
             layout.padding = new RectOffset(10, 10, 10, 10);
@@ -946,6 +948,8 @@ namespace ArchiveNull.Evidence
             content.anchorMin = new Vector2(0f, 1f);
             content.anchorMax = new Vector2(1f, 1f);
             content.pivot = new Vector2(0.5f, 1f);
+            content.sizeDelta = Vector2.zero;
+            content.anchoredPosition = Vector2.zero;
             VerticalLayoutGroup layout = content.gameObject.AddComponent<VerticalLayoutGroup>();
             layout.spacing = 10f;
             layout.padding = new RectOffset(10, 10, 14, 14);
@@ -989,6 +993,7 @@ namespace ArchiveNull.Evidence
 
         private void OpenChat(int index)
         {
+            if (index == 0)
             RegisterDigitalEvidence(messagesEvidence, "phone_messages", "Mensajes del teléfono de Julián",
                 "Los mensajes conservan el tono habitual de Julián y permiten compararlo con el supuesto mensaje final enviado a Sofía.",
                 "Este mensaje final es demasiado breve y directo. No coincide con la forma habitual de escribir de Julián.");
@@ -1002,6 +1007,7 @@ namespace ArchiveNull.Evidence
         private static void RegisterDigitalEvidence(EvidenceData configuredData, string fallbackId, string fallbackName,
             string fallbackDescription, string fallbackNarrative)
         {
+            if (EvidenceInventory.Instance.HasEvidence(configuredData != null ? configuredData.evidenceId : fallbackId)) return;
             EvidenceData data = configuredData;
             if (data == null)
             {
@@ -1024,6 +1030,11 @@ namespace ArchiveNull.Evidence
             }
 
             EvidenceInventory.Instance.RegisterEvidence(data);
+        }
+
+        private void OnDestroy()
+        {
+            if (phoneGroup != null) Destroy(phoneGroup.gameObject);
         }
 
         private static Sprite CreateDigitalEvidenceSprite(string label, Color accent)
@@ -1068,6 +1079,7 @@ namespace ArchiveNull.Evidence
             }
 
             PhoneChat chat = chats[Mathf.Clamp(selectedChat, 0, chats.Length - 1)];
+            Canvas.ForceUpdateCanvases();
             headerText.text = chat.contact + "\n<size=12><color=#9DAAAD>" + chat.status + "</color></size>";
             foreach (string raw in chat.conversation)
             {
@@ -1115,7 +1127,8 @@ namespace ArchiveNull.Evidence
             timestamp.rectTransform.offsetMin = new Vector2(12f, 5f);
             timestamp.rectTransform.offsetMax = new Vector2(-10f, 23f);
 
-            const float availableTextWidth = 276f;
+            float contentWidth = Mathf.Max(100f, parent.rect.width);
+            float availableTextWidth = Mathf.Max(60f, (contentWidth - 20f) * 0.79f - 24f);
             Vector2 preferred = text.GetPreferredValues(message, availableTextWidth, 0f);
             rowLayout.preferredHeight = Mathf.Max(64f, preferred.y + 43f);
         }

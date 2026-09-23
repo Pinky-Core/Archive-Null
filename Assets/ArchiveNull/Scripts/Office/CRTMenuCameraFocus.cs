@@ -155,6 +155,7 @@ namespace ArchiveNull.UI
 
         private void Update()
         {
+            if (ArchiveNull.Evidence.EvidenceNotebookUI.IsAnyNotebookOpen || ArchiveNull.Evidence.EvidenceNotebookUI.ClosedThisFrame || ArchiveNull.Accusation.AccusationPanel.IsAnyOpen || RuntimeConfirmationDialog.IsOpen) return;
             if (_targetCamera == null || _focusPose == null)
             {
                 return;

@@ -15,11 +15,13 @@ public sealed class GameSaveSystem : MonoBehaviour
     private const string ContextOffice = "Office";
     private const string ContextMemory = "Memory";
     private static GameSaveSystem instance;
+    private static bool laboratorySession;
 
     [SerializeField] private float autosaveInterval = 12f;
 
     private float nextAutosaveTime;
     private bool loaded;
+    private readonly Dictionary<string, PlayerPoseRecord> memoryPositions = new();
 
     [Serializable]
     private sealed class SaveData
@@ -32,6 +34,10 @@ public sealed class GameSaveSystem : MonoBehaviour
         public float playerZ;
         public float playerYaw;
         public List<EvidenceRecord> evidence = new();
+        public List<EvidenceRecord> photos = new();
+        public List<EvidenceMarkerPlacement.Record> markers = new();
+        public List<PlayerPoseRecord> memoryPositions = new();
+        public bool caseCompleted;
         public List<StringPair> notes = new();
         public string operatorNotes;
         public List<Vector2Record> cardPositions = new();
@@ -40,6 +46,14 @@ public sealed class GameSaveSystem : MonoBehaviour
         public List<string> connections = new();
         public List<string> unlockedConclusions = new();
         public List<IntRecord> timelineSlots = new();
+    }
+
+    [Serializable]
+    private sealed class PlayerPoseRecord
+    {
+        public string scene;
+        public Vector3 position;
+        public float yaw;
     }
 
     [Serializable]
@@ -80,6 +94,7 @@ public sealed class GameSaveSystem : MonoBehaviour
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     private static void Install()
     {
+        laboratorySession = SceneManager.GetActiveScene().name == "MechanicsLab";
         SceneManager.sceneLoaded -= HandleSceneLoaded;
         SceneManager.sceneLoaded += HandleSceneLoaded;
         HandleSceneLoaded(SceneManager.GetActiveScene(), LoadSceneMode.Single);
@@ -87,14 +102,10 @@ public sealed class GameSaveSystem : MonoBehaviour
 
     private static void HandleSceneLoaded(Scene scene, LoadSceneMode mode)
     {
-        if (string.Equals(scene.name, MainMenuSceneName, StringComparison.OrdinalIgnoreCase))
-        {
-            return;
-        }
-
         if (instance != null)
         {
             instance.LoadIfNeeded();
+            instance.RestoreMemoryPosition(scene.name);
             return;
         }
 
@@ -107,10 +118,12 @@ public sealed class GameSaveSystem : MonoBehaviour
     private void OnEnable()
     {
         EvidenceInventory.Instance.OnInventoryChanged += MarkAutosaveSoon;
+        PhotoAlbum.Changed += MarkAutosaveSoon;
     }
 
     private void OnDisable()
     {
+        PhotoAlbum.Changed -= MarkAutosaveSoon;
         if (EvidenceInventory.ExistingInstance != null)
         {
             EvidenceInventory.ExistingInstance.OnInventoryChanged -= MarkAutosaveSoon;
@@ -163,16 +176,22 @@ public sealed class GameSaveSystem : MonoBehaviour
 
     private void Save()
     {
-        if (string.Equals(SceneManager.GetActiveScene().name, MainMenuSceneName, StringComparison.OrdinalIgnoreCase))
+        if (!loaded) return;
+        try
         {
-            return;
+            SaveData data = BuildSaveData();
+            Directory.CreateDirectory(SaveDirectory);
+            string pending = SavePath + ".tmp";
+            File.WriteAllText(pending, JsonUtility.ToJson(data, true));
+            if (File.Exists(SavePath)) File.Replace(pending, SavePath, SavePath + ".bak");
+            else File.Move(pending, SavePath);
+            if (!laboratorySession) PlayerPrefs.SetString(LastContextPref, data.activeScene == MainMenuSceneName ? ContextOffice : ContextMemory);
+            PlayerPrefs.Save();
         }
-
-        SaveData data = BuildSaveData();
-        Directory.CreateDirectory(SaveDirectory);
-        File.WriteAllText(SavePath, JsonUtility.ToJson(data, true));
-        PlayerPrefs.SetString(LastContextPref, ContextMemory);
-        PlayerPrefs.Save();
+        catch (Exception exception)
+        {
+            Debug.LogWarning("[Save] No se pudo guardar: " + exception.Message);
+        }
     }
 
     private SaveData BuildSaveData()
@@ -182,6 +201,7 @@ public sealed class GameSaveSystem : MonoBehaviour
             activeScene = SceneManager.GetActiveScene().name,
             operatorNotes = EvidenceInventory.Instance.GetOperatorNotes()
         };
+        data.caseCompleted = PlayerPrefs.GetInt(ArchiveNull.Accusation.AccusationPanel.CaseCompletedPref, 0) == 1;
 
         FirstPersonMovement movement = FindAnyObjectByType<FirstPersonMovement>();
         if (movement != null)
@@ -193,7 +213,10 @@ public sealed class GameSaveSystem : MonoBehaviour
             data.playerY = safePosition.y;
             data.playerZ = safePosition.z;
             data.playerYaw = safeRotation.eulerAngles.y;
+            memoryPositions[data.activeScene] = new PlayerPoseRecord { scene = data.activeScene, position = safePosition, yaw = data.playerYaw };
         }
+        data.memoryPositions.AddRange(memoryPositions.Values);
+        data.markers=EvidenceMarkerPlacement.CaptureRecords();
 
         IReadOnlyList<EvidenceData> evidence = EvidenceInventory.Instance.GetAllEvidence();
         for (int i = 0; i < evidence.Count; i++)
@@ -222,6 +245,10 @@ public sealed class GameSaveSystem : MonoBehaviour
             data.notes.Add(new StringPair { key = note.Key, value = note.Value });
         }
 
+        foreach (EvidenceData photo in PhotoAlbum.Photos)
+            data.photos.Add(new EvidenceRecord { id = photo.evidenceId, name = photo.evidenceName,
+                description = photo.description, sourceScene = photo.sourceSceneName, photoFile = SaveEvidencePhoto(photo) });
+
         AddVectorRecords(data.cardPositions, BoardSessionState.CardPositions);
         AddVectorRecords(data.worldPhotoPositions, BoardSessionState.WorldPhotoPositions);
         AddStringPairs(data.evidenceZones, BoardSessionState.EvidenceZones);
@@ -243,7 +270,7 @@ public sealed class GameSaveSystem : MonoBehaviour
             return;
         }
 
-        SaveData data = JsonUtility.FromJson<SaveData>(File.ReadAllText(SavePath));
+        SaveData data = ReadSave();
         if (data == null)
         {
             return;
@@ -251,9 +278,27 @@ public sealed class GameSaveSystem : MonoBehaviour
 
         BoardSessionState.Clear();
         RestoreBoardData(data);
+        memoryPositions.Clear();
+        if (data.memoryPositions != null)
+            foreach (PlayerPoseRecord pose in data.memoryPositions)
+                if (pose != null && !string.IsNullOrEmpty(pose.scene)) memoryPositions[pose.scene] = pose;
+        if (data.hasPlayerTransform && !memoryPositions.ContainsKey(data.activeScene))
+            memoryPositions[data.activeScene] = new PlayerPoseRecord { scene = data.activeScene,
+                position = new Vector3(data.playerX, data.playerY, data.playerZ), yaw = data.playerYaw };
+        PlayerPrefs.SetInt(ArchiveNull.Accusation.AccusationPanel.CaseCompletedPref, data.caseCompleted ? 1 : 0);
         EvidenceInventory.Instance.RestoreEvidence(CreateEvidence(data.evidence));
         EvidenceInventory.Instance.RestoreNotes(ToDictionary(data.notes), data.operatorNotes);
+        PhotoAlbum.Restore(CreateEvidence(data.photos));
+        EvidenceMarkerPlacement.RestoreRecords(data.markers);
         TryRestorePlayerTransform(data);
+        RestoreMemoryPosition(SceneManager.GetActiveScene().name);
+    }
+
+    private void RestoreMemoryPosition(string scene)
+    {
+        if (scene == MainMenuSceneName || !memoryPositions.TryGetValue(scene, out PlayerPoseRecord pose)) return;
+        FirstPersonMovement movement = FindAnyObjectByType<FirstPersonMovement>();
+        if (movement != null) movement.TryRestorePosition(pose.position, Quaternion.Euler(0f, pose.yaw, 0f));
     }
 
     private static void TryRestorePlayerTransform(SaveData data)
@@ -287,12 +332,13 @@ public sealed class GameSaveSystem : MonoBehaviour
             return false;
         }
 
-        SaveData data = JsonUtility.FromJson<SaveData>(File.ReadAllText(SavePath));
+        SaveData data = ReadSave();
         if (data == null || string.IsNullOrWhiteSpace(data.activeScene) || string.Equals(data.activeScene, MainMenuSceneName, StringComparison.OrdinalIgnoreCase))
         {
             return false;
         }
 
+        if (!Application.CanStreamedLevelBeLoaded(data.activeScene)) return false;
         SceneManager.LoadScene(data.activeScene, LoadSceneMode.Single);
         return true;
     }
@@ -305,6 +351,9 @@ public sealed class GameSaveSystem : MonoBehaviour
         }
 
         BoardSessionState.Clear();
+        PhotoAlbum.Restore(null);
+        EvidenceMarkerPlacement.RestoreRecords(null);
+        instance?.memoryPositions.Clear();
         EvidenceInventory.Instance.RestoreEvidence(Array.Empty<EvidenceData>());
         EvidenceInventory.Instance.RestoreNotes(new Dictionary<string, string>(), string.Empty);
         PlayerAssistanceSettings.ResetHelpProgress();
@@ -315,7 +364,10 @@ public sealed class GameSaveSystem : MonoBehaviour
         PlayerPrefs.DeleteKey("archive.intro.detective.v2.seen");
         PlayerPrefs.DeleteKey("archive.narrative.memory01.intro.completed");
         PlayerPrefs.DeleteKey("archive.office.casefile.discovered");
+        PlayerPrefs.DeleteKey(ArchiveNull.Accusation.AccusationPanel.CaseCompletedPref);
+        PlayerPrefs.DeleteKey(ArchiveNull.UI.OfficeDissolveTransition.PendingOfficeRebuildPref);
         MarkOfficeContext();
+        SaveNow();
     }
 
     private static void RestoreBoardData(SaveData data)
@@ -423,7 +475,30 @@ public sealed class GameSaveSystem : MonoBehaviour
                 return fileName;
             }
 
-            File.WriteAllBytes(path, texture.EncodeToPNG());
+            byte[] png;
+            if (texture.isReadable && (texture.format == TextureFormat.RGB24 || texture.format == TextureFormat.RGBA32))
+                png = texture.EncodeToPNG();
+            else
+            {
+                RenderTexture previous = RenderTexture.active;
+                RenderTexture temporary = RenderTexture.GetTemporary(texture.width, texture.height, 0, RenderTextureFormat.ARGB32);
+                Texture2D readable = new(texture.width, texture.height, TextureFormat.RGBA32, false);
+                try
+                {
+                    Graphics.Blit(texture, temporary);
+                    RenderTexture.active = temporary;
+                    readable.ReadPixels(new Rect(0, 0, texture.width, texture.height), 0, 0);
+                    readable.Apply();
+                    png = readable.EncodeToPNG();
+                }
+                finally
+                {
+                    RenderTexture.active = previous;
+                    RenderTexture.ReleaseTemporary(temporary);
+                    Destroy(readable);
+                }
+            }
+            File.WriteAllBytes(path, png);
             return fileName;
         }
         catch (Exception exception)
@@ -440,16 +515,21 @@ public sealed class GameSaveSystem : MonoBehaviour
             return null;
         }
 
-        string path = Path.Combine(PhotoDirectory, fileName);
+        string path = Path.Combine(PhotoDirectory, Path.GetFileName(fileName));
         if (!File.Exists(path))
         {
             return null;
         }
 
-        byte[] bytes = File.ReadAllBytes(path);
         Texture2D texture = new(2, 2, TextureFormat.RGBA32, false);
-        if (!texture.LoadImage(bytes))
+        try
         {
+            if (!texture.LoadImage(File.ReadAllBytes(path))) { Destroy(texture); return null; }
+        }
+        catch (Exception exception)
+        {
+            Destroy(texture);
+            Debug.LogWarning("[Save] Foto no disponible: " + exception.Message);
             return null;
         }
 
@@ -500,7 +580,44 @@ public sealed class GameSaveSystem : MonoBehaviour
         return value;
     }
 
-    private static string SaveDirectory => Path.Combine(Application.persistentDataPath, "Saves");
+    private static string SaveDirectory
+    {
+        get
+        {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            if (laboratorySession) return Path.Combine(Application.persistentDataPath, "MechanicsLab", "Saves");
+            if (PlayableCaseSmokeTest.Requested) return Path.Combine(Application.persistentDataPath, "Validation", System.Diagnostics.Process.GetCurrentProcess().Id.ToString(), "Saves");
+#endif
+            return Path.Combine(Application.persistentDataPath, "Saves");
+        }
+    }
+    private static SaveData ReadSave()
+    {
+        foreach (string path in new[] { SavePath, SavePath + ".bak" })
+        {
+            if (!File.Exists(path)) continue;
+            try
+            {
+                SaveData data = JsonUtility.FromJson<SaveData>(File.ReadAllText(path));
+                if (data != null && !string.IsNullOrEmpty(data.activeScene))
+                {
+                    data.evidence ??= new(); data.photos ??= new(); data.notes ??= new();
+                    data.cardPositions ??= new(); data.worldPhotoPositions ??= new(); data.evidenceZones ??= new();
+                    data.connections ??= new(); data.unlockedConclusions ??= new(); data.timelineSlots ??= new();
+                    return data;
+                }
+            }
+            catch (Exception exception) { Debug.LogWarning("[Save] Archivo inválido: " + exception.Message); }
+        }
+        return null;
+    }
+
+    public static void DeletePhotoFile(string id)
+    {
+        if (string.IsNullOrEmpty(id) || !id.StartsWith("photo_", StringComparison.Ordinal)) return;
+        try { File.Delete(Path.Combine(PhotoDirectory, SanitizeFileName(id) + ".png")); }
+        catch (Exception exception) { Debug.LogWarning("[Save] No se pudo eliminar la foto: " + exception.Message); }
+    }
     private static string PhotoDirectory => Path.Combine(SaveDirectory, "EvidencePhotos");
     private static string SavePath => Path.Combine(SaveDirectory, SaveFileName);
 }

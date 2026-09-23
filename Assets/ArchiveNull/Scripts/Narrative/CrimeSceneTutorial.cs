@@ -418,15 +418,15 @@ public sealed class CrimeSceneTutorial : MonoBehaviour
         rootGroup.interactable = false;
         rootGroup.blocksRaycasts = false;
 
-        Image panel = CreateImage("HelpPanel", canvasObject.transform as RectTransform, new Color(0.04f, 0.038f, 0.032f, 0.9f));
+        Image panel = CreateImage("HelpPanel", canvasObject.transform as RectTransform, new Color(.015f,.014f,.011f,.58f));
         RectTransform panelRect = panel.rectTransform;
-        panelRect.anchorMin = new Vector2(0f, 0f);
-        panelRect.anchorMax = new Vector2(0f, 0f);
-        panelRect.pivot = new Vector2(0f, 0f);
-        panelRect.anchoredPosition = new Vector2(48f, 52f);
-        panelRect.sizeDelta = new Vector2(760f, 176f);
+        panelRect.anchorMin = new Vector2(0f, 1f);
+        panelRect.anchorMax = new Vector2(0f, 1f);
+        panelRect.pivot = new Vector2(0f, 1f);
+        panelRect.anchoredPosition = new Vector2(48f, -190f);
+        panelRect.sizeDelta = new Vector2(600f, 195f);
         Outline outline = panel.gameObject.AddComponent<Outline>();
-        outline.effectColor = new Color(0.78f, 0.68f, 0.48f, 0.42f);
+        outline.effectColor = new Color(.78f,.68f,.48f,.12f);
         outline.effectDistance = new Vector2(1f, -1f);
 
         text = CreateText("Text", panelRect);

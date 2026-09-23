@@ -146,7 +146,8 @@ public sealed class GlobalPauseMenu : MonoBehaviour
 
         if (GlobalInputBindings.WasPressed(GameInputAction.Pause))
         {
-            if (ArchiveNull.Evidence.EvidenceNotebookUI.IsAnyNotebookOpen ||
+            if (ArchiveNull.Evidence.TestingToolsController.CancelledThisFrame || ArchiveNull.Evidence.TestingToolsController.IsPlacing || MemoryLoadingScreen.IsBusy) return;
+            if (ArchiveNull.Evidence.EvidenceNotebookUI.IsAnyNotebookOpen || ArchiveNull.Evidence.EvidenceNotebookUI.ClosedThisFrame ||
                 ArchiveNull.Evidence.PhoneEvidenceReader.IsAnyOpen ||
                 Keypad.IsAnyOpen)
             {
@@ -183,10 +184,13 @@ public sealed class GlobalPauseMenu : MonoBehaviour
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
         optionsPanel.SetActive(false);
-        if (caseSummaryRoot != null) caseSummaryRoot.SetActive(true);
+        if (caseSummaryRoot != null) caseSummaryRoot.SetActive(false);
+        pauseActions.SetActive(true);
         RefreshPauseCaseSummary();
         awaitingRebind = false;
+        pauseBackdrop.Capture(Camera.main);
         SetVisible(true);
+        if(UnityEngine.EventSystems.EventSystem.current!=null) UnityEngine.EventSystems.EventSystem.current.SetSelectedGameObject(resumeButton.gameObject);
         SuppressGameplayCanvases();
         Time.timeScale = 0f;
         isPaused = true;
@@ -194,6 +198,7 @@ public sealed class GlobalPauseMenu : MonoBehaviour
 
     public void ShowOptions()
     {
+        pauseActions.SetActive(false);
         optionsPanel.SetActive(true);
         if (caseSummaryRoot != null) caseSummaryRoot.SetActive(false);
         BuildOptionsCategory(currentOptionsCategory);
@@ -202,7 +207,8 @@ public sealed class GlobalPauseMenu : MonoBehaviour
     public void HideOptions()
     {
         optionsPanel.SetActive(false);
-        if (caseSummaryRoot != null) caseSummaryRoot.SetActive(true);
+        if (caseSummaryRoot != null) caseSummaryRoot.SetActive(false);
+        pauseActions.SetActive(true);
     }
 
     public void ExitToMainMenu()
@@ -236,137 +242,60 @@ public sealed class GlobalPauseMenu : MonoBehaviour
         PlayerPrefs.Save();
         SetVisible(false);
 
-        exitFadeOverlay = CreateFadeOverlay();
-        AsyncOperation officeLoad = SceneManager.LoadSceneAsync(MainMenuSceneName, LoadSceneMode.Single);
-        if (officeLoad != null)
-        {
-            officeLoad.allowSceneActivation = false;
-        }
-
-        OfficeDissolveTransition sceneTransition = FindAnyObjectByType<OfficeDissolveTransition>();
-        bool destroyTemporaryTransition = false;
-        if (sceneTransition != null)
-        {
-            yield return sceneTransition.PlayDissolve();
-        }
-        else
-        {
-            GameObject transitionHost = new("RuntimeMemoryDissolveTransition");
-            sceneTransition = transitionHost.AddComponent<OfficeDissolveTransition>();
-            sceneTransition.DisablePendingReturnRebuildCheck();
-            destroyTemporaryTransition = true;
-            yield return sceneTransition.PlayDissolve();
-        }
-
-        yield return FadeCanvasGroup(exitFadeOverlay, 0f, 1f, 0.45f);
-
-        if (destroyTemporaryTransition && sceneTransition != null)
-        {
-            Destroy(sceneTransition.gameObject);
-        }
-
-        if (officeLoad == null)
-        {
-            SceneManager.LoadScene(MainMenuSceneName, LoadSceneMode.Single);
-            yield break;
-        }
-
-        while (officeLoad.progress < 0.9f)
-        {
-            yield return null;
-        }
-
-        officeLoad.allowSceneActivation = true;
+        OfficeDissolveTransition transition = FindAnyObjectByType<OfficeDissolveTransition>();
+        MemoryLoadingScreen.Load(MainMenuSceneName,transition);
+        yield break;
     }
-
+    private GameObject pauseActions;
+    private PauseBackdrop pauseBackdrop;
+    private Button resumeButton;
     private void BuildUi()
     {
-        GameObject canvasObject = new("GlobalPauseCanvas", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
-        canvasObject.transform.SetParent(transform, false);
-
-        Canvas canvas = canvasObject.GetComponent<Canvas>();
-        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-        canvas.sortingOrder = 5000;
-
-        CanvasScaler scaler = canvasObject.GetComponent<CanvasScaler>();
-        scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-        scaler.referenceResolution = new Vector2(1920f, 1080f);
-        scaler.matchWidthOrHeight = 0.5f;
-
-        rootGroup = canvasObject.AddComponent<CanvasGroup>();
-
-        RectTransform canvasRect = canvasObject.GetComponent<RectTransform>();
-        Image backdrop = CreateImage("Backdrop", canvasRect, new Color(0.018f, 0.021f, 0.019f, 0.91f));
-        Stretch(backdrop.rectTransform);
-        BuildGlitchBackdrop(canvasRect);
-
-        Image topRule = CreateImage("TopRule", canvasRect, new Color(0.66f, 0.62f, 0.48f, 0.5f));
-        topRule.rectTransform.anchorMin = new Vector2(0f, 1f);
-        topRule.rectTransform.anchorMax = new Vector2(1f, 1f);
-        topRule.rectTransform.pivot = new Vector2(0.5f, 1f);
-        topRule.rectTransform.anchoredPosition = new Vector2(0f, -102f);
-        topRule.rectTransform.sizeDelta = new Vector2(0f, 1f);
-
-        RectTransform leftRail = CreatePanel("PauseLeftRail", canvasRect, new Vector2(600f, 690f), new Vector2(0f, 0.5f), new Color(0f, 0f, 0f, 0f));
-        leftRail.anchoredPosition = new Vector2(116f, 6f);
-
-        RectTransform titleBar = CreatePanel("PauseTitleBar", leftRail, new Vector2(560f, 92f), new Vector2(0f, 1f), new Color(0f, 0f, 0f, 0f));
-        titleBar.anchoredPosition = new Vector2(0f, -4f);
-        TMP_Text title = CreateText("Title", titleBar, L("SISTEMA", "SYSTEM"), 42, FontStyles.Normal, TextAlignmentOptions.Left);
-        Stretch(title.rectTransform);
-        title.rectTransform.offsetMin = new Vector2(0f, 8f);
-        title.color = new Color(0.9f, 0.87f, 0.75f, 1f);
-
-        TMP_Text section = CreateText("Section", leftRail, L("ARCHIVE: NULL  /  SESIÓN EN PAUSA", "ARCHIVE: NULL  /  SESSION PAUSED"), 16, FontStyles.Normal, TextAlignmentOptions.Left);
-        SetPoint(section.rectTransform, new Vector2(0f, 1f), new Vector2(280f, -112f), new Vector2(560f, 30f));
-        section.color = new Color(0.58f, 0.61f, 0.55f, 1f);
-
-        CreateLeftButton(leftRail, L("CONTINUAR INVESTIGACION", "CONTINUE INVESTIGATION"), new Vector2(0f, -190f), Resume);
-        CreateLeftButton(leftRail, L("CONFIGURACIÓN", "SETTINGS"), new Vector2(0f, -274f), ShowOptions);
-        CreateLeftButton(leftRail, L("VOLVER A LA OFICINA", "RETURN TO OFFICE"), new Vector2(0f, -358f), ExitToMainMenu);
-
-        caseSummaryRoot = CreatePanel("CaseSummary", canvasRect, new Vector2(680f, 430f), new Vector2(1f, 0.5f), new Color(0.025f, 0.028f, 0.025f, 0.58f)).gameObject;
-        RectTransform caseRect = caseSummaryRoot.GetComponent<RectTransform>();
-        caseRect.anchoredPosition = new Vector2(-128f, 8f);
-        AddOutline(caseSummaryRoot, new Color(0.58f, 0.55f, 0.42f, 0.3f));
-        TMP_Text caseHeader = CreateText("CaseHeader", caseRect, L("EXPEDIENTE ACTIVO", "ACTIVE CASE"), 17, FontStyles.Bold, TextAlignmentOptions.Left);
-        SetPoint(caseHeader.rectTransform, new Vector2(0f, 1f), new Vector2(284f, -34f), new Vector2(500f, 28f));
-        caseHeader.color = new Color(0.65f, 0.61f, 0.46f, 1f);
-        caseSummaryText = CreateText("CaseSummaryText", caseRect, string.Empty, 23, FontStyles.Normal, TextAlignmentOptions.TopLeft);
-        Stretch(caseSummaryText.rectTransform);
-        caseSummaryText.rectTransform.offsetMin = new Vector2(34f, 34f);
-        caseSummaryText.rectTransform.offsetMax = new Vector2(-34f, -82f);
-        caseSummaryText.color = new Color(0.86f, 0.86f, 0.79f, 1f);
-
-        TMP_Text footer = CreateText("Footer", canvasRect, L("ESC  CONTINUAR     CLICK  SELECCIONAR", "ESC  CONTINUE     CLICK  SELECT"), 15, FontStyles.Normal, TextAlignmentOptions.Left);
-        SetPoint(footer.rectTransform, new Vector2(0f, 0f), new Vector2(496f, 42f), new Vector2(760f, 30f));
-        footer.color = new Color(0.52f, 0.54f, 0.49f, 1f);
-
-        optionsPanel = CreatePanel("OptionsPanel", canvasRect, new Vector2(930f, 660f), new Vector2(1f, 0.5f), new Color(0.022f, 0.026f, 0.023f, 0.97f)).gameObject;
-        RectTransform optionsRect = optionsPanel.GetComponent<RectTransform>();
-        optionsRect.anchoredPosition = new Vector2(-96f, 0f);
-        AddOutline(optionsPanel, new Color(0.62f, 0.58f, 0.43f, 0.32f));
-
-        optionsHeaderText = CreateText("OptionsTitle", optionsRect, L("OPCIONES", "OPTIONS"), 31, FontStyles.Bold, TextAlignmentOptions.Left);
-        SetPoint(optionsHeaderText.rectTransform, new Vector2(0f, 1f), new Vector2(36f, -42f), new Vector2(320f, 42f));
-
-        RectTransform tabsRoot = CreatePanel("CategoryTabs", optionsRect, new Vector2(860f, 52f), new Vector2(0.5f, 1f), new Color(0f, 0f, 0f, 0f));
-        tabsRoot.anchoredPosition = new Vector2(0f, -96f);
-        CreateCategoryButton(tabsRoot, PauseOptionsCategory.General, L("GENERAL", "GENERAL"), 0);
-        CreateCategoryButton(tabsRoot, PauseOptionsCategory.Language, L("IDIOMA", "LANGUAGE"), 1);
-        CreateCategoryButton(tabsRoot, PauseOptionsCategory.Sound, L("SONIDO", "SOUND"), 2);
-        CreateCategoryButton(tabsRoot, PauseOptionsCategory.Video, L("VIDEO", "VIDEO"), 3);
-        CreateCategoryButton(tabsRoot, PauseOptionsCategory.Controls, L("CONTROLES", "CONTROLS"), 4);
-
-        optionsContentRoot = CreatePanel("OptionsContent", optionsRect, new Vector2(840f, 450f), new Vector2(0.5f, 1f), new Color(0.01f, 0.022f, 0.021f, 0.45f));
-        optionsContentRoot.anchoredPosition = new Vector2(0f, -170f);
-        AddOutline(optionsContentRoot.gameObject, new Color(0.26f, 0.75f, 0.68f, 0.18f));
-
-        CreateButton(optionsRect, L("CERRAR OPCIONES", "CLOSE OPTIONS"), new Vector2(0f, -604f), HideOptions);
-        currentOptionsCategory = PauseOptionsCategory.General;
-        BuildOptionsCategory(currentOptionsCategory);
+        GameObject host=new("GlobalPauseCanvas",typeof(Canvas),typeof(CanvasScaler),typeof(GraphicRaycaster)); host.transform.SetParent(transform,false);
+        Canvas canvas=host.GetComponent<Canvas>(); canvas.renderMode=RenderMode.ScreenSpaceOverlay; canvas.sortingOrder=25000;
+        CanvasScaler scaler=host.GetComponent<CanvasScaler>(); scaler.uiScaleMode=CanvasScaler.ScaleMode.ScaleWithScreenSize; scaler.referenceResolution=new Vector2(1920,1080); scaler.screenMatchMode=CanvasScaler.ScreenMatchMode.Expand;
+        rootGroup=host.AddComponent<CanvasGroup>(); RectTransform root=(RectTransform)host.transform;
+        var blurred=new GameObject("Paused world",typeof(RectTransform),typeof(RawImage),typeof(PauseBackdrop)); blurred.transform.SetParent(root,false); Stretch((RectTransform)blurred.transform); blurred.GetComponent<RawImage>().raycastTarget=false; pauseBackdrop=blurred.GetComponent<PauseBackdrop>();
+        Image shade=CreateImage("Soft shade",root,new Color(.014f,.011f,.006f,.68f)); Stretch(shade.rectTransform);
+        RectTransform top=CreatePanel("Navigation",root,new Vector2(1040,88),new Vector2(.5f,1),Color.clear); top.anchoredPosition=new Vector2(0,-18);
+        ThinButton(top,L("PAUSA","PAUSE"),new Vector2(-330,0),new Vector2(270,76),ShowPauseActions,20);
+        ThinButton(top,L("EXPEDIENTE","CASE FILE"),Vector2.zero,new Vector2(270,76),ShowCaseSummary,20);
+        ThinButton(top,L("OPCIONES","OPTIONS"),new Vector2(330,0),new Vector2(270,76),ShowOptions,20);
+        Image rule=CreateImage("Navigation baseline",root,new Color(.72f,.62f,.37f,.15f)); rule.rectTransform.anchorMin=new Vector2(0,1); rule.rectTransform.anchorMax=Vector2.one; rule.rectTransform.sizeDelta=new Vector2(0,1); rule.rectTransform.anchoredPosition=new Vector2(0,-108);
+        pauseActions=CreatePanel("Pause actions",root,new Vector2(760,430),new Vector2(.5f,.5f),Color.clear).gameObject;
+        var actions=(RectTransform)pauseActions.transform; actions.anchoredPosition=new Vector2(0,-36);
+        resumeButton=ThinButton(actions,L("Continuar investigación","Resume investigation"),new Vector2(0,132),new Vector2(760,104),Resume,30);
+        ThinButton(actions,L("Configuración","Settings"),new Vector2(0,0),new Vector2(760,104),ShowOptions,30);
+        ThinButton(actions,L("Salir de la memoria","Leave memory"),new Vector2(0,-132),new Vector2(760,104),ExitToMainMenu,30);
+        caseSummaryRoot=CreatePanel("Case overview",root,new Vector2(980,510),new Vector2(.5f,.5f),Color.clear).gameObject;
+        caseSummaryText=CreateText("Case details",(RectTransform)caseSummaryRoot.transform,"",27,FontStyles.Normal,TextAlignmentOptions.TopLeft); Stretch(caseSummaryText.rectTransform); caseSummaryText.color=new Color(.89f,.88f,.81f);
+        TMP_Text footer=CreateText("Footer",root,L("ESC  Continuar      ·      Clic  Seleccionar","ESC  Resume      ·      Click  Select"),18,FontStyles.Normal,TextAlignmentOptions.Right);
+        SetPoint(footer.rectTransform,new Vector2(1,0),new Vector2(-380,46),new Vector2(660,36)); footer.color=new Color(.77f,.76f,.68f);
+        TMP_Text brand=CreateText("Archive",root,"ARCHIVE: NULL",15,FontStyles.Normal,TextAlignmentOptions.Left); SetPoint(brand.rectTransform,new Vector2(0,0),new Vector2(230,46),new Vector2(340,36)); brand.color=new Color(.55f,.52f,.41f);
+        optionsPanel=CreatePanel("Options content",root,new Vector2(1020,690),new Vector2(.5f,.5f),new Color(.015f,.014f,.011f,.42f)).gameObject;
+        RectTransform optionsRect=(RectTransform)optionsPanel.transform;
+        optionsHeaderText=CreateText("OptionsTitle",optionsRect,L("Configuración","Settings"),31,FontStyles.Normal,TextAlignmentOptions.Left);
+        SetPoint(optionsHeaderText.rectTransform,new Vector2(.5f,1),new Vector2(0,-42),new Vector2(860,48));
+        RectTransform tabs=CreatePanel("Settings navigation",optionsRect,new Vector2(860,45),new Vector2(.5f,1),Color.clear); tabs.anchoredPosition=new Vector2(0,-92);
+        CreateCategoryButton(tabs,PauseOptionsCategory.General,L("GENERAL","GENERAL"),0);
+        CreateCategoryButton(tabs,PauseOptionsCategory.Language,L("IDIOMA","LANGUAGE"),1);
+        CreateCategoryButton(tabs,PauseOptionsCategory.Sound,L("SONIDO","SOUND"),2);
+        CreateCategoryButton(tabs,PauseOptionsCategory.Video,L("IMAGEN","PICTURE"),3);
+        CreateCategoryButton(tabs,PauseOptionsCategory.Controls,L("CONTROLES","CONTROLS"),4);
+        optionsContentRoot=CreatePanel("Settings fields",optionsRect,new Vector2(840,450),new Vector2(.5f,1),Color.clear); optionsContentRoot.anchoredPosition=new Vector2(0,-145);
+        ThinButton(optionsRect,L("Volver","Back"),new Vector2(0,-290),new Vector2(360,54),HideOptions,22);
+        currentOptionsCategory=PauseOptionsCategory.General; BuildOptionsCategory(currentOptionsCategory);
     }
-
+    private Button ThinButton(RectTransform parent,string label,Vector2 position,Vector2 size,UnityEngine.Events.UnityAction action,float fontSize)
+    {
+        RectTransform rect=CreatePanel(label,parent,size,new Vector2(.5f,.5f),Color.clear); rect.anchoredPosition=position;
+        Button button=rect.gameObject.AddComponent<Button>(); button.targetGraphic=rect.GetComponent<Image>(); button.transition=Selectable.Transition.None; button.onClick.AddListener(action);
+        TMP_Text text=CreateText("Label",rect,label,fontSize,FontStyles.Normal,TextAlignmentOptions.Center); Stretch(text.rectTransform); text.rectTransform.offsetMin=new Vector2(12,16); text.rectTransform.offsetMax=new Vector2(-12,-8);
+        Image line=CreateImage("Selection line",rect,new Color(.89f,.74f,.43f,.13f)); line.rectTransform.anchorMin=Vector2.zero; line.rectTransform.anchorMax=new Vector2(1,0); line.rectTransform.sizeDelta=new Vector2(0,1); line.rectTransform.anchoredPosition=new Vector2(0,3); line.raycastTarget=false;
+        var visual=rect.gameObject.AddComponent<PauseMenuAction>(); visual.Label=text; visual.Rule=line; return button;
+    }
+    private void ShowPauseActions() { optionsPanel.SetActive(false); caseSummaryRoot.SetActive(false); pauseActions.SetActive(true); }
+    private void ShowCaseSummary() { optionsPanel.SetActive(false); pauseActions.SetActive(false); caseSummaryRoot.SetActive(true); RefreshPauseCaseSummary(); }
     private void RefreshPauseCaseSummary()
     {
         if (caseSummaryText == null)
@@ -379,6 +308,9 @@ public sealed class GlobalPauseMenu : MonoBehaviour
         caseSummaryText.text = L(
             $"LA LLAVE POR DENTRO\n\nUBICACIÓN  {sceneName.ToUpperInvariant()}\nEVIDENCIAS REGISTRADAS  {evidenceCount:00}\n\nOBJETIVO ACTUAL\nDocumentar la escena, contrastar los registros y volver a la oficina cuando exista una hipótesis sostenible.",
             $"THE KEY FROM INSIDE\n\nLOCATION  {sceneName.ToUpperInvariant()}\nREGISTERED EVIDENCE  {evidenceCount:00}\n\nCURRENT OBJECTIVE\nDocument the scene, compare records, and return to the office once a defensible hypothesis exists.");
+        caseSummaryText.text = "LA LLAVE POR DENTRO\n\n" + sceneName + " · " + evidenceCount + " evidencias\n\n" +
+            ArchiveNull.Evidence.CaseEvidenceCatalog.NextObjective() + "\n\nTAB: libreta y fotografías";
+        if (sceneName == "MechanicsLab") caseSummaryText.text = "LABORATORIO DE MECÁNICAS\n\nG: rueda de herramientas\nTrípode: clic para colocar · Q/R para rotar\nE sobre trípode: montar / recuperar\nL: encender montada · P: foto montada\n\nG: herramientas · F: levantar cámara\nTAB: libreta y fotografías";
     }
 
     private void SuppressGameplayCanvases()
@@ -524,7 +456,7 @@ public sealed class GlobalPauseMenu : MonoBehaviour
 
     private Button CreateButton(RectTransform parent, string label, Vector2 anchoredPosition, UnityEngine.Events.UnityAction action)
     {
-        RectTransform rect = CreatePanel(label + "Button", parent, new Vector2(360f, 56f), new Vector2(0.5f, 1f), new Color(0.07f, 0.12f, 0.115f, 1f));
+        RectTransform rect = CreatePanel(label + "Button", parent, new Vector2(360f, 56f), new Vector2(0.5f, 1f), new Color(.10f,.20f,.29f,1));
         rect.anchoredPosition = anchoredPosition;
         Button button = rect.gameObject.AddComponent<Button>();
         button.targetGraphic = rect.GetComponent<Image>();
@@ -555,7 +487,7 @@ public sealed class GlobalPauseMenu : MonoBehaviour
 
     private void CreateCategoryButton(RectTransform parent, PauseOptionsCategory category, string label, int index)
     {
-        RectTransform rect = CreatePanel(category + "Tab", parent, new Vector2(160f, 38f), new Vector2(0f, 0.5f), new Color(0.045f, 0.09f, 0.082f, 0.96f));
+        RectTransform rect = CreatePanel(category + "Tab", parent, new Vector2(160f, 38f), new Vector2(0f, 0.5f), new Color(.08f,.14f,.20f,1));
         rect.anchoredPosition = new Vector2(index * 170f, 0f);
         Button button = rect.gameObject.AddComponent<Button>();
         button.targetGraphic = rect.GetComponent<Image>();
@@ -592,7 +524,12 @@ public sealed class GlobalPauseMenu : MonoBehaviour
                 CreateValueButton(optionsContentRoot, L("AYUDAS CONTEXTUALES", "CONTEXT HELP"), GetHelpLabel(), new Vector2(0f, -136f), ToggleContextHelp);
                 CreateValueButton(optionsContentRoot, L("TEXTOS DE ACCIONES", "ACTION MESSAGES"), GetActionFeedbackLabel(), new Vector2(0f, -214f), ToggleActionFeedback);
                 CreateValueButton(optionsContentRoot, L("REINICIAR AYUDAS", "RESET HELP"), L("REINICIAR", "RESET"), new Vector2(0f, -292f), ResetContextHelp);
-                CreateInfoLine(optionsContentRoot, L("Los subtítulos narrativos permanecen activos aunque oculte los textos de acciones.", "Narrative subtitles remain active when action messages are hidden."), new Vector2(0f, -372f));
+                Slider headBob = CreateOptionSlider(optionsContentRoot, L("MOVIMIENTO BODYCAM", "BODYCAM MOTION"), new Vector2(0f, -372f), value =>
+                {
+                    PlayerPrefs.SetFloat("archive.headbob.intensity", value);
+                    PlayerPrefs.Save();
+                });
+                headBob.SetValueWithoutNotify(PlayerPrefs.GetFloat("archive.headbob.intensity", 0.65f));
                 if (sensitivitySlider != null) sensitivitySlider.value = Mathf.InverseLerp(0.25f, 8f, PlayerPrefs.GetFloat(PrefLookSensitivity, look != null ? look.sensitivity : 2f));
                 break;
 
@@ -639,7 +576,7 @@ public sealed class GlobalPauseMenu : MonoBehaviour
         slider.maxValue = 1f;
         slider.onValueChanged.AddListener(action);
 
-        RectTransform fill = CreatePanel("Fill", sliderRect, new Vector2(0f, 0f), new Vector2(0f, 0.5f), new Color(0.46f, 0.95f, 0.86f, 1f));
+        RectTransform fill = CreatePanel("Fill", sliderRect, new Vector2(0f, 0f), new Vector2(0f, 0.5f), new Color(.4f,.73f,.97f,1));
         Stretch(fill);
         slider.fillRect = fill;
         slider.targetGraphic = fill.GetComponent<Image>();
@@ -651,7 +588,7 @@ public sealed class GlobalPauseMenu : MonoBehaviour
         TMP_Text text = CreateText(label + "Label", parent, label, 19, FontStyles.Bold, TextAlignmentOptions.Left);
         SetPoint(text.rectTransform, new Vector2(0.5f, 1f), anchoredPosition + new Vector2(-250f, 18f), new Vector2(260f, 30f));
 
-        RectTransform rect = CreatePanel(label + "Value", parent, new Vector2(390f, 38f), new Vector2(0.5f, 1f), new Color(0.045f, 0.085f, 0.078f, 1f));
+        RectTransform rect = CreatePanel(label + "Value", parent, new Vector2(390f, 38f), new Vector2(0.5f, 1f), new Color(.08f,.14f,.20f,1));
         rect.anchoredPosition = anchoredPosition + new Vector2(148f, 8f);
         Button button = rect.gameObject.AddComponent<Button>();
         button.targetGraphic = rect.GetComponent<Image>();
@@ -663,7 +600,7 @@ public sealed class GlobalPauseMenu : MonoBehaviour
 
     private void CreateCompactValueButton(RectTransform parent, string label, string value, Vector2 anchoredPosition, UnityEngine.Events.UnityAction action)
     {
-        RectTransform rect = CreatePanel(label + "CompactValue", parent, new Vector2(380f, 72f), new Vector2(0.5f, 1f), new Color(0.045f, 0.085f, 0.078f, 1f));
+        RectTransform rect = CreatePanel(label + "CompactValue", parent, new Vector2(380f, 72f), new Vector2(0.5f, 1f), new Color(.08f,.14f,.20f,1));
         rect.anchoredPosition = anchoredPosition;
         Button button = rect.gameObject.AddComponent<Button>();
         button.targetGraphic = rect.GetComponent<Image>();
@@ -784,7 +721,7 @@ public sealed class GlobalPauseMenu : MonoBehaviour
         TMP_Text label = CreateText("QualityLabel", parent, L("GRAFICOS", "GRAPHICS"), 21, FontStyles.Bold, TextAlignmentOptions.Left);
         SetPoint(label.rectTransform, new Vector2(0.5f, 1f), anchoredPosition + new Vector2(-210f, 26f), new Vector2(180f, 34f));
 
-        RectTransform rect = CreatePanel("QualitySelector", parent, new Vector2(360f, 48f), new Vector2(0.5f, 1f), new Color(0.07f, 0.12f, 0.115f, 1f));
+        RectTransform rect = CreatePanel("QualitySelector", parent, new Vector2(360f, 48f), new Vector2(0.5f, 1f), new Color(.10f,.20f,.29f,1));
         rect.anchoredPosition = anchoredPosition + new Vector2(80f, 20f);
         Button button = rect.gameObject.AddComponent<Button>();
         button.targetGraphic = rect.GetComponent<Image>();
@@ -822,7 +759,7 @@ public sealed class GlobalPauseMenu : MonoBehaviour
             TMP_Text actionLabel = CreateText(action + "Label", parent, GlobalInputBindings.GetLabel(action, IsSpanish()), 16, FontStyles.Bold, TextAlignmentOptions.Left);
             SetPoint(actionLabel.rectTransform, new Vector2(0.5f, 1f), anchoredPosition + new Vector2(-205f, y), new Vector2(250f, 26f));
 
-            RectTransform buttonRect = CreatePanel(action + "Rebind", parent, new Vector2(160f, 24f), new Vector2(0.5f, 1f), new Color(0.07f, 0.12f, 0.115f, 1f));
+            RectTransform buttonRect = CreatePanel(action + "Rebind", parent, new Vector2(160f, 24f), new Vector2(0.5f, 1f), new Color(.10f,.20f,.29f,1));
             buttonRect.anchoredPosition = anchoredPosition + new Vector2(160f, y);
             Button button = buttonRect.gameObject.AddComponent<Button>();
             button.targetGraphic = buttonRect.GetComponent<Image>();
@@ -1188,7 +1125,7 @@ public sealed class GlobalPauseMenu : MonoBehaviour
         tmp.fontSize = size;
         tmp.fontStyle = style;
         tmp.alignment = alignment;
-        tmp.color = new Color(0.76f, 0.96f, 0.9f, 1f);
+        tmp.color = new Color(.83f,.9f,.97f,1);
         return tmp;
     }
 
@@ -1236,7 +1173,7 @@ public sealed class GlobalPauseMenu : MonoBehaviour
         CanvasScaler scaler = canvasObject.GetComponent<CanvasScaler>();
         scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
         scaler.referenceResolution = new Vector2(1920f, 1080f);
-        scaler.matchWidthOrHeight = 0.5f;
+        scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.Expand;
 
         GameObject imageObject = new("Black", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
         imageObject.transform.SetParent(canvasObject.transform, false);

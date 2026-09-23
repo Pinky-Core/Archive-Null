@@ -135,12 +135,12 @@ namespace ArchiveNull.Evidence
             }
         }
 
-        private enum ToolSlot
+        public enum ToolSlot
         {
             Hand,
             Camera,
             UvLight,
-            InventoryItem
+            InventoryItem, Brush, Tripod, Flashlight, Tags
         }
 
         private sealed class WheelSegmentVisual
@@ -149,10 +149,84 @@ namespace ArchiveNull.Evidence
             public Image Arc;
             public Image ActiveBorder;
             public Image IconImage;
+            public TMP_Text Label;
             public float CenterAngle;
             public float HalfWidth;
         }
 
+        private PhysicalEvidenceCamera physicalCamera;
+        private Camera captureOverride;
+        private readonly System.Collections.Generic.Dictionary<ToolSlot, GameObject> extraTools = new();
+        public ToolSlot EquippedTool => equippedTool;
+        public ToolSlot? MountedTool { get; private set; }
+        public GameObject MountedObject { get; private set; }
+        private Transform mountedOriginalParent;
+        public bool MountedPowered { get; private set; }
+        public void RegisterTool(ToolSlot slot, GameObject tool) { extraTools[slot]=tool; CacheToolPose(tool); ApplyToolImmediate(tool, equippedTool==slot); }
+        public bool SelectTool(ToolSlot slot)
+        {
+            if (MountedTool==slot) { ShowActionMessage("Recuperá esta herramienta del trípode."); return false; }
+            hoveredTool=slot; EquipHoveredTool(true); return equippedTool==slot;
+        }
+        public bool MountEquipped(Transform mount)
+        {
+            if (mount==null || MountedObject!=null || equippedTool==ToolSlot.Hand || equippedTool==ToolSlot.Tripod || equippedTool==ToolSlot.InventoryItem || equippedTool==ToolSlot.Tags) return false;
+            GameObject item=GetToolObject(equippedTool);
+            if(item==null) return false;
+            ToolSlot slot=equippedTool;
+            SetCameraMode(false);
+            if(cameraPoseRoutine!=null) { StopCoroutine(cameraPoseRoutine); cameraPoseRoutine=null; }
+            if(equipRoutine!=null) { StopCoroutine(equipRoutine); equipRoutine=null; }
+            mountedOriginalParent=item.transform.parent;
+            Vector3 scale=item.transform.lossyScale;
+            MountedTool=slot; MountedObject=item;
+            equippedTool=hoveredTool=ToolSlot.Hand;
+            IsAnyCameraEquipped=IsAnyUvLightActive=false;
+            item.transform.SetParent(mount,false);
+            item.transform.localPosition=Vector3.zero; item.transform.localRotation=Quaternion.identity; item.transform.localScale=new Vector3(scale.x/mount.lossyScale.x,scale.y/mount.lossyScale.y,scale.z/mount.lossyScale.z);
+            item.SetActive(true);
+            ApplyEquippedToolImmediate();
+            GetComponentInParent<TestingToolsController>()?.RefreshEquippedTools();
+            SetMountedPower(true);
+            SetInventoryWheel(false);
+            return true;
+        }
+        public bool RetrieveMounted()
+        {
+            if(MountedObject==null || !MountedTool.HasValue) return false;
+            GameObject item=MountedObject; ToolSlot slot=MountedTool.Value;
+            SetMountedPower(false);
+            item.transform.SetParent(mountedOriginalParent,false);
+            MountedTool=null; MountedObject=null;
+            ApplyToolImmediate(item,false);
+            return SelectTool(slot);
+        }
+        public void SetMountedPower(bool powered)
+        {
+            MountedPowered=powered;
+            if(MountedObject==null) return;
+            foreach(Light lamp in MountedObject.GetComponentsInChildren<Light>(true)) lamp.enabled=powered;
+            PhysicalEvidenceCamera camera=MountedObject.GetComponent<PhysicalEvidenceCamera>();
+            if(camera!=null)
+            {
+                camera.IsMounted=powered;
+                if(cameraModeRoutine!=null) { StopCoroutine(cameraModeRoutine); cameraModeRoutine=null; }
+                if(cameraModeUI!=null) cameraModeUI.SetActive(powered);
+                if(hudGroup!=null) hudGroup.alpha=powered ? 1 : 0;
+            }
+        }
+        public void TickMountedTool()
+        {
+            if(MountedTool==ToolSlot.UvLight && MountedPowered && uvSpotlight!=null) UpdateUvRevealFromSpotlight();
+        }
+        private Camera LensCamera => captureOverride != null ? captureOverride : physicalCamera != null ? physicalCamera.LensCamera : playerCamera;
+        public void StowForExternalTool() { hoveredTool = ToolSlot.Hand; EquipHoveredTool(true); }
+        public void CaptureFrom(Camera source)
+        {
+            if (source == null) return;
+            captureOverride = source;
+            try { TryCapture(); } finally { captureOverride = null; }
+        }
         private void Awake()
         {
             radialMenuOpen = false;
@@ -181,6 +255,20 @@ namespace ArchiveNull.Evidence
             EnsureAudio();
             EnsureHudAnimationReferences();
             EnsureNotebook();
+            if (cameraToolObject != null) cameraToolObject.SetActive(false);
+            cameraToolObject = new GameObject("Held evidence camera");
+            cameraToolObject.transform.SetParent(playerCamera.transform, false);
+            cameraToolObject.transform.localPosition = new Vector3(.2f, -.25f, .65f);
+            Vector3 cameraScale = playerCamera.transform.lossyScale;
+            var playerBody=playerCamera.GetComponentInParent<FirstPersonMovement>();
+            float sceneScale=playerBody!=null ? TestingToolsController.PlayerScale(playerBody.transform,playerCamera.transform) : 1;
+            cameraToolObject.transform.localScale = new Vector3(sceneScale / Mathf.Abs(cameraScale.x), sceneScale / Mathf.Abs(cameraScale.y), sceneScale / Mathf.Abs(cameraScale.z));
+            cameraToolObject.transform.localPosition = Vector3.Scale(new Vector3(.2f,-.25f,.65f),cameraToolObject.transform.localScale);
+            physicalCamera = cameraToolObject.AddComponent<PhysicalEvidenceCamera>();
+            physicalCamera.Initialize(playerCamera);
+            physicalCamera.MountHud(cameraModeUI);
+            cameraFaceLocalPosition = Vector3.Scale(new Vector3(.025f, -.035f, .39f),cameraToolObject.transform.localScale);
+            cameraFaceLocalEuler = Vector3.zero;
             CacheToolPoses();
             ApplyEquippedToolImmediate();
             SetCameraModeImmediate(false);
@@ -200,6 +288,7 @@ namespace ArchiveNull.Evidence
 
         private void Update()
         {
+            if (TestingToolsController.IsPlacing || ArchiveNull.UI.MemoryLoadingScreen.IsBusy || GlobalPauseMenu.IsPaused || RuntimeConfirmationDialog.IsOpen || ArchiveNull.Accusation.AccusationPanel.IsAnyOpen) return;
             if (EvidenceNotebookUI.IsAnyNotebookOpen || global::Keypad.IsAnyOpen)
             {
                 if (radialMenuOpen)
@@ -301,6 +390,7 @@ namespace ArchiveNull.Evidence
 
             IsCameraModeActive = active;
             IsAnyCameraModeActive = active;
+            if (active && equipRoutine != null) { StopCoroutine(equipRoutine); equipRoutine = null; ApplyEquippedToolImmediate(); }
             AnimateCameraHeldPose(active);
             if (cameraModeRoutine != null)
             {
@@ -411,9 +501,11 @@ namespace ArchiveNull.Evidence
             {
                 WheelSegmentVisual segment = wheelSegments[i];
                 bool isHovered = segment.Tool == hoveredTool;
+                bool mounted = MountedTool==segment.Tool;
+                if(segment.Label!=null) { segment.Label.text=mounted ? "EN TRÍPODE" : GetToolLabel(segment.Tool); segment.Label.color=mounted ? new Color(.95f,.61f,.36f) : Color.white; }
                 if (segment.Arc != null)
                 {
-                    segment.Arc.color = isHovered ? new Color(0.92f, 0.97f, 0.96f, 0.25f) : new Color(0.04f, 0.08f, 0.08f, 0.82f);
+                    segment.Arc.color = mounted ? new Color(.25f,.13f,.08f,.85f) : isHovered ? new Color(0.92f, 0.97f, 0.96f, 0.25f) : new Color(0.04f, 0.08f, 0.08f, 0.82f);
                 }
                 if (segment.ActiveBorder != null)
                 {
@@ -498,6 +590,7 @@ namespace ArchiveNull.Evidence
 
         private void EquipHoveredTool(bool closeWheel)
         {
+            if(MountedTool==hoveredTool) { ShowActionMessage("EN TRÍPODE: recuperá la herramienta para equiparla."); if(closeWheel) SetInventoryWheel(false); return; }
             if (equippedTool == hoveredTool)
             {
                 if (closeWheel)
@@ -527,6 +620,7 @@ namespace ArchiveNull.Evidence
             }
 
             IsAnyUvLightActive = equippedTool == ToolSlot.UvLight && uvLightOn;
+            GetComponentInParent<TestingToolsController>()?.RefreshEquippedTools();
             AnimateToolEquip(equippedTool);
             if (equippedTool == ToolSlot.InventoryItem)
             {
@@ -538,10 +632,10 @@ namespace ArchiveNull.Evidence
                 SetInventoryWheel(false);
             }
 
-            ShowActionMessage("Herramienta equipada: " + GetToolLabel(equippedTool));
+            // Equipped controls now identify the active tool without a duplicate toast.
             if (toolStateText != null)
             {
-                toolStateText.text = "HERRAMIENTA: " + GetToolLabel(equippedTool);
+                toolStateText.text = "FOTO";
             }
         }
 
@@ -552,6 +646,10 @@ namespace ArchiveNull.Evidence
                 ToolSlot.Hand => "MANO",
                 ToolSlot.Camera => "CAMARA",
                 ToolSlot.UvLight => "LUZ UV",
+                ToolSlot.Brush => "PINCEL + POLVO",
+                ToolSlot.Tripod => "TRÍPODE",
+                ToolSlot.Flashlight => "LINTERNA",
+                ToolSlot.Tags => "MARCADORES",
                 ToolSlot.InventoryItem => collectedPhone != null ? collectedPhone.InventoryDisplayName : "OBJETO",
                 _ => "MANO"
             };
@@ -578,6 +676,10 @@ namespace ArchiveNull.Evidence
                 ToolSlot.Hand => "M",
                 ToolSlot.Camera => "C",
                 ToolSlot.UvLight => "UV",
+                ToolSlot.Brush => "POLVO",
+                ToolSlot.Tripod => "TRI",
+                ToolSlot.Flashlight => "LUZ",
+                ToolSlot.Tags => "123",
                 ToolSlot.InventoryItem => "OBJ",
                 _ => "M"
             };
@@ -596,7 +698,7 @@ namespace ArchiveNull.Evidence
                 return;
             }
 
-            Ray ray = playerCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
+            Ray ray = LensCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
             int hitCount = Physics.SphereCastNonAlloc(ray, uvRevealRadius, uvHits, uvRevealDistance, ~0, QueryTriggerInteraction.Collide);
             if (hitCount <= 0)
             {
@@ -683,6 +785,7 @@ namespace ArchiveNull.Evidence
 
         private void SetUvLight(bool active)
         {
+            if(MountedTool==ToolSlot.UvLight) { uvLightOn=false; IsAnyUvLightActive=false; return; }
             uvLightOn = active && equippedTool == ToolSlot.UvLight;
             IsAnyUvLightActive = uvLightOn;
             if (uvSpotlight != null)
@@ -749,6 +852,7 @@ namespace ArchiveNull.Evidence
 
         private void ApplyEquippedToolImmediate()
         {
+            foreach(var entry in extraTools) ApplyToolImmediate(entry.Value, equippedTool==entry.Key);
             ApplyToolImmediate(handToolObject, equippedTool == ToolSlot.Hand);
             ApplyToolImmediate(cameraToolObject, equippedTool == ToolSlot.Camera);
             ApplyToolImmediate(uvLightToolObject, equippedTool == ToolSlot.UvLight);
@@ -760,7 +864,7 @@ namespace ArchiveNull.Evidence
 
         private void ApplyToolImmediate(GameObject toolObject, bool visible)
         {
-            if (toolObject == null)
+            if (toolObject == null || toolObject == MountedObject)
             {
                 return;
             }
@@ -789,20 +893,14 @@ namespace ArchiveNull.Evidence
 
         private IEnumerator AnimateToolEquipRoutine(GameObject nextTool)
         {
-            GameObject previousHand = handToolObject != nextTool && handToolObject != null && handToolObject.activeSelf ? handToolObject : null;
-            GameObject previousCamera = cameraToolObject != nextTool && cameraToolObject != null && cameraToolObject.activeSelf ? cameraToolObject : null;
-            GameObject previousUv = uvLightToolObject != nextTool && uvLightToolObject != null && uvLightToolObject.activeSelf ? uvLightToolObject : null;
-            GameObject previousInventoryItem = collectedPhone != null && collectedPhone.gameObject != nextTool && collectedPhone.gameObject.activeSelf
-                ? collectedPhone.gameObject
-                : null;
-
-            yield return AnimateToolsDown(previousHand, previousCamera, previousUv, previousInventoryItem);
-
-            HideTool(previousHand);
-            HideTool(previousCamera);
-            HideTool(previousUv);
-            HideTool(previousInventoryItem);
-
+            var previous = new System.Collections.Generic.List<GameObject>();
+            foreach(ToolSlot slot in System.Enum.GetValues(typeof(ToolSlot)))
+            {
+                GameObject candidate=GetToolObject(slot);
+                if(candidate!=null && candidate!=nextTool && candidate!=MountedObject && candidate.activeSelf) previous.Add(candidate);
+            }
+            yield return AnimateToolsDown(previous.ToArray());
+            foreach(GameObject item in previous) HideTool(item);
             if (nextTool != null)
             {
                 if (!toolPoses.TryGetValue(nextTool, out ToolPose pose))
@@ -846,7 +944,7 @@ namespace ArchiveNull.Evidence
                 for (int i = 0; i < toolObjects.Length; i++)
                 {
                     GameObject toolObject = toolObjects[i];
-                    if (toolObject == null || !toolObject.activeSelf || !toolPoses.TryGetValue(toolObject, out ToolPose pose))
+                    if (toolObject == null || toolObject == MountedObject || !toolObject.activeSelf || !toolPoses.TryGetValue(toolObject, out ToolPose pose))
                     {
                         continue;
                     }
@@ -860,7 +958,7 @@ namespace ArchiveNull.Evidence
 
         private void HideTool(GameObject toolObject)
         {
-            if (toolObject == null)
+            if (toolObject == null || toolObject == MountedObject)
             {
                 return;
             }
@@ -873,7 +971,7 @@ namespace ArchiveNull.Evidence
             toolObject.SetActive(false);
         }
 
-        private GameObject GetToolObject(ToolSlot tool)
+        public GameObject GetToolObject(ToolSlot tool)
         {
             return tool switch
             {
@@ -881,7 +979,7 @@ namespace ArchiveNull.Evidence
                 ToolSlot.Camera => cameraToolObject,
                 ToolSlot.UvLight => uvLightToolObject,
                 ToolSlot.InventoryItem => collectedPhone != null ? collectedPhone.gameObject : null,
-                _ => null
+                _ => extraTools.TryGetValue(tool, out var extra) ? extra : null
             };
         }
 
@@ -935,9 +1033,12 @@ namespace ArchiveNull.Evidence
                 return;
             }
 
-            nextCaptureTime = Time.unscaledTime + captureCooldown;
-            PlaySound(shutterClip);
-            PlayCaptureFeedback();
+            if (PhotoAlbum.Photos.Count >= PhotoAlbum.Capacity)
+            {
+                ShowMessage(GameLocalization.Text("Tarjeta llena. Eliminá fotos desde la galería.", "Card full. Delete photographs from the gallery."));
+                return;
+            }
+            nextCaptureTime = Time.unscaledTime + Mathf.Max(0.4f, captureCooldown);
 
             if (playerCamera == null)
             {
@@ -945,25 +1046,22 @@ namespace ArchiveNull.Evidence
                 return;
             }
 
-            Ray ray = playerCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
-            if (!TryGetCaptureTarget(ray, out EvidenceTarget target, out bool blocked))
-            {
-                ShowMessage(blocked
-                    ? GameLocalization.Text("Objetivo no registrable.", "Target cannot be recorded.")
-                    : GameLocalization.Text("No hay evidencia enfocada.", "No evidence in focus."));
-                return;
-            }
-
-            if (!target.CanRegister(out string validationMessage))
-            {
-                ShowMessage(validationMessage);
-                return;
-            }
-
+            Ray ray = LensCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
+            TryGetCaptureTarget(ray, out EvidenceTarget target, out _);
             Sprite capturedPhoto = CaptureCameraPhoto();
-            EvidenceData capturedEvidence = target.CreateCapturedEvidence(capturedPhoto);
-            bool registered = EvidenceInventory.Instance.RegisterEvidence(capturedEvidence);
-            ShowMessage(registered ? BuildEvidenceSubtitle(capturedEvidence) : GameLocalization.Text("Evidencia ya registrada.", "Evidence already recorded."));
+            if (capturedPhoto == null) return;
+            string label = target != null ? EvidenceTextLocalization.Name(target.EvidenceData) : null;
+            PhotoAlbum.Add(capturedPhoto, gameObject.scene.name, label);
+            if(recordingText!=null) recordingText.text="FOTOS  " + PhotoAlbum.Photos.Count.ToString("000");
+            if (target != null && target.CanRegister(out _))
+            {
+                EvidenceData capturedEvidence = target.CreateCapturedEvidence(capturedPhoto);
+                EvidenceInventory.Instance.RegisterEvidence(capturedEvidence);
+                ShowMessage(BuildEvidenceSubtitle(capturedEvidence));
+            }
+            else ShowMessage(GameLocalization.Text("Foto guardada en la galería.", "Photograph saved to gallery."));
+            PlaySound(shutterClip);
+            PlayCaptureFeedback();
         }
 
         private static string BuildEvidenceSubtitle(EvidenceData data)
@@ -1037,7 +1135,7 @@ namespace ArchiveNull.Evidence
 
             EvidenceTarget[] candidates = FindObjectsByType<EvidenceTarget>(FindObjectsInactive.Include);
             float bestScore = float.PositiveInfinity;
-            Vector3 cameraPosition = playerCamera.transform.position;
+            Vector3 cameraPosition = LensCamera.transform.position;
             for (int i = 0; i < candidates.Length; i++)
             {
                 EvidenceTarget candidate = candidates[i];
@@ -1053,7 +1151,7 @@ namespace ArchiveNull.Evidence
                     continue;
                 }
 
-                Vector3 viewport = playerCamera.WorldToViewportPoint(aimPoint);
+                Vector3 viewport = LensCamera.WorldToViewportPoint(aimPoint);
                 if (viewport.z <= 0f)
                 {
                     continue;
@@ -1180,7 +1278,7 @@ namespace ArchiveNull.Evidence
                 return Mathf.Max(maxCaptureDistance, minimumUnzoomedCaptureDistance);
             }
 
-            float zoom01 = Mathf.InverseLerp(defaultFov, minZoomFov, playerCamera.fieldOfView);
+            float zoom01 = Mathf.InverseLerp(defaultFov, minZoomFov, LensCamera.fieldOfView);
             float multiplier = Mathf.Lerp(1f, Mathf.Max(1f, zoomedCaptureDistanceMultiplier), zoom01);
             return Mathf.Max(maxCaptureDistance, minimumUnzoomedCaptureDistance) * multiplier;
         }
@@ -1235,32 +1333,53 @@ namespace ArchiveNull.Evidence
 
         private Sprite CaptureCameraPhoto()
         {
-            if (playerCamera == null)
+            if (LensCamera == null)
             {
                 return null;
             }
 
-            int side = Mathf.Clamp(capturedPhotoWidth, 256, 4096);
+            int side = Mathf.Clamp(capturedPhotoWidth, 256, 1920);
+            int height = Mathf.Max(1, Mathf.RoundToInt(side / LensCamera.aspect));
 
-            RenderTexture previousTarget = playerCamera.targetTexture;
+            RenderTexture previousTarget = LensCamera.targetTexture;
             RenderTexture previousActive = RenderTexture.active;
-            RenderTexture renderTexture = RenderTexture.GetTemporary(side, side, 24, RenderTextureFormat.ARGB32);
-            Texture2D texture = new Texture2D(side, side, TextureFormat.RGB24, false);
+            RenderTexture renderTexture = RenderTexture.GetTemporary(side, height, 24, RenderTextureFormat.ARGB32);
+            Texture2D texture = new Texture2D(side, height, TextureFormat.RGB24, false);
+            List<Renderer> hiddenRenderers = new();
+            foreach (GameObject tool in new[] { handToolObject, cameraToolObject, uvLightToolObject })
+                if (tool != null)
+                    foreach (Renderer renderer in tool.GetComponentsInChildren<Renderer>())
+                        if (renderer.enabled) { hiddenRenderers.Add(renderer); renderer.enabled = false; }
 
-            playerCamera.targetTexture = renderTexture;
-            RenderTexture.active = renderTexture;
-            playerCamera.Render();
-            texture.ReadPixels(new Rect(0f, 0f, side, side), 0, 0);
-            texture.Apply();
-
-            playerCamera.targetTexture = previousTarget;
-            RenderTexture.active = previousActive;
-            RenderTexture.ReleaseTemporary(renderTexture);
+            try
+            {
+                var request = new UnityEngine.Rendering.Universal.UniversalRenderPipeline.SingleCameraRequest { destination = renderTexture };
+                if (UnityEngine.Rendering.RenderPipeline.SupportsRenderRequest(LensCamera, request))
+                    UnityEngine.Rendering.RenderPipeline.SubmitRenderRequest(LensCamera, request);
+                else { LensCamera.targetTexture = renderTexture; LensCamera.Render(); }
+                RenderTexture.active = renderTexture;
+                texture.ReadPixels(new Rect(0f, 0f, side, height), 0, 0);
+                texture.Apply();
+            }
+            catch (System.Exception exception)
+            {
+                Destroy(texture);
+                Debug.LogWarning("[Camera] Capture failed: " + exception.Message);
+                ShowMessage(GameLocalization.Text("No se pudo guardar la foto. Intentá otra vez.", "Could not capture photograph. Try again."));
+                return null;
+            }
+            finally
+            {
+                foreach (Renderer renderer in hiddenRenderers) if (renderer != null) renderer.enabled = true;
+                LensCamera.targetTexture = previousTarget;
+                RenderTexture.active = previousActive;
+                RenderTexture.ReleaseTemporary(renderTexture);
+            }
 
             texture.name = "CapturedEvidencePhoto";
             texture.wrapMode = TextureWrapMode.Clamp;
             texture.filterMode = FilterMode.Bilinear;
-            Sprite sprite = Sprite.Create(texture, new Rect(0f, 0f, side, side), new Vector2(0.5f, 0.5f), 100f);
+            Sprite sprite = Sprite.Create(texture, new Rect(0f, 0f, side, height), new Vector2(0.5f, 0.5f), 100f);
             sprite.name = "CapturedEvidencePhotoSprite";
             return sprite;
         }
@@ -1277,7 +1396,7 @@ namespace ArchiveNull.Evidence
             CanvasScaler scaler = canvasObject.GetComponent<CanvasScaler>();
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
             scaler.referenceResolution = new Vector2(1920f, 1080f);
-            scaler.matchWidthOrHeight = 0.5f;
+            scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.Expand;
 
             RectTransform canvasRect = canvasObject.GetComponent<RectTransform>();
             Stretch(canvasRect);
@@ -1297,99 +1416,34 @@ namespace ArchiveNull.Evidence
 
         private GameObject CreateCameraHud(RectTransform parent)
         {
-            GameObject root = CreateRectObject("CameraModeHUD", parent);
-            RectTransform rootRect = root.GetComponent<RectTransform>();
-            Stretch(rootRect);
-            hudGroup = root.AddComponent<CanvasGroup>();
-            hudGroup.interactable = false;
-            hudGroup.blocksRaycasts = false;
-            hudAnimatedRoot = rootRect;
-
-            Image dim = CreateImage("CameraTint", rootRect, new Color(0.02f, 0.06f, 0.055f, 0.12f));
-            Stretch(dim.rectTransform);
-            dim.raycastTarget = false;
-
-            RectTransform frame = CreateRectObject("Viewfinder", rootRect).GetComponent<RectTransform>();
-            frame.anchorMin = new Vector2(0.5f, 0.5f);
-            frame.anchorMax = new Vector2(0.5f, 0.5f);
-            frame.pivot = new Vector2(0.5f, 0.5f);
-            frame.sizeDelta = new Vector2(1040f, 640f);
-
-            CreateCorner(frame, "Corner_TL", new Vector2(0f, 1f), new Vector2(1f, -1f));
-            CreateCorner(frame, "Corner_TR", new Vector2(1f, 1f), new Vector2(-1f, -1f));
-            CreateCorner(frame, "Corner_BL", new Vector2(0f, 0f), new Vector2(1f, 1f));
-            CreateCorner(frame, "Corner_BR", new Vector2(1f, 0f), new Vector2(-1f, 1f));
-
-            Image crossHorizontal = CreateImage("CrosshairHorizontal", frame, hudColor);
-            crossHorizontal.rectTransform.sizeDelta = new Vector2(46f, 2f);
-            Center(crossHorizontal.rectTransform);
-            crossHorizontal.raycastTarget = false;
-
-            Image crossVertical = CreateImage("CrosshairVertical", frame, hudColor);
-            crossVertical.rectTransform.sizeDelta = new Vector2(2f, 46f);
-            Center(crossVertical.rectTransform);
-            crossVertical.raycastTarget = false;
-
-            TMP_Text title = CreateText("ModeLabel", rootRect, cameraModeLabel, 24f, TextAlignmentOptions.TopLeft);
-            title.color = hudColor;
-            SetRect(title.rectTransform, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0f, 1f), new Vector2(70f, -52f), new Vector2(-70f, -16f));
-
-            TMP_Text hint = CreateText("CaptureHint", rootRect, captureHint, 20f, TextAlignmentOptions.BottomRight);
-            hint.color = hudColor;
-            SetRect(hint.rectTransform, new Vector2(0f, 0f), new Vector2(1f, 0f), new Vector2(1f, 0f), new Vector2(70f, 18f), new Vector2(-70f, 54f));
-
-            zoomText = CreateText("ZoomValue", rootRect, "ZOOM 1.0X", 18f, TextAlignmentOptions.BottomLeft);
-            zoomText.color = hudColor;
-            SetRect(zoomText.rectTransform, new Vector2(0f, 0f), new Vector2(1f, 0f), new Vector2(0f, 0f), new Vector2(70f, 18f), new Vector2(-70f, 54f));
-
-            toolStateText = CreateText("ToolState", rootRect, "HERRAMIENTA: " + GetToolLabel(equippedTool), 18f, TextAlignmentOptions.TopRight);
-            toolStateText.color = hudColor;
-            SetRect(toolStateText.rectTransform, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(70f, -90f), new Vector2(-70f, -62f));
-
-            recordingText = CreateText("RecText", rootRect, "REC", 22f, TextAlignmentOptions.TopRight);
-            recordingText.color = new Color(1f, 0.24f, 0.24f, 0.95f);
-            SetRect(recordingText.rectTransform, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(70f, -52f), new Vector2(-70f, -22f));
-
-            focusStateText = CreateText("FocusState", rootRect, "ENFOCADO", 17f, TextAlignmentOptions.Bottom);
-            focusStateText.color = new Color(hudColor.r, hudColor.g, hudColor.b, 0.84f);
-            SetRect(focusStateText.rectTransform, new Vector2(0f, 0f), new Vector2(1f, 0f), new Vector2(0.5f, 0f), new Vector2(650f, 18f), new Vector2(1260f, 56f));
-
-            captureFlash = CreateImage("CaptureFlash", rootRect, Color.white);
-            Stretch(captureFlash.rectTransform);
-            captureFlash.raycastTarget = false;
-            SetImageAlpha(captureFlash, 0f);
-
-            zoomBlurOverlay = CreateImage("ZoomBlurOverlay", rootRect, new Color(0.08f, 0.16f, 0.16f, 0f));
-            Stretch(zoomBlurOverlay.rectTransform);
-            zoomBlurOverlay.raycastTarget = false;
-
-            RectTransform zoomBarRoot = CreateRectObject("ZoomBarRoot", rootRect).GetComponent<RectTransform>();
-            zoomBarRoot.anchorMin = new Vector2(0.5f, 0f);
-            zoomBarRoot.anchorMax = new Vector2(0.5f, 0f);
-            zoomBarRoot.pivot = new Vector2(0.5f, 0f);
-            zoomBarRoot.anchoredPosition = new Vector2(0f, 76f);
-            zoomBarRoot.sizeDelta = new Vector2(300f, 14f);
-            Image zoomBarBg = CreateImage("ZoomBarBg", zoomBarRoot, new Color(0.05f, 0.11f, 0.1f, 0.9f));
-            Stretch(zoomBarBg.rectTransform);
-            RectTransform fillRect = CreateRectObject("ZoomBarFill", zoomBarRoot).GetComponent<RectTransform>();
-            fillRect.anchorMin = new Vector2(0f, 0f);
-            fillRect.anchorMax = new Vector2(0f, 1f);
-            fillRect.pivot = new Vector2(0f, 0.5f);
-            fillRect.anchoredPosition = Vector2.zero;
-            fillRect.sizeDelta = new Vector2(12f, 0f);
-            zoomBarFill = fillRect.gameObject.AddComponent<Image>();
-            zoomBarFill.color = new Color(0.78f, 0.96f, 0.92f, 0.95f);
-
-            transitionBlackOverlay = CreateImage("TransitionBlack", rootRect, new Color(0f, 0f, 0f, 0f));
-            Stretch(transitionBlackOverlay.rectTransform);
-            transitionBlackOverlay.raycastTarget = false;
-            transitionBlackOverlay.transform.SetAsLastSibling();
-            captureFlash.transform.SetAsLastSibling();
-
+            GameObject root=CreateRectObject("CameraModeHUD",parent); RectTransform rect=(RectTransform)root.transform; Stretch(rect);
+            hudGroup=root.AddComponent<CanvasGroup>(); hudGroup.blocksRaycasts=false; hudAnimatedRoot=rect;
+            Image top=CreateImage("LCD status strip",rect,new Color(0,0,0,.66f)); SetRect(top.rectTransform,new Vector2(0,1),Vector2.one,new Vector2(.5f,1),new Vector2(0,-38),Vector2.zero);
+            Image bottom=CreateImage("LCD exposure strip",rect,new Color(0,0,0,.72f)); SetRect(bottom.rectTransform,Vector2.zero,new Vector2(1,0),new Vector2(.5f,0),Vector2.zero,new Vector2(0,40));
+            toolStateText=CreateText("Mode",rect,"FOTO",18,TextAlignmentOptions.TopLeft);
+            SetRect(toolStateText.rectTransform,Vector2.zero,Vector2.one,new Vector2(.5f,.5f),new Vector2(14,42),new Vector2(-14,-9));
+            recordingText=CreateText("PhotoCount",rect,"FOTOS  " + PhotoAlbum.Photos.Count.ToString("000"),16,TextAlignmentOptions.TopRight);
+            SetRect(recordingText.rectTransform,Vector2.zero,Vector2.one,new Vector2(.5f,.5f),new Vector2(14,42),new Vector2(-14,-10));
+            zoomText=CreateText("Zoom",rect,"1.0x",18,TextAlignmentOptions.BottomRight);
+            SetRect(zoomText.rectTransform,Vector2.zero,Vector2.one,new Vector2(.5f,.5f),new Vector2(14,10),new Vector2(-14,-40));
+            focusStateText=CreateText("Focus",rect,"AF-S",16,TextAlignmentOptions.BottomLeft);
+            SetRect(focusStateText.rectTransform,Vector2.zero,Vector2.one,new Vector2(.5f,.5f),new Vector2(14,10),new Vector2(-420,-40));
+            TMP_Text exposure=CreateText("Exposure",rect,"1/125     F2.8     ISO 400",15,TextAlignmentOptions.Bottom);
+            SetRect(exposure.rectTransform,Vector2.zero,Vector2.one,new Vector2(.5f,.5f),new Vector2(155,11),new Vector2(-78,-40));
+            for(int i=1;i<=2;i++)
+            {
+                Image v=CreateImage("Composition vertical",rect,new Color(1,1,1,.13f)); SetRect(v.rectTransform,new Vector2(i/3f,0),new Vector2(i/3f,1),new Vector2(.5f,.5f),new Vector2(0,42),new Vector2(1,-40));
+                Image h=CreateImage("Composition horizontal",rect,new Color(1,1,1,.13f)); SetRect(h.rectTransform,new Vector2(0,i/3f),new Vector2(1,i/3f),new Vector2(.5f,.5f),new Vector2(0,0),new Vector2(0,1));
+            }
+            for(int x=-1;x<=1;x+=2) for(int y=-1;y<=1;y+=2)
+            {
+                Image h=CreateImage("AF corner",rect,new Color(.65f,1,.72f,.9f)); h.rectTransform.anchorMin=h.rectTransform.anchorMax=new Vector2(.5f,.5f); h.rectTransform.sizeDelta=new Vector2(16,2); h.rectTransform.anchoredPosition=new Vector2(x*38,y*32);
+                Image v=CreateImage("AF corner",rect,new Color(.65f,1,.72f,.9f)); v.rectTransform.anchorMin=v.rectTransform.anchorMax=new Vector2(.5f,.5f); v.rectTransform.sizeDelta=new Vector2(2,16); v.rectTransform.anchoredPosition=new Vector2(x*45,y*25);
+            }
+            captureFlash=CreateImage("Shutter flash",rect,new Color(1,1,1,0)); Stretch(captureFlash.rectTransform); captureFlash.raycastTarget=false;
+            transitionBlackOverlay=CreateImage("Shutter",rect,new Color(0,0,0,0)); Stretch(transitionBlackOverlay.rectTransform); transitionBlackOverlay.raycastTarget=false;
             return root;
-        }
-
-        private void CreateInventoryWheel(RectTransform parent)
+        }        private void CreateInventoryWheel(RectTransform parent)
         {
             wheelSegments.Clear();
 
@@ -1416,10 +1470,8 @@ namespace ArchiveNull.Evidence
             Stretch(outerRing.rectTransform);
             outerRing.sprite = CreateRingSprite(512, 0.48f, 0.2f);
 
-            CreateWheelSegment(rootRect, ToolSlot.Hand, 90f, 45f);
-            CreateWheelSegment(rootRect, ToolSlot.Camera, 180f, 45f);
-            CreateWheelSegment(rootRect, ToolSlot.UvLight, 270f, 45f);
-            CreateWheelSegment(rootRect, ToolSlot.InventoryItem, 0f, 45f);
+            ToolSlot[] slots={ToolSlot.InventoryItem,ToolSlot.Hand,ToolSlot.Camera,ToolSlot.UvLight,ToolSlot.Flashlight,ToolSlot.Brush,ToolSlot.Tripod,ToolSlot.Tags};
+            for(int i=0;i<slots.Length;i++) CreateWheelSegment(rootRect,slots[i],i*360f/slots.Length,180f/slots.Length-1);
 
             RectTransform centerDisk = CreateRectObject("CenterDisk", rootRect).GetComponent<RectTransform>();
             centerDisk.anchorMin = new Vector2(0.5f, 0.5f);
@@ -1521,12 +1573,15 @@ namespace ArchiveNull.Evidence
                 Stretch(fallbackText.rectTransform);
             }
 
+            TMP_Text slotLabel=CreateText("Tool name",iconRect,GetToolLabel(slot),13,TextAlignmentOptions.Center);
+            slotLabel.rectTransform.sizeDelta=new Vector2(140,30); slotLabel.rectTransform.anchoredPosition=new Vector2(0,-49); slotLabel.raycastTarget=false;
             wheelSegments.Add(new WheelSegmentVisual
             {
                 Tool = slot,
                 Arc = segmentArc,
                 ActiveBorder = borderArc,
                 IconImage = iconImage,
+                Label = slotLabel,
                 CenterAngle = NormalizeAngle180(centerAngle),
                 HalfWidth = halfWidth
             });
@@ -1539,8 +1594,8 @@ namespace ArchiveNull.Evidence
             panelRect.anchorMin = new Vector2(1f, 1f);
             panelRect.anchorMax = new Vector2(1f, 1f);
             panelRect.pivot = new Vector2(1f, 1f);
-            panelRect.anchoredPosition = new Vector2(-34f, -142f);
-            panelRect.sizeDelta = new Vector2(430f, 64f);
+            panelRect.anchoredPosition = new Vector2(-42f, -205f);
+            panelRect.sizeDelta = new Vector2(500f, 112f);
 
             Image panel = panelObject.AddComponent<Image>();
             panel.color = new Color(0f, 0f, 0f, 0.7f);
@@ -1760,6 +1815,7 @@ namespace ArchiveNull.Evidence
             {
                 timer += Time.unscaledDeltaTime;
                 float t = Mathf.Clamp01(timer / Mathf.Max(0.001f, captureFeedbackDuration));
+                if(transitionBlackOverlay!=null) SetImageAlpha(transitionBlackOverlay,t > .35f && t < .68f ? 1 : 0);
                 float flash = t < 0.32f ? Mathf.Lerp(0f, 0.82f, t / 0.32f) : Mathf.Lerp(0.82f, 0f, (t - 0.32f) / 0.68f);
                 if (captureFlash != null)
                 {
@@ -1785,6 +1841,7 @@ namespace ArchiveNull.Evidence
                 hudAnimatedRoot.localScale = Vector3.one;
             }
 
+            if(transitionBlackOverlay!=null) SetImageAlpha(transitionBlackOverlay,0);
             captureFeedbackRoutine = null;
         }
 
@@ -1809,7 +1866,7 @@ namespace ArchiveNull.Evidence
                 lastZoomInputTime = Time.unscaledTime;
             }
 
-            playerCamera.fieldOfView = Mathf.SmoothDamp(playerCamera.fieldOfView, targetFov, ref zoomVelocity, zoomLerpTime, Mathf.Infinity, Time.unscaledDeltaTime);
+            LensCamera.fieldOfView = Mathf.SmoothDamp(LensCamera.fieldOfView, targetFov, ref zoomVelocity, zoomLerpTime, Mathf.Infinity, Time.unscaledDeltaTime);
             UpdateZoomFocusFeedback();
             RefreshZoomText();
         }
@@ -1823,7 +1880,7 @@ namespace ArchiveNull.Evidence
 
             targetFov = defaultFov;
             zoomVelocity = 0f;
-            playerCamera.fieldOfView = immediate ? defaultFov : Mathf.Lerp(playerCamera.fieldOfView, defaultFov, Time.unscaledDeltaTime * zoomIdleReturnSpeed);
+            LensCamera.fieldOfView = immediate ? defaultFov : Mathf.Lerp(LensCamera.fieldOfView, defaultFov, Time.unscaledDeltaTime * zoomIdleReturnSpeed);
             zoomBlurAlpha = Mathf.Max(0f, zoomBlurAlpha - zoomBlurDecaySpeed * Time.unscaledDeltaTime);
             UpdateZoomFocusFeedback();
             RefreshZoomText();
@@ -1836,11 +1893,11 @@ namespace ArchiveNull.Evidence
                 return;
             }
 
-            float zoom = Mathf.Clamp(defaultFov / Mathf.Max(1f, playerCamera.fieldOfView), 1f, 9.9f);
+            float zoom = Mathf.Clamp(defaultFov / Mathf.Max(1f, LensCamera.fieldOfView), 1f, 9.9f);
             zoomText.text = $"ZOOM {zoom:0.0}X";
             if (zoomBarFill != null)
             {
-                float t = Mathf.InverseLerp(defaultFov, minZoomFov, playerCamera.fieldOfView);
+                float t = Mathf.InverseLerp(defaultFov, minZoomFov, LensCamera.fieldOfView);
                 RectTransform fillRect = zoomBarFill.rectTransform;
                 fillRect.sizeDelta = new Vector2(Mathf.Lerp(12f, 300f, t), fillRect.sizeDelta.y);
             }
@@ -1857,7 +1914,7 @@ namespace ArchiveNull.Evidence
             if (focusStateText != null)
             {
                 bool focusing = Time.unscaledTime - lastZoomInputTime < 0.22f || zoomBlurAlpha > 0.03f;
-                focusStateText.text = focusing ? "ENFOCANDO..." : "ENFOCADO";
+                focusStateText.text = focusing ? "AF-S ..." : "AF-S OK";
                 focusStateText.color = focusing
                     ? new Color(hudColor.r, hudColor.g, hudColor.b, 0.72f)
                     : new Color(hudColor.r, hudColor.g, hudColor.b, 0.92f);

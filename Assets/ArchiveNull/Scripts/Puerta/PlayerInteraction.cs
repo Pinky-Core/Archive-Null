@@ -20,6 +20,7 @@ public class PlayerInteraction : MonoBehaviour
 
     void Update()
     {
+        if(ArchiveNull.Evidence.EvidenceMarkerPlacement.HandledInputThisFrame) return;
         if (playerCamera == null)
         {
             playerCamera = Camera.main;

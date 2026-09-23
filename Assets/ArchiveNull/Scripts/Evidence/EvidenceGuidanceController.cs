@@ -372,17 +372,17 @@ namespace ArchiveNull.Evidence
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
             scaler.referenceResolution = new Vector2(1920f, 1080f);
 
-            subtitleGroup = CreatePanel("NarrativeSubtitle", canvasObject.transform as RectTransform, new Vector2(0.5f, 0f), new Vector2(980f, 92f), new Vector2(0f, 52f));
+            subtitleGroup = CreatePanel("NarrativeSubtitle", canvasObject.transform as RectTransform, new Vector2(0.5f, 0f), new Vector2(1100f, 150f), new Vector2(0f, 32f));
             Canvas subtitleCanvas = subtitleGroup.gameObject.AddComponent<Canvas>();
             subtitleCanvas.overrideSorting = true;
             subtitleCanvas.sortingOrder = 20000;
-            subtitleText = CreateText(subtitleGroup.transform as RectTransform, 25f, TextAlignmentOptions.Center);
+            subtitleText = CreateText(subtitleGroup.transform as RectTransform, 25f, TextAlignmentOptions.Center); subtitleText.lineSpacing=4;
 
-            hintGroup = CreatePanel("InactivityHint", canvasObject.transform as RectTransform, new Vector2(0f, 1f), new Vector2(520f, 112f), new Vector2(42f, -42f));
+            hintGroup = CreatePanel("InactivityHint", canvasObject.transform as RectTransform, new Vector2(0f, 1f), new Vector2(560f, 150f), new Vector2(42f, -42f));
             hintText = CreateText(hintGroup.transform as RectTransform, 20f, TextAlignmentOptions.TopLeft);
             hintText.color = new Color(0.96f, 0.88f, 0.63f);
 
-            objectiveGroup = CreatePanel("CurrentObjective", canvasObject.transform as RectTransform, new Vector2(1f, 1f), new Vector2(470f, 88f), new Vector2(-42f, -42f));
+            objectiveGroup = CreatePanel("CurrentObjective", canvasObject.transform as RectTransform, new Vector2(1f, 1f), new Vector2(500f, 130f), new Vector2(-42f, -42f));
             objectiveText = CreateText(objectiveGroup.transform as RectTransform, 18f, TextAlignmentOptions.TopLeft);
             objectiveText.color = new Color(0.78f, 0.92f, 0.88f);
 
@@ -423,7 +423,7 @@ namespace ArchiveNull.Evidence
 
         private static CanvasGroup CreatePanel(string name, RectTransform parent, Vector2 anchor, Vector2 size, Vector2 position)
         {
-            Image image = CreateImage(name, parent, new Color(0.025f, 0.028f, 0.03f, 0.9f));
+            Image image = CreateImage(name, parent, new Color(.015f,.014f,.011f,.60f));
             RectTransform rect = image.rectTransform;
             rect.anchorMin = anchor;
             rect.anchorMax = anchor;

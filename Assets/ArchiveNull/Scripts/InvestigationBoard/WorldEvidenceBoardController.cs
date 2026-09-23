@@ -96,6 +96,7 @@ namespace ArchiveNull.InvestigationBoard
 
         private void Update()
         {
+            if (EvidenceNotebookUI.IsAnyNotebookOpen || RuntimeConfirmationDialog.IsOpen || ArchiveNull.Accusation.AccusationPanel.IsAnyOpen) return;
             HandleMouse();
             UpdateReticle();
             connectionManager?.UpdateVisuals();
@@ -103,6 +104,15 @@ namespace ArchiveNull.InvestigationBoard
 
         private void RefreshFromInventory()
         {
+            var removed = new List<string>();
+            foreach (var pair in photosById)
+                if (!EvidenceInventory.Instance.HasEvidence(pair.Key))
+                {
+                    if (pair.Value != null) Destroy(pair.Value.gameObject);
+                    removed.Add(pair.Key);
+                }
+            foreach (string id in removed) photosById.Remove(id);
+            connectionManager?.RefreshConnections();
             IReadOnlyList<EvidenceData> evidence = EvidenceInventory.Instance.GetAllEvidence();
             for (int i = 0; i < evidence.Count; i++)
             {

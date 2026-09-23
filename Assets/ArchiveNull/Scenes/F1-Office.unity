@@ -6272,6 +6272,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ArchiveNull.UI.OfficeDissolveTransition
   officeRoot: {fileID: 788447259}
+  limitMemoryRadius: 1
+  maximumMemoryRadius: 40
+  memoryOrigin: {fileID: 0}
+  memoryCenter: {x: 8, y: 0, z: 10.5}
+  boundaryWidth: 0.65
   fallbackDissolveShader: {fileID: 4800000, guid: bb82048c173156e4598be1adb174f664, type: 3}
   dissolveDuration: 1.25
   rebuildOnMainMenuReturn: 1

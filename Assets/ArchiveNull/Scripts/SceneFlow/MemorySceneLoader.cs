@@ -17,6 +17,7 @@ namespace ArchiveNull.UI
         [SerializeField] private string memorySceneName = "Memory_01";
         [SerializeField] private float loadDelay;
         [SerializeField] private float fadeToBlackDuration = 0.35f;
+        private bool transitioning;
 
         public void StartMemory()
         {
@@ -36,43 +37,21 @@ namespace ArchiveNull.UI
 
         public IEnumerator PlayMemory(string sceneName)
         {
-            if (string.IsNullOrWhiteSpace(sceneName))
+            if (transitioning || string.IsNullOrWhiteSpace(sceneName) || !Application.CanStreamedLevelBeLoaded(sceneName))
             {
                 Debug.LogWarning("[MemorySceneLoader] Cannot start memory. Scene name is empty.");
                 yield break;
             }
 
             Debug.Log($"[MemorySceneLoader] Starting memory transition to scene '{sceneName}'.");
+            transitioning = true;
+            GameSaveSystem.SaveNow();
 
             mainMenuController?.DisableMonitorCanvasForTransition();
 
-            if (officeDissolveTransition != null)
-            {
-                yield return officeDissolveTransition.PlayDissolve();
-            }
-            else
-            {
-                Debug.LogWarning("[MemorySceneLoader] No OfficeDissolveTransition assigned. Loading scene directly.");
-            }
-
-            if (fadeToBlack != null)
-            {
-                yield return FadeCanvasGroup(fadeToBlack, fadeToBlack.alpha, 1f, fadeToBlackDuration, true, true);
-            }
-
-            if (loadDelay > 0f)
-            {
-                Debug.Log($"[MemorySceneLoader] Waiting {loadDelay:0.00}s before scene load.");
-                yield return new WaitForSeconds(loadDelay);
-            }
-
-            Debug.Log($"[MemorySceneLoader] Loading scene '{sceneName}'.");
-            if (!GameManager.Instance.LoadScene(sceneName))
-            {
-                Debug.LogWarning($"[MemorySceneLoader] Scene change to '{sceneName}' was rejected because another transition is active.");
-            }
+            if (!MemoryLoadingScreen.Load(sceneName)) transitioning = false;
+            yield break;
         }
-
         private static IEnumerator FadeCanvasGroup(CanvasGroup group, float from, float to, float duration, bool activateAtStart, bool keepActiveAtEnd)
         {
             if (group == null)

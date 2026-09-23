@@ -27,7 +27,14 @@ namespace ArchiveNull.UI
         [SerializeField] private Shader fallbackDissolveShader;
 
         [Header("Timing")]
-        [SerializeField] private float dissolveDuration = 1.25f;
+        [Header("Memory exploration boundary")]
+        [SerializeField] private bool limitMemoryRadius;
+        [SerializeField, Min(1f)] private float maximumMemoryRadius = 15f;
+        [SerializeField] private Transform memoryOrigin;
+        [SerializeField] private Vector3 memoryCenter;
+        [SerializeField, Min(0.05f)] private float boundaryWidth = 0.65f;
+
+        [SerializeField] private float dissolveDuration = 4.5f;
         [SerializeField] private bool rebuildOnMainMenuReturn = true;
         [SerializeField] private bool restoreOriginalMaterialsAfterRebuild = true;
         [SerializeField] private bool fadeFromBlackOnMainMenuReturn = true;
@@ -42,9 +49,30 @@ namespace ArchiveNull.UI
         private MaterialPropertyBlock _propertyBlock;
         private RendererState[] _rendererStates;
         private bool _originalMaterialsRestored;
+        private Vector3 waveOrigin;
+        private float waveDistance;
+        private Vector3 reconstructionOrigin;
+        private bool retracting;
+        public bool IsReconstructing { get; private set; }
+        private static readonly int WaveOriginId = Shader.PropertyToID("_WaveOrigin");
+        private static readonly int WaveRadiusId = Shader.PropertyToID("_WaveRadius");
+        private static readonly int WaveWidthId = Shader.PropertyToID("_WaveWidth");
 
         public GameObject OfficeRoot => officeRoot;
-        public float DissolveDuration => dissolveDuration;
+        public float DissolveDuration => Mathf.Max(4.5f, dissolveDuration);
+        public float RetractionDuration => DissolveDuration * .65f;
+        public static OfficeDissolveTransition ActiveMemory { get; private set; }
+        public Vector3 MemoryCenter => waveOrigin;
+        public float MaximumMemoryRadius => maximumMemoryRadius;
+        private MemoryBoundaryPixels boundaryPixels;
+
+        public Vector3 ConstrainPosition(Vector3 position, float clearance = 0.35f)
+        {
+            if (!limitMemoryRadius) return position;
+            Vector2 offset = new(position.x - waveOrigin.x, position.z - waveOrigin.z);
+            offset = Vector2.ClampMagnitude(offset, Mathf.Max(0f, maximumMemoryRadius - clearance));
+            return new Vector3(waveOrigin.x + offset.x, position.y, waveOrigin.z + offset.y);
+        }
 
         public void DisablePendingReturnRebuildCheck()
         {
@@ -61,6 +89,10 @@ namespace ArchiveNull.UI
 
         private void Awake()
         {
+            maximumMemoryRadius = Mathf.Max(1f, maximumMemoryRadius);
+            // A scene anchor, never the current player/save position.
+            waveOrigin = memoryOrigin != null ? memoryOrigin.position : memoryCenter;
+            if (limitMemoryRadius) ActiveMemory = this;
             restoreOriginalMaterialsAfterRebuild = true;
             _propertyBlock = new MaterialPropertyBlock();
             if (fallbackDissolveShader == null)
@@ -71,6 +103,7 @@ namespace ArchiveNull.UI
 
         private void Start()
         {
+            if (MemoryLoadingScreen.IsBusy) { PlayerPrefs.SetInt(PendingOfficeRebuildPref, 0); return; }
             if (!rebuildOnMainMenuReturn || PlayerPrefs.GetInt(PendingOfficeRebuildPref, 0) != 1)
             {
                 return;
@@ -84,7 +117,6 @@ namespace ArchiveNull.UI
         private IEnumerator PlayPendingReturnRebuild()
         {
             CanvasGroup fadeOverlay = fadeFromBlackOnMainMenuReturn ? CreateBlackFadeOverlay() : null;
-            PrepareRebuildStart();
 
             if (fadeOverlay != null)
             {
@@ -97,17 +129,27 @@ namespace ArchiveNull.UI
                 Destroy(fadeOverlay.gameObject);
             }
 
-            yield return PlayRebuild(restoreOriginalMaterialsAfterRebuild);
+            // The office is real: only the headset fades on.
         }
 
         public IEnumerator PlayDissolve()
         {
             CacheRendererStates();
+            retracting = true;
+            RenderSettings.skybox = null;
+            if (Camera.main != null) { Camera.main.clearFlags = CameraClearFlags.SolidColor; Camera.main.backgroundColor = Color.black; }
+            reconstructionOrigin = Camera.main != null ? Camera.main.transform.position : waveOrigin;
+            waveDistance = 1f;
+            foreach (RendererState state in _rendererStates)
+                if (state?.Renderer != null) waveDistance = Mathf.Max(waveDistance,
+                    Vector3.Distance(reconstructionOrigin, state.Renderer.bounds.center) + state.Renderer.bounds.extents.magnitude);
+            waveDistance += 1f;
+            if (limitMemoryRadius) waveDistance = maximumMemoryRadius + Vector3.Distance(reconstructionOrigin,waveOrigin) + 5f;
             EnsureDissolveMaterialsApplied();
             ApplyDissolve(0f);
             Debug.Log("[OfficeDissolveTransition] Starting office dissolve.");
 
-            float duration = Mathf.Max(0.001f, dissolveDuration);
+            float duration = RetractionDuration;
             float timer = 0f;
             while (timer < duration)
             {
@@ -123,12 +165,16 @@ namespace ArchiveNull.UI
 
         public IEnumerator PlayRebuild(bool restoreOriginalMaterials = false)
         {
+            IsReconstructing = true;
             CacheRendererStates();
+            retracting = false;
+            reconstructionOrigin = waveOrigin;
+            if (limitMemoryRadius) waveDistance = maximumMemoryRadius;
             EnsureDissolveMaterialsApplied();
             ApplyDissolve(1f);
             Debug.Log("[OfficeDissolveTransition] Starting office rebuild.");
 
-            float duration = Mathf.Max(0.001f, dissolveDuration);
+            float duration = Mathf.Max(4.5f, dissolveDuration);
             float timer = 0f;
             while (timer < duration)
             {
@@ -152,6 +198,7 @@ namespace ArchiveNull.UI
             }
 
             Debug.Log("[OfficeDissolveTransition] Office rebuild completed.");
+            IsReconstructing = false;
         }
 
         public void PrepareRebuildStart()
@@ -169,6 +216,13 @@ namespace ArchiveNull.UI
             }
 
             Renderer[] renderers = CollectRenderers();
+            if (!limitMemoryRadius) waveOrigin = Camera.main != null ? Camera.main.transform.position : transform.position;
+            waveDistance = 1f;
+            foreach (Renderer candidate in renderers)
+                if (candidate != null)
+                    waveDistance = Mathf.Max(waveDistance, Vector3.Distance(waveOrigin, candidate.bounds.center) + candidate.bounds.extents.magnitude);
+            waveDistance += 1f;
+            if (limitMemoryRadius) waveDistance = maximumMemoryRadius;
             _rendererStates = new RendererState[renderers.Length];
 
             for (int i = 0; i < renderers.Length; i++)
@@ -184,7 +238,7 @@ namespace ArchiveNull.UI
                 for (int materialIndex = 0; materialIndex < originalMaterials.Length; materialIndex++)
                 {
                     Material material = originalMaterials[materialIndex];
-                    if (material == null || !material.HasProperty(DissolveAmountId))
+                    if (material == null || !material.HasProperty(WaveRadiusId))
                     {
                         supportsPropertyBlock = false;
                         break;
@@ -206,11 +260,16 @@ namespace ArchiveNull.UI
 
                 _rendererStates[i] = state;
             }
+            if (limitMemoryRadius && boundaryPixels == null)
+            {
+                boundaryPixels = new GameObject("Memory boundary pixels").AddComponent<MemoryBoundaryPixels>();
+                boundaryPixels.Initialize(waveOrigin, maximumMemoryRadius);
+            }
         }
 
         private Renderer[] CollectRenderers()
         {
-            if (officeRoot != null)
+            if (officeRoot != null && !limitMemoryRadius)
             {
                 return officeRoot.GetComponentsInChildren<Renderer>(true);
             }
@@ -225,7 +284,12 @@ namespace ArchiveNull.UI
                     continue;
                 }
 
-                renderers.AddRange(root.GetComponentsInChildren<Renderer>(true));
+                foreach (Renderer renderer in root.GetComponentsInChildren<Renderer>(true))
+                    if (renderer.GetComponentInParent<FirstPersonMovement>() == null &&
+                        renderer.GetComponentInParent<Camera>() == null &&
+                        renderer.GetComponentInParent<Canvas>() == null &&
+                        renderer is not ParticleSystemRenderer)
+                        renderers.Add(renderer);
             }
 
             return renderers.ToArray();
@@ -233,6 +297,7 @@ namespace ArchiveNull.UI
 
         private void ApplyDissolve(float amount)
         {
+            if (boundaryPixels != null) boundaryPixels.SetProgress(1f - amount);
             if (_rendererStates == null)
             {
                 return;
@@ -248,6 +313,12 @@ namespace ArchiveNull.UI
 
                 state.Renderer.GetPropertyBlock(_propertyBlock);
                 _propertyBlock.SetFloat(DissolveAmountId, amount);
+                _propertyBlock.SetVector(WaveOriginId, waveOrigin);
+                _propertyBlock.SetVector("_ReconstructionOrigin", retracting ? reconstructionOrigin : waveOrigin);
+                _propertyBlock.SetFloat(WaveRadiusId, Mathf.Lerp(-1f, waveDistance, 1f - amount));
+                _propertyBlock.SetFloat(WaveWidthId, 0.45f);
+                _propertyBlock.SetFloat("_MemoryRadius", limitMemoryRadius ? maximumMemoryRadius : 0f);
+                _propertyBlock.SetFloat("_BoundaryWidth", boundaryWidth);
                 state.Renderer.SetPropertyBlock(_propertyBlock);
             }
         }
@@ -290,6 +361,13 @@ namespace ArchiveNull.UI
 
                 if (state.OriginalMaterials != null)
                 {
+                    // Keep clipping on geometry touching or crossing the fixed border.
+                    // Interior objects retain their authored lighting and materials.
+                    Bounds bounds = state.Renderer.bounds;
+                    Vector2 farthest = new(Mathf.Abs(bounds.center.x - waveOrigin.x) + bounds.extents.x,
+                        Mathf.Abs(bounds.center.z - waveOrigin.z) + bounds.extents.z);
+                    if (limitMemoryRadius && farthest.magnitude >= maximumMemoryRadius - boundaryWidth)
+                        continue;
                     state.Renderer.sharedMaterials = state.OriginalMaterials;
                 }
 
@@ -297,6 +375,29 @@ namespace ArchiveNull.UI
             }
 
             _originalMaterialsRestored = true;
+        }
+
+        private void OnDestroy()
+        {
+            if (ActiveMemory == this) ActiveMemory = null;
+            if (boundaryPixels != null) Destroy(boundaryPixels.gameObject);
+            if (_rendererStates == null) return;
+            foreach (RendererState state in _rendererStates)
+                if (state?.RuntimeDissolveMaterials != null)
+                    foreach (Material material in state.RuntimeDissolveMaterials) if (material != null) Destroy(material);
+        }
+
+        private void OnDrawGizmosSelected()
+        {
+            if (!limitMemoryRadius) return;
+            Vector3 center = Application.isPlaying ? waveOrigin : memoryOrigin != null ? memoryOrigin.position : memoryCenter;
+            Gizmos.color = Color.cyan;
+            for (int i = 0; i < 96; i++)
+            {
+                float a = i * Mathf.PI * 2f / 96f, b = (i + 1) * Mathf.PI * 2f / 96f;
+                Gizmos.DrawLine(center + new Vector3(Mathf.Cos(a), 0, Mathf.Sin(a)) * maximumMemoryRadius,
+                    center + new Vector3(Mathf.Cos(b), 0, Mathf.Sin(b)) * maximumMemoryRadius);
+            }
         }
 
         private IEnumerator SmoothRestoreOriginalMaterials()

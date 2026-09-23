@@ -46,6 +46,7 @@ namespace ArchiveNull.Narrative
 
         private IEnumerator PlayIntroduction()
         {
+            while(ArchiveNull.UI.MemoryLoadingScreen.IsBusy || ArchiveNull.UI.SceneRebuildTransition.IsBusy) yield return null;
             yield return new WaitForSecondsRealtime(1.2f);
             yield return ShowLine(GameLocalization.Text("SISTEMA", "SYSTEM"), GameLocalization.Text("Memoria 01 estabilizada. Sala principal de la residencia Herrera. Reconstrucción correspondiente a la noche del 14 de junio.", "Memory 01 stabilized. Main room of the Herrera residence. Reconstruction corresponding to the night of June 14."), 5.5f);
             yield return ShowLine(GameLocalization.Text("OPERADOR 253", "OPERATOR 253"), GameLocalization.Text("Julián Herrera, 41 años. Arquitecto. Fue encontrado muerto aquí, con la puerta principal cerrada desde adentro.", "Julián Herrera, age 41. Architect. He was found dead here, with the front door locked from the inside."), 5.5f);
@@ -85,19 +86,19 @@ namespace ArchiveNull.Narrative
             scaler.referenceResolution = new Vector2(1920f, 1080f);
             scaler.matchWidthOrHeight = 0.5f;
             group = canvasObject.GetComponent<CanvasGroup>();
-            group.blocksRaycasts = false;
+            group.blocksRaycasts = false; group.alpha=0;
 
-            Image panel = CreateImage(canvasObject.transform as RectTransform, new Color(0.015f, 0.018f, 0.017f, 0.9f));
+            Image panel = CreateImage(canvasObject.transform as RectTransform, new Color(.015f,.014f,.011f,.62f));
             RectTransform rect = panel.rectTransform;
             rect.anchorMin = new Vector2(0.5f, 0f);
             rect.anchorMax = new Vector2(0.5f, 0f);
             rect.pivot = new Vector2(0.5f, 0f);
-            rect.anchoredPosition = new Vector2(0f, 48f);
-            rect.sizeDelta = new Vector2(1120f, 132f);
+            rect.anchoredPosition = new Vector2(0f, 32f);
+            rect.sizeDelta = new Vector2(1100f, 160f);
             speakerText = CreateText(rect, 18f, FontStyles.Bold);
-            speakerText.rectTransform.offsetMin = new Vector2(32f, 84f);
+            speakerText.rectTransform.offsetMin = new Vector2(32f, 115f);
             speakerText.color = new Color(0.72f, 0.65f, 0.43f, 1f);
-            dialogueText = CreateText(rect, 25f, FontStyles.Normal);
+            dialogueText = CreateText(rect, 25f, FontStyles.Normal); dialogueText.lineSpacing=4;
             dialogueText.rectTransform.offsetMin = new Vector2(32f, 18f);
             dialogueText.rectTransform.offsetMax = new Vector2(-32f, -48f);
         }

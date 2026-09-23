@@ -1,6 +1,8 @@
 using System;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using UnityEngine.EventSystems;
+using UnityEngine.InputSystem.UI;
 
 namespace ArchiveNull.Core
 {
@@ -74,20 +76,44 @@ namespace ArchiveNull.Core
 
         public bool LoadScene(string sceneName)
         {
-            if (IsChangingScene || string.IsNullOrWhiteSpace(sceneName))
+            if (IsChangingScene || string.IsNullOrWhiteSpace(sceneName) || !Application.CanStreamedLevelBeLoaded(sceneName))
             {
                 return false;
             }
 
             IsChangingScene = true;
+            GameSaveSystem.SaveNow();
             Time.timeScale = 1f;
             SceneChangeStarted?.Invoke(sceneName);
-            SceneManager.LoadScene(sceneName, LoadSceneMode.Single);
+            try { if (!ArchiveNull.UI.MemoryLoadingScreen.Load(sceneName)) { IsChangingScene = false; return false; } }
+            catch (Exception exception)
+            {
+                IsChangingScene = false;
+                Debug.LogError("[GameManager] No se pudo cargar la escena: " + exception.Message);
+                return false;
+            }
             return true;
         }
 
         private void HandleSceneLoaded(Scene scene, LoadSceneMode mode)
         {
+            // Persistent UI helpers and authored scene UIs must share one event system.
+            EventSystem[] systems = FindObjectsByType<EventSystem>(FindObjectsInactive.Exclude);
+            EventSystem selected = null;
+            foreach (EventSystem system in systems)
+                if (system.isActiveAndEnabled && (selected == null || system.gameObject.scene == scene)) selected = system;
+            if (selected != null)
+            {
+                foreach (EventSystem system in systems)
+                    if (system != selected)
+                    {
+                        system.enabled = false;
+                        foreach (BaseInputModule module in system.GetComponents<BaseInputModule>()) module.enabled = false;
+                    }
+                InputSystemUIInputModule input = selected.GetComponent<InputSystemUIInputModule>();
+                if (input == null) { input = selected.gameObject.AddComponent<InputSystemUIInputModule>(); input.AssignDefaultActions(); }
+                foreach (BaseInputModule module in selected.GetComponents<BaseInputModule>()) module.enabled = module == input;
+            }
             CurrentSceneName = scene.name;
             IsChangingScene = false;
             SceneChangeCompleted?.Invoke(scene);

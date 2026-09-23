@@ -7450,7 +7450,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ArchiveNull.Evidence.EvidenceTarget
   evidenceData: {fileID: 0}
-  evidenceId: f1_house_cup
+  evidenceId: f1_house_guest_cup
   evidenceName: Taza
   description: Taza de otra persona
   narrativeLine: "Se ve que hab\xEDa otra persona con Juli\xE1n..."
@@ -7743,6 +7743,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ArchiveNull.UI.OfficeDissolveTransition
   officeRoot: {fileID: 788447259}
+  limitMemoryRadius: 1
+  maximumMemoryRadius: 60
+  memoryOrigin: {fileID: 0}
+  memoryCenter: {x: -2.5, y: 0, z: 12.5}
+  boundaryWidth: 0.65
   fallbackDissolveShader: {fileID: 4800000, guid: bb82048c173156e4598be1adb174f664, type: 3}
   dissolveDuration: 1.25
   rebuildOnMainMenuReturn: 1
@@ -9821,7 +9826,7 @@ MonoBehaviour:
   unlockMode: 1
   pin: 2530
   ownerName: Julian Herrera
-  lockDate: 17 OCT
+  lockDate: 14 JUN
   evidenceTarget: {fileID: 0}
   pickupNarration: Este telefono parece pertenecer a Julian. Si puedo desbloquearlo,
     tal vez conserve algo util.
@@ -9829,32 +9834,32 @@ MonoBehaviour:
   - {fileID: 0}
   chats:
   - contact: Sofia Roldan
-    status: ultima vez hoy a las 22:16
-    preview: Necesito que hablemos.
+    status: ultima conexion 20:04
+    preview: No me busques mas. Ya tome una decision. Perdon.
     conversation:
-    - IN|21:48|Llegaste a casa?
-    - OUT|21:51|Si. Tenemos que terminar con esto.
-    - IN|22:03|No por mensaje. Llamame.
-    - OUT|22:14|No puedo seguir con esto. Necesito que hablemos.
-  - contact: Martin Herrera
-    status: ultima vez ayer
-    preview: La copia de la llave sigue donde acordamos.
+    - OUT|16:30|Sofia, estoy revisando papeles de mama. La copia de Nicolas no coincide con la original. Tambien hay diferencias en las facturas de Salas. Manana voy a hablar con Funes; no quiero denunciar sin confirmar todo.
+    - IN|18:12|Acabo de salir de tu casa. Ya estoy en el colectivo. Le escribi a Ana para que me espere; necesito tranquilizarme.
+    - OUT|18:16|Entiendo que estes enojada. Hablamos manana cuando haya ordenado los documentos. Gracias por venir.
+    - OUT|20:00|No me busques mas. Ya tome una decision. Perdon.
+    - IN|20:04|Julian? Esto no parece tuyo. Contestame, por favor.
+  - contact: Nicolas Herrera
+    status: ultima conexion 19:47
+    preview: Estoy en la estacion de servicio.
     conversation:
-    - OUT|18:32|Necesito entrar sin que Sofia se entere.
-    - IN|18:40|La copia de la llave sigue donde acordamos.
-    - OUT|18:42|Despues hablamos.
-  - contact: Numero desconocido
-    status: sin conexion
-    preview: No firmes nada hasta que llegue.
+    - IN|18:18|Estoy llegando. Tenemos que hablar de la casa.
+    - OUT|18:46|Te fuiste sin responder por la firma de mama. Manana lo va a revisar el abogado.
+    - IN|19:47|Estoy en la estacion de servicio, fuera del barrio. No pienso volver a discutir hoy.
+  - contact: Victor Salas
+    status: ultima conexion 19:09
+    preview: Entro por el lateral.
     conversation:
-    - IN|19:42|No firmes nada hasta que llegue.
-    - OUT|19:44|Quien sos?
-    - IN|19:45|Alguien que sabe lo que intentan hacer.
+    - OUT|19:02|Victor, los comprobantes repiten numero pero tienen montos distintos. Necesito una explicacion antes de hablar con Funes.
+    - IN|19:09|Estoy afuera. Entro por el lateral como cuando hicimos la reforma.
   callRecords:
-  - MISSED|Sofia Roldan|22:14|Llamada perdida
-  - OUT|Martin Herrera|20:08|02:41
-  - IN|Estudio Valdez|18:32|05:12
-  - MISSED|Numero desconocido|17:56|Llamada perdida
+  - OUT|Dr. Funes|18:55|03:12 - Consulta para la manana siguiente
+  - IN|Victor Salas|19:08|00:43 - Antes de su visita
+  - MISSED|Sofia Roldan|20:04|Sin respuesta tras el mensaje final
+  - MISSED|Sofia Roldan|20:11|Segunda llamada sin respuesta
   messagesEvidence: {fileID: 0}
   callsEvidence: {fileID: 0}
   powerOnDuration: 0.42

@@ -1,0 +1,48 @@
+PASS laboratory installs player, tools and photographic camera
+PASS independent head bob pivot installed
+PASS memory rebuild completed
+PASS tripod can be placed on supported free floor; eye=(0.00, 1.85, -5.00)
+PASS tripod keeps chosen rotation
+PASS cancel moving restores original tripod
+PASS place evidence marker 1
+PASS place evidence marker 2
+PASS place evidence marker 3
+PASS collecting marker 2 renumbers former marker 3 to 2
+PASS placed marker records are available to save system
+PASS new tripod is empty
+PASS wheel selects Brush
+PASS mount transfers same object: Brush
+PASS mounted tool unavailable in hand: Brush
+PASS retrieving restores tool: Brush
+PASS wheel selects Flashlight
+PASS mount transfers same object: Flashlight
+PASS mounted tool unavailable in hand: Flashlight
+PASS retrieving restores tool: Flashlight
+PASS wheel selects UvLight
+PASS mount transfers same object: UvLight
+PASS mounted tool unavailable in hand: UvLight
+PASS retrieving restores tool: UvLight
+PASS held camera renders live image on LCD (physical=True, mode=True, paused=False, notebook=False)
+PASS handheld feed originates at physical lens
+PASS lens zoom does not change player view
+PASS photograph reaches discard gallery
+PASS LCD turns black when camera mode ends
+PASS camera mounts on empty tripod
+PASS mounted lens stays on camera when player moves
+PASS mounted camera cannot be duplicated in the wheel
+PASS camera can be retrieved and equipped again
+PASS empty hand has no persistent controls panel
+PASS equipping markers shows their specific controls
+PASS reagent exposure reveals hidden trace
+PASS walking near boundary never moves memory origin
+PASS asynchronous memory loading starts
+PASS house wave runs with loading and scene blackouts removed
+PASS house reconstruction was visible before completion
+PASS loading screen completes before entering house
+PASS assets wait until blackout has been displayed
+PASS reconstruction wave uses slower playback
+PASS house uses expanded radius
+FAIL System.InvalidOperationException: scaled tripod finds supported free floor in F1-House (scale 2,13)
+  at MechanicsEditorProbe.Check (System.Boolean condition, System.String message) [0x0001f] in F:\Unity Proyects\Archive Null\Assets\ArchiveNull\Editor\MechanicsEditorProbe.cs:200 
+  at MechanicsEditorProbe.CheckScenePlacement (ArchiveNull.Evidence.TestingToolsController tools, UnityEngine.Camera eyes) [0x000fa] in F:\Unity Proyects\Archive Null\Assets\ArchiveNull\Editor\MechanicsEditorProbe.cs:195 
+  at MechanicsEditorProbe.Tick () [0x00b72] in F:\Unity Proyects\Archive Null\Assets\ArchiveNull\Editor\MechanicsEditorProbe.cs:142 
