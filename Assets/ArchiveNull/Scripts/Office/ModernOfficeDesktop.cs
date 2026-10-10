@@ -105,8 +105,8 @@ namespace ArchiveNull.UI
         {
             if(!RectTransformUtility.ScreenPointToLocalPointInRectangle(desktop,screenPoint,canvas.worldCamera,out var local)) return screenPoint;
             var bounds=desktop.rect;
-            local.x=Mathf.Clamp(local.x,bounds.xMin+8,bounds.xMax-8);
-            local.y=Mathf.Clamp(local.y,bounds.yMin+8,bounds.yMax-8);
+            local.x=Mathf.Clamp(local.x,bounds.xMin+8,bounds.xMax-40);
+            local.y=Mathf.Clamp(local.y,bounds.yMin+56,bounds.yMax-8);
             return RectTransformUtility.WorldToScreenPoint(canvas.worldCamera,desktop.TransformPoint(local));
         }
         private void LateUpdate()
