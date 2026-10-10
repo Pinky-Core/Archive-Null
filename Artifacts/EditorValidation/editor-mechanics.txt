@@ -42,7 +42,37 @@ PASS loading screen completes before entering house
 PASS assets wait until blackout has been displayed
 PASS reconstruction wave uses slower playback
 PASS house uses expanded radius
-FAIL System.InvalidOperationException: scaled tripod finds supported free floor in F1-House (scale 2,13)
-  at MechanicsEditorProbe.Check (System.Boolean condition, System.String message) [0x0001f] in F:\Unity Proyects\Archive Null\Assets\ArchiveNull\Editor\MechanicsEditorProbe.cs:200 
-  at MechanicsEditorProbe.CheckScenePlacement (ArchiveNull.Evidence.TestingToolsController tools, UnityEngine.Camera eyes) [0x000fa] in F:\Unity Proyects\Archive Null\Assets\ArchiveNull\Editor\MechanicsEditorProbe.cs:195 
-  at MechanicsEditorProbe.Tick () [0x00b72] in F:\Unity Proyects\Archive Null\Assets\ArchiveNull\Editor\MechanicsEditorProbe.cs:142 
+PASS tag placement confirms and persists in F1-House
+PASS pickup ray reaches marker without hitting operator in F1-House
+PASS marker can be collected in F1-House
+PASS tag finds supported free floor in F1-House (scale 2,13)
+PASS house blocks tripod and white flashlight, including shortcuts
+PASS house retains UV and evidence markers
+PASS authored materials restored after reconstruction
+PASS exit wave retracts toward player position
+PASS real office has no memory boundary or reconstruction wave
+PASS office installs headset session UI
+PASS office installs modern operating system desktop
+PASS first-time seating blocked before primary dossier is opened
+PASS opening primary dossier enables workstation
+PASS suspect photographs load from portrait atlas
+PASS focusing monitor opens desktop and finishes session boot
+PASS locked office explains missing investigation requirements
+PASS locked contractor memory cannot be mounted
+PASS partial phone investigation keeps office locked: f1_house_cube
+PASS partial phone investigation keeps office locked: phone_messages
+PASS registering note, messages and calls unlocks office through inventory event
+PASS persisted office access repairs a stale archive index
+PASS desktop mounts unlocked contractor memory
+PASS desktop configuration opens game settings
+PASS closing options returns usable desktop pointer
+PASS office dependencies retained for return journey
+PASS contractor memory retains its fixed boundary
+PASS tag placement confirms and persists in F1-Office
+PASS pickup ray reaches marker without hitting operator in F1-Office
+PASS marker can be collected in F1-Office
+PASS tag finds supported free floor in F1-Office (scale 2,13)
+PASS placed tripod can be targeted for mounting or moving in F1-Office
+PASS scaled tripod finds supported free floor in F1-Office (scale 2,13)
+PASS complete office-memory-office round trip
+MEASURE warm office assets: 1,21 seconds
