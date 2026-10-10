@@ -75,6 +75,9 @@ namespace ArchiveNull.UI
         private bool _pendingFocusReleasedEvent;
         private Vector2 _mouseLook;
         private float _farMotionBlendTimer;
+        private float standingEyeHeight;
+        public float StandingEyeHeight => standingEyeHeight;
+        public Vector3 ArrivalPosition => _firstTimeStartPose!=null ? _firstTimeStartPose.position : GetPosePosition(CameraPose.Stand);
 
         public event Action ReturnedToFar;
 
@@ -110,7 +113,8 @@ namespace ArchiveNull.UI
                 _initialCameraPosition = _targetCamera.transform.position;
                 _initialCameraRotation = _targetCamera.transform.rotation;
                 bool startAtFarPose = ShouldStartAtFarPose();
-                Transform firstTimePose = !startAtFarPose && ShouldUseFirstTimeStartPose() ? _firstTimeStartPose : null;
+                standingEyeHeight=_firstTimeStartPose!=null ? _firstTimeStartPose.position.y : _initialCameraPosition.y;
+                Transform firstTimePose = !startAtFarPose ? _firstTimeStartPose : null;
                 Vector3 startPosition = firstTimePose != null ? firstTimePose.position : startAtFarPose ? GetPosePosition(CameraPose.Far) : GetPosePosition(CameraPose.Stand);
                 Quaternion startRotation = firstTimePose != null ? firstTimePose.rotation : startAtFarPose ? GetPoseRotation(CameraPose.Far) : GetPoseRotation(CameraPose.Stand);
                 _currentPose = startAtFarPose ? CameraPose.Far : CameraPose.Stand;
@@ -127,23 +131,8 @@ namespace ArchiveNull.UI
 
         private bool ShouldStartAtFarPose()
         {
-            bool returningFromMemory = PlayerPrefs.GetInt(OfficeDissolveTransition.PendingOfficeRebuildPref, 0) == 1;
-            if (returningFromMemory)
-            {
-                return !_startStandingOnMemoryReturn;
-            }
-
-            if (!_startAtFarPose)
-            {
-                return false;
-            }
-
-            if (_startStandingUntilTutorialCompleted && PlayerPrefs.GetInt(OfficeSpeakerTutorial.CompletedPref, 0) != 1)
-            {
-                return false;
-            }
-
-            return true;
+            // Arrival is a session event, not a persisted tutorial/rebuild preference.
+            return MemoryLoadingScreen.IsReturningToOffice;
         }
 
         private bool ShouldUseFirstTimeStartPose()
@@ -373,7 +362,9 @@ namespace ArchiveNull.UI
         private Vector3 GetPosePosition(CameraPose pose)
         {
             Transform poseTransform = GetPoseTransform(pose);
-            return poseTransform != null ? poseTransform.position : _initialCameraPosition;
+            Vector3 position=poseTransform != null ? poseTransform.position : _initialCameraPosition;
+            if(pose==CameraPose.Stand) position.y=standingEyeHeight;
+            return position;
         }
 
         private Quaternion GetPoseRotation(CameraPose pose)

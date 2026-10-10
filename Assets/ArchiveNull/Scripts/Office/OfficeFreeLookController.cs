@@ -85,7 +85,7 @@ namespace ArchiveNull.UI
             Vector3 euler = _cameraRoot.rotation.eulerAngles;
             _pitch = NormalizeAngle(euler.x);
             _yaw = euler.y;
-            _lockedHeight = _cameraRoot.position.y;
+            _lockedHeight = _computerFocus!=null ? _computerFocus.StandingEyeHeight : _cameraRoot.position.y;
         }
 
         public void DisableFreeFlight()
@@ -106,6 +106,7 @@ namespace ArchiveNull.UI
 
         private static bool IsUiBlockingLook()
         {
+            if(MemoryLoadingScreen.IsBusy) return true;
             return EvidenceNotebookUI.IsAnyNotebookOpen || EvidenceCameraController.IsAnyRadialMenuOpen || CaseFileReader.IsAnyCaseFileOpen ||
                 ArchiveNull.Accusation.AccusationPanel.IsAnyOpen || RuntimeConfirmationDialog.IsOpen;
         }
@@ -116,6 +117,7 @@ namespace ArchiveNull.UI
             {
                 return;
             }
+            if(_computerFocus.IsTransitioning) { _freeFlightEnabled=false; return; }
 
             if (_computerFocus.IsInStandPose)
             {

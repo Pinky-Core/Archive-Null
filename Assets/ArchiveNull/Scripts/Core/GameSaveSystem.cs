@@ -307,6 +307,7 @@ public sealed class GameSaveSystem : MonoBehaviour
 
     private static void TryRestorePlayerTransform(SaveData data)
     {
+        if(SceneManager.GetActiveScene().name==MainMenuSceneName) return;
         if (data == null || !data.hasPlayerTransform || !string.Equals(data.activeScene, SceneManager.GetActiveScene().name, StringComparison.OrdinalIgnoreCase))
         {
             return;

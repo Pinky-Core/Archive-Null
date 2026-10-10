@@ -12,6 +12,7 @@ namespace ArchiveNull.UI
     {
         public static bool IsBusy { get; private set; }
         public static bool IsLoadingAssets { get; private set; }
+        public static bool IsReturningToOffice { get; private set; }
         public static float Progress { get; private set; }
         public static float BlackBeforeLoadSeconds { get; private set; }
         public static float LastAssetLoadSeconds { get; private set; }
@@ -26,6 +27,7 @@ namespace ArchiveNull.UI
         {
             if(IsBusy || !Application.CanStreamedLevelBeLoaded(scene)) return false;
             IsBusy=IsLoadingAssets=true; Progress=0;
+            IsReturningToOffice=scene=="MainMenu" && SceneManager.GetActiveScene().name!="MainMenu";
             var host=new GameObject("Memory loading",typeof(MemoryLoadingScreen)); DontDestroyOnLoad(host);
             host.GetComponent<MemoryLoadingScreen>().StartCoroutine(host.GetComponent<MemoryLoadingScreen>().Run(scene,closingMemory));
             return true;
@@ -142,6 +144,6 @@ namespace ArchiveNull.UI
             for(float time=0;time<duration;time+=Time.unscaledDeltaTime) { group.alpha=Mathf.SmoothStep(from,to,time/duration); yield return null; }
             group.alpha=to;
         }
-        private void OnDestroy() { RestoreRaycasters(); Application.backgroundLoadingPriority=previousPriority; IsBusy=IsLoadingAssets=false; }
+        private void OnDestroy() { RestoreRaycasters(); Application.backgroundLoadingPriority=previousPriority; IsReturningToOffice=false; IsBusy=IsLoadingAssets=false; }
     }
 }
