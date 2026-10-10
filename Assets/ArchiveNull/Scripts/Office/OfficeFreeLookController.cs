@@ -210,7 +210,7 @@ namespace ArchiveNull.UI
 
             if (_lockMovementHeight)
             {
-                nextPosition.y = _lockedHeight;
+                nextPosition.y = _computerFocus!=null ? _computerFocus.StandingEyeHeight : _lockedHeight;
             }
 
             _cameraRoot.position = nextPosition;
