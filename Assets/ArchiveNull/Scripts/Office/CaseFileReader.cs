@@ -302,6 +302,10 @@ namespace ArchiveNull.UI
             return interactionCollider.Raycast(ray, out _, interactionDistance);
         }
 
+        public void OpenFromDesktop()
+        {
+            if (!open && !busy) StartCoroutine(OpenRoutine());
+        }
         private IEnumerator OpenRoutine()
         {
             busy = true;
@@ -326,7 +330,9 @@ namespace ArchiveNull.UI
 
             pageIndex = 0;
             RefreshPage();
+            if(rootGroup!=null) foreach(TMP_Text label in rootGroup.GetComponentsInChildren<TMP_Text>(true)) label.font=Resources.Load<TMP_FontAsset>("Fonts & Materials/LiberationSans SDF");
             SetUiVisible(true);
+            PlayerPrefs.SetInt("archive.office.casefile.discovered",1); PlayerPrefs.Save();
             busy = false;
         }
 
@@ -516,7 +522,8 @@ namespace ArchiveNull.UI
                 portraitImage.gameObject.SetActive(showPortrait);
                 if (showPortrait)
                 {
-                    portraitImage.sprite = GeneratePortraitSprite(page.portraitName, page.portraitAccent);
+                    portraitImage.sprite = CasePortraits.Get(page.portraitName) ?? GeneratePortraitSprite(page.portraitName, page.portraitAccent);
+                    portraitImage.preserveAspect = true;
                 }
             }
 

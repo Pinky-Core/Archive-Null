@@ -306,6 +306,7 @@ namespace ArchiveNull.UI
         private void Update()
         {
             if(subtitleText!=null && subtitleText.transform.parent is RectTransform subtitlePanel) subtitlePanel.anchoredPosition=new Vector2(0,vrHeadsetStarter!=null && vrHeadsetStarter.IsEquipped ? 280 : 32);
+            hasOpenedCaseFile = OfficeOnboarding.CanUseWorkstation;
             if (currentStep == TutorialStep.Completed || isPlayingLine)
             {
                 return;
@@ -326,7 +327,7 @@ namespace ArchiveNull.UI
                     }
                     break;
                 case TutorialStep.SitPrompt:
-                    if (cameraFocus != null && cameraFocus.IsInFarPose)
+                    if (hasOpenedCaseFile && cameraFocus != null && cameraFocus.IsInFarPose)
                     {
                         PlayStep(TutorialStep.TerminalReady);
                     }

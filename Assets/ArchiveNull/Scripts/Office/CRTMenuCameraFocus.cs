@@ -155,6 +155,7 @@ namespace ArchiveNull.UI
 
         private void Update()
         {
+            if (GlobalPauseMenu.IsPaused) return;
             if (ArchiveNull.Evidence.EvidenceNotebookUI.IsAnyNotebookOpen || ArchiveNull.Evidence.EvidenceNotebookUI.ClosedThisFrame || ArchiveNull.Accusation.AccusationPanel.IsAnyOpen || RuntimeConfirmationDialog.IsOpen) return;
             if (_targetCamera == null || _focusPose == null)
             {
@@ -301,6 +302,7 @@ namespace ArchiveNull.UI
 
         public void FocusComputer()
         {
+            if (!OfficeOnboarding.CanUseWorkstation) return;
             _isFocused = true;
             _currentPose = CameraPose.Focus;
             Cursor.lockState = CursorLockMode.None;
@@ -347,6 +349,7 @@ namespace ArchiveNull.UI
 
         public void MoveToFarPose()
         {
+            if (!OfficeOnboarding.CanUseWorkstation) return;
             _isFocused = false;
             Cursor.lockState = CursorLockMode.Locked;
             Cursor.visible = false;
