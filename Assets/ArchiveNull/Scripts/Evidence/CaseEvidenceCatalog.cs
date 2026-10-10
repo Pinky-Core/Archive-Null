@@ -93,6 +93,19 @@ namespace ArchiveNull.Evidence
             EvidenceInventory.Instance.HasEvidence("phone_messages") &&
             EvidenceInventory.Instance.HasEvidence("phone_call_log");
 
+        public static string ContractorAccessHint
+        {
+            get
+            {
+                if (CanVisitContractor || UnityEngine.PlayerPrefs.GetInt(EvidenceDrivenMemoryUnlock.ContractorOfficeUnlockedPref,0)==1 || UnityEngine.PlayerPrefs.GetInt("crt.archive.unlocked",1)>=2)
+                    return "Oficina de Víctor Salas disponible. Seleccionala y equipá el visor en la oficina.";
+                var inventory=EvidenceInventory.Instance;
+                string note=inventory.HasEvidence("f1_house_cube") ? "✓" : "○";
+                string messages=inventory.HasEvidence("phone_messages") ? "✓" : "○";
+                string calls=inventory.HasEvidence("phone_call_log") ? "✓" : "○";
+                return "Para habilitar la oficina de Salas, registrá en Casa Herrera:\n"+note+" Nota del estante (incluye el PIN)   "+messages+" Mensajes del teléfono   "+calls+" Llamadas del teléfono";
+            }
+        }
         public static string NextObjective()
         {
             if (!CanVisitContractor)
