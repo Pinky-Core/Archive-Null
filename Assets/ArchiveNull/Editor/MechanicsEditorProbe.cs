@@ -26,7 +26,7 @@ public static class MechanicsEditorProbe
         EditorApplication.playModeStateChanged+=state=>
         {
             if(state==PlayModeStateChange.EnteredPlayMode && SessionState.GetBool("archive.mechanics.test",false))
-            { results.Clear(); capturedRebuild=false; Application.runInBackground=true; deadline=EditorApplication.timeSinceStartup+9; phase=0; Application.logMessageReceived+=Log; }
+            { results.Clear(); capturedRebuild=false; Application.runInBackground=true; deadline=EditorApplication.timeSinceStartup+9; phase=Environment.GetCommandLineArgs().Contains("-archive-office-test") ? 4 : 0; Application.logMessageReceived+=Log; }
             if(state==PlayModeStateChange.EnteredEditMode && SessionState.GetBool("archive.mechanics.restore",false))
             {
                 EditorSceneManager.playModeStartScene=AssetDatabase.LoadAssetAtPath<SceneAsset>(SessionState.GetString("archive.mechanics.oldStart","")); SessionState.SetBool("archive.mechanics.restore",false);
@@ -139,7 +139,13 @@ public static class MechanicsEditorProbe
                 Check(MemoryLoadingScreen.BlackBeforeLoadSeconds>=.4f,"assets wait until blackout has been displayed");
                 Check(OfficeDissolveTransition.ActiveMemory.DissolveDuration>=4.5f,"reconstruction wave uses slower playback");
                 Check(OfficeDissolveTransition.ActiveMemory.MaximumMemoryRadius==60,"house uses expanded radius");
-                CheckScenePlacement(tools,eyes);
+                CheckMarkerPlacement(tools,eyes);
+                if(UnityEngine.SceneManagement.SceneManager.GetActiveScene().name=="F1-House")
+                {
+                    Check(!camera.SelectTool(EvidenceCameraController.ToolSlot.Tripod) && !camera.SelectTool(EvidenceCameraController.ToolSlot.Flashlight),"house blocks tripod and white flashlight, including shortcuts");
+                    Check(camera.IsToolAvailable(EvidenceCameraController.ToolSlot.UvLight) && camera.IsToolAvailable(EvidenceCameraController.ToolSlot.Tags),"house retains UV and evidence markers");
+                }
+                else CheckScenePlacement(tools,eyes);
                 var sample=UnityEngine.Object.FindAnyObjectByType<EvidenceTarget>();
                 Check(sample.GetComponentInChildren<Renderer>().sharedMaterial.shader.name!="ArchiveNull/RoomDissolve","authored materials restored after reconstruction");
                 var wave=OfficeDissolveTransition.ActiveMemory; Vector3 exitOrigin=Camera.main.transform.position;
@@ -158,14 +164,57 @@ public static class MechanicsEditorProbe
                 CaptureCanvas(visorUi.GetComponent<Canvas>(),"headset-session.png"); visorUi.SetActive(false);
                 RuntimeConfirmationDialog.Show("SALIR DE LA MEMORIA","Las evidencias, fotografías y notas se conservan.","VOLVER A LA OFICINA","CONTINUAR",()=>{});
                 CaptureCanvas(GameObject.Find("ConfirmationDialog").GetComponent<Canvas>(),"session-confirmation.png"); UnityEngine.Object.Destroy(GameObject.Find("ConfirmationDialog"));
-                MemoryLoadingScreen.Load("F1-Office"); phase=5;
+                var desktop=UnityEngine.Object.FindAnyObjectByType<ModernOfficeDesktop>();
+                Check(desktop!=null,"office installs modern operating system desktop");
+                PlayerPrefs.DeleteKey("archive.office.casefile.discovered"); PlayerPrefs.DeleteKey(OfficeSpeakerTutorial.CompletedPref);
+                var focus=UnityEngine.Object.FindAnyObjectByType<CRTMenuCameraFocus>(); focus.MoveToStandPose(); focus.MoveToFarPose();
+                Check(focus.IsInStandPose,"first-time seating blocked before primary dossier is opened");
+                var reader=UnityEngine.Object.FindAnyObjectByType<CaseFileReader>(); reader.OpenFromDesktop();
+                Check(OfficeOnboarding.CanUseWorkstation,"opening primary dossier enables workstation");
+                Call(reader,"SelectPage",3); CaptureCanvas(((CanvasGroup)Field(reader,"rootGroup")).GetComponentInParent<Canvas>(),"primary-case-file.png");
+                reader.StartCoroutine((IEnumerator)Call(reader,"CloseRoutine"));
+                Check(CasePortraits.Get("SOFIA ROLDAN")!=null && CasePortraits.Get("VICTOR SALAS")!=null,"suspect photographs load from portrait atlas");
+                focus.FocusComputer(); phase=7; deadline=EditorApplication.timeSinceStartup+3.2;
+            }
+            else if(phase==7)
+            {
+                var desktop=UnityEngine.Object.FindAnyObjectByType<ModernOfficeDesktop>();
+                Check(desktop.IsOpen && desktop.IsReady,"focusing monitor opens desktop and finishes session boot"); desktop.OpenCases();
+                CaptureCanvas(GameObject.Find("Archive OS").GetComponent<Canvas>(),"modern-desktop.png");
+                EvidenceInventory.Instance.RestoreEvidence(Array.Empty<EvidenceData>());
+                PlayerPrefs.DeleteKey(EvidenceDrivenMemoryUnlock.ContractorOfficeUnlockedPref); PlayerPrefs.SetInt("crt.archive.unlocked",1);
+                desktop.OpenMemories(); CaptureCanvas(GameObject.Find("Archive OS").GetComponent<Canvas>(),"memory-folders.png");
+                Check(CaseEvidenceCatalog.ContractorAccessHint.Contains("teléfono"),"locked office explains missing investigation requirements");
+                var menu=UnityEngine.Object.FindAnyObjectByType<CRTMainMenuController>();
+                Check(!menu.DesktopMount(1),"locked contractor memory cannot be mounted");
+                foreach(string id in new[]{"f1_house_cube","phone_messages","phone_call_log"})
+                {
+                    var data=ScriptableObject.CreateInstance<EvidenceData>(); data.evidenceId=id; data.evidenceName=id; EvidenceInventory.Instance.RegisterEvidence(data);
+                    if(id!="phone_call_log") Check(!menu.DesktopArchiveUnlocked(1),"partial phone investigation keeps office locked: "+id);
+                }
+                Check(menu.DesktopArchiveUnlocked(1),"registering note, messages and calls unlocks office through inventory event");
+                PlayerPrefs.SetInt("crt.archive.unlocked",1);
+                EvidenceDrivenMemoryUnlock.RefreshProgress();
+                Check(PlayerPrefs.GetInt("crt.archive.unlocked")==2,"persisted office access repairs a stale archive index");
+
+                Check(menu.DesktopMount(1) && menu.MountedArchiveSceneName=="F1-Office","desktop mounts unlocked contractor memory");
+                Call(desktop,"OpenSettings"); Check(GlobalPauseMenu.IsPaused,"desktop configuration opens game settings");
+                UnityEngine.Object.FindAnyObjectByType<GlobalPauseMenu>().Resume();
+                Check(Cursor.lockState==CursorLockMode.None && Cursor.visible,"closing options returns usable desktop pointer");
+                desktop.Close(); MemoryLoadingScreen.Load("F1-Office"); phase=5;
             }
             else if(phase==5)
             {
                 if(MemoryLoadingScreen.IsBusy || SceneRebuildTransition.IsBusy) return;
                 Check(OfficeAssetCache.RetainedCount>0,"office dependencies retained for return journey");
                 Check(OfficeDissolveTransition.ActiveMemory.MaximumMemoryRadius==40,"contractor memory retains its fixed boundary");
-                CheckScenePlacement(tools,eyes);
+                CheckMarkerPlacement(tools,eyes);
+                if(UnityEngine.SceneManagement.SceneManager.GetActiveScene().name=="F1-House")
+                {
+                    Check(!camera.SelectTool(EvidenceCameraController.ToolSlot.Tripod) && !camera.SelectTool(EvidenceCameraController.ToolSlot.Flashlight),"house blocks tripod and white flashlight, including shortcuts");
+                    Check(camera.IsToolAvailable(EvidenceCameraController.ToolSlot.UvLight) && camera.IsToolAvailable(EvidenceCameraController.ToolSlot.Tags),"house retains UV and evidence markers");
+                }
+                else CheckScenePlacement(tools,eyes);
                 MemoryLoadingScreen.Load("MainMenu",OfficeDissolveTransition.ActiveMemory); phase=6;
             }
             else if(phase==6)
@@ -179,6 +228,30 @@ public static class MechanicsEditorProbe
         catch(Exception exception) { results.Add("FAIL "+exception); Finish(); }
     }
     private static object Field(object target,string name)=>target.GetType().GetField(name,BindingFlags.Instance|BindingFlags.NonPublic).GetValue(target);
+    private static void CheckMarkerPlacement(TestingToolsController tools,Camera eyes)
+    {
+        var markers=UnityEngine.Object.FindAnyObjectByType<EvidenceMarkerPlacement>();
+        Quaternion original=eyes.transform.rotation; float scale=(float)Field(tools,"sceneScale"); bool valid=false;
+        markers.Begin();
+        for(int radius=1;radius<=3 && !valid;radius++) for(int angle=0;angle<360 && !valid;angle+=30)
+        {
+            Vector3 floor=tools.transform.position+Quaternion.Euler(0,angle,0)*Vector3.forward*(radius+.5f)*scale;
+            eyes.transform.rotation=Quaternion.LookRotation(floor-eyes.transform.position);
+            Call(markers,"UpdatePreview"); valid=(bool)Field(markers,"valid");
+        }
+        if(valid)
+        {
+            Check(markers.Confirm(),"tag placement confirms and persists in "+tools.gameObject.scene.name);
+            Physics.SyncTransforms();
+            var tag=UnityEngine.Object.FindObjectsByType<EvidenceMarker>(FindObjectsInactive.Exclude).OrderByDescending(marker=>marker.Number).First();
+            eyes.transform.LookAt(tag.GetComponent<Collider>().bounds.center);
+            Check(PlacementSurface.Raycast(eyes.ViewportPointToRay(new Vector3(.5f,.5f,0)),3*scale,tools.transform,out var tagHit) && tagHit.collider.GetComponentInParent<EvidenceMarker>()==tag,"pickup ray reaches marker without hitting operator in "+tools.gameObject.scene.name);
+            int previousCount=markers.Count; markers.Remove(tag); Check(markers.Count==previousCount-1,"marker can be collected in "+tools.gameObject.scene.name);
+        }
+        else markers.Cancel();
+        eyes.transform.rotation=original;
+        Check(valid,"tag finds supported free floor in "+tools.gameObject.scene.name+" (scale "+scale.ToString("F2")+")");
+    }
     private static void CheckScenePlacement(TestingToolsController tools,Camera eyes)
     {
         Quaternion original=eyes.transform.rotation;
@@ -190,7 +263,13 @@ public static class MechanicsEditorProbe
             eyes.transform.rotation=Quaternion.LookRotation(floor-eyes.transform.position);
             Call(tools,"UpdatePlacement"); valid=(bool)Field(tools,"valid");
         }
-        if(valid) tools.ConfirmPlacement(); else tools.CancelPlacement();
+        if(valid)
+        {
+            tools.ConfirmPlacement(); Physics.SyncTransforms();
+            var tripod=(GameObject)Field(tools,"tripod"); eyes.transform.LookAt(tripod.GetComponent<Collider>().bounds.center);
+            Check((bool)Call(tools,"AimingAtTripod"),"placed tripod can be targeted for mounting or moving in "+tools.gameObject.scene.name);
+        }
+        else tools.CancelPlacement();
         eyes.transform.rotation=original;
         Check(valid,"scaled tripod finds supported free floor in "+UnityEngine.SceneManagement.SceneManager.GetActiveScene().name+" (scale "+scale.ToString("F2")+")");
     }
@@ -214,9 +293,10 @@ public static class MechanicsEditorProbe
     private static void CaptureCanvas(Canvas canvas,string file)
     {
         var host=new GameObject("UI verification camera",typeof(Camera)); var camera=host.GetComponent<Camera>(); camera.enabled=false; camera.clearFlags=CameraClearFlags.SolidColor; camera.backgroundColor=Color.black; camera.nearClipPlane=.1f; camera.farClipPlane=10; camera.transform.position=Vector3.one*10000; host.AddComponent<UniversalAdditionalCameraData>();
+        var canvasTarget=RenderTexture.GetTemporary(1280,720,24); camera.targetTexture=canvasTarget; camera.aspect=1280f/720;
         RenderMode mode=canvas.renderMode; Camera previous=canvas.worldCamera; float distance=canvas.planeDistance;
         try { canvas.renderMode=RenderMode.ScreenSpaceCamera; canvas.worldCamera=camera; canvas.planeDistance=1; Canvas.ForceUpdateCanvases(); Capture(camera,file); }
-        finally { canvas.renderMode=mode; canvas.worldCamera=previous; canvas.planeDistance=distance; UnityEngine.Object.Destroy(host); }
+        finally { canvas.renderMode=mode; canvas.worldCamera=previous; canvas.planeDistance=distance; camera.targetTexture=null; RenderTexture.ReleaseTemporary(canvasTarget); UnityEngine.Object.Destroy(host); }
     }
     private static void Capture(Camera camera,string file)
     {

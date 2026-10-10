@@ -1,4 +1,4 @@
-param([int]$TimeoutSeconds = 240)
+param([int]$TimeoutSeconds = 240, [switch]$OfficeOnly)
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'RegistrySnapshot.ps1')
 $workspace = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
@@ -17,6 +17,7 @@ if ($null -ne $key) {
 $original | Export-Clixml -LiteralPath (Join-Path $outputDirectory 'preferences-before-test.xml')
 try {
     $arguments = '-batchmode -projectPath "' + $workspace + '" -executeMethod MechanicsLabEditor.TestInEditor -archive-editor-test -logFile "' + (Join-Path $outputDirectory 'editor.log') + '"'
+    if ($OfficeOnly) { $arguments += " -archive-office-test" }
     $editor = Start-Process -FilePath 'C:\Program Files\Unity\Hub\Editor\6000.6.0f1\Editor\Unity.exe' -ArgumentList $arguments -WindowStyle Hidden -PassThru
     if (!$editor.WaitForExit($TimeoutSeconds * 1000)) { $editor.Kill(); $editor.WaitForExit(); throw 'Editor test timed out; inspect Artifacts/EditorValidation/editor.log.' }
     if ($editor.ExitCode -ne 0) { throw 'Editor mechanics test failed; inspect Artifacts/EditorValidation.' }

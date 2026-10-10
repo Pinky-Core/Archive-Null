@@ -75,7 +75,7 @@ public static class MechanicsLabEditor
         CreateLab();
         SessionState.SetBool("archive.mechanics.test",true);
         SessionState.SetString("archive.mechanics.oldStart",AssetDatabase.GetAssetPath(EditorSceneManager.playModeStartScene));
-        EditorSceneManager.playModeStartScene=AssetDatabase.LoadAssetAtPath<SceneAsset>(LabPath);
+        EditorSceneManager.playModeStartScene=AssetDatabase.LoadAssetAtPath<SceneAsset>(System.Environment.GetCommandLineArgs().Contains("-archive-office-test") ? "Assets/ArchiveNull/Scenes/MainMenu.unity" : LabPath);
         EditorApplication.EnterPlaymode();
     }
 }
