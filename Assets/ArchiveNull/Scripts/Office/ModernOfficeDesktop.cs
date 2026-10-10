@@ -61,6 +61,7 @@ namespace ArchiveNull.UI
             clock=Text(taskbar,"",18,new Vector2(785,0),new Vector2(270,45),ink);
             status=Text(desktop,"OPERADOR 253   /   SESIÓN LOCAL",18,new Vector2(380,-437),new Vector2(990,45),muted);
             desktop.gameObject.AddComponent<RectMask2D>();
+            InitializeFeedback();
             desktop.gameObject.SetActive(false);
         }
         public void Open()
@@ -68,13 +69,13 @@ namespace ArchiveNull.UI
             focused=true; desktop.gameObject.SetActive(true);
             interaction.interactable=interaction.blocksRaycasts=true;
             owner.SetDesktopPower(true);
-            Cursor.lockState=CursorLockMode.None; Cursor.visible=true;
+            Cursor.lockState=CursorLockMode.None; Cursor.visible=false;
             if(!ready && boot==null) StartCoroutine(Boot());
         }
         // Leaving the seat releases input but preserves the monitor's visible session.
-        public void Close() { focused=false; pendingBinding=null; if(interaction!=null) interaction.interactable=interaction.blocksRaycasts=false; }
+        public void Close() { focused=false; pendingBinding=null; if(computerPointer!=null) computerPointer.gameObject.SetActive(false); if(interaction!=null) interaction.interactable=interaction.blocksRaycasts=false; }
         public void PowerOff() { Close(); if(desktop!=null) desktop.gameObject.SetActive(false); owner.SetDesktopPower(false); }
-        private void OnDestroy() { if(canvas!=null) Destroy(canvas.gameObject); }
+        private void OnDestroy() { DisposeFeedback(); if(canvas!=null) Destroy(canvas.gameObject); }
         private IEnumerator Boot()
         {
             boot=Panel(desktop,"Session boot",new Color(.016f,.028f,.05f),Vector2.zero,new Vector2(1920,1080));
@@ -89,6 +90,7 @@ namespace ArchiveNull.UI
             }
             EvidenceDrivenMemoryUnlock.RefreshProgress();
             message.text="Escritorio listo"; ready=true;
+            PlayComputerSound(ComputerSound.Startup);
             Destroy(boot.gameObject); boot=null;
         }
         private void Update()
@@ -109,8 +111,9 @@ namespace ArchiveNull.UI
         }
         private void LateUpdate()
         {
-            if(!IsOpen || GlobalPauseMenu.IsPaused || CaseFileReader.IsAnyCaseFileOpen || RuntimeConfirmationDialog.IsOpen || ArchiveNull.Accusation.AccusationPanel.IsAnyOpen || Mouse.current==null) return;
+            if(!IsOpen || GlobalPauseMenu.IsPaused || CaseFileReader.IsAnyCaseFileOpen || RuntimeConfirmationDialog.IsOpen || ArchiveNull.Accusation.AccusationPanel.IsAnyOpen || Mouse.current==null) { if(computerPointer!=null) computerPointer.gameObject.SetActive(false); return; }
             Vector2 pointer=Mouse.current.position.ReadValue(), confined=ConfinePointer(pointer);
+            UpdateComputerPointer(confined);
             if((confined-pointer).sqrMagnitude>1) Mouse.current.WarpCursorPosition(confined);
         }
         private void App(string code,string label,Vector2 position,UnityEngine.Events.UnityAction action)
@@ -148,6 +151,7 @@ namespace ArchiveNull.UI
         private void AnimateWindow(bool opening,bool destroy)
         {
             if(window==null) return;
+            PlayComputerSound(opening ? ComputerSound.Open : ComputerSound.Close);
             if(windowAnimation!=null) StopCoroutine(windowAnimation);
             if(!opening) windowPosition=window.anchoredPosition;
             window.gameObject.SetActive(true);
@@ -240,6 +244,8 @@ namespace ArchiveNull.UI
         private Button Button(Transform parent,string value,Vector2 position,Vector2 size,UnityEngine.Events.UnityAction action)
         {
             var rect=Panel(parent,value,new Color(.105f,.15f,.215f),position,size);var button=rect.gameObject.AddComponent<Button>();
+            rect.gameObject.AddComponent<DesktopButtonSound>().Desktop=this;
+            button.onClick.AddListener(()=>PlayComputerSound(ComputerSound.Click));
             var colors=button.colors; colors.highlightedColor=new Color(.65f,.82f,1);colors.pressedColor=new Color(.4f,.65f,1);button.colors=colors;button.onClick.AddListener(action);
             Text(rect,value,23,Vector2.zero,size-new Vector2(24,6),ink); return button;
         }
