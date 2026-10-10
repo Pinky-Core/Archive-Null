@@ -71,11 +71,31 @@ public static class MechanicsLabEditor
     [MenuItem("Archive NULL/Test mechanics in editor")]
     public static void TestInEditor()
     {
+        StartTest(System.Environment.GetCommandLineArgs().Contains("-archive-office-test"));
+    }
+    [MenuItem("Archive NULL/Test office monitor in editor")]
+    public static void TestOfficeInEditor() => StartTest(true);
+    [InitializeOnLoadMethod]
+    private static void WatchOfficeTestRequest()
+    {
+        EditorApplication.update -= CheckOfficeTestRequest;
+        EditorApplication.update += CheckOfficeTestRequest;
+    }
+    private static void CheckOfficeTestRequest()
+    {
+        const string request=".utmp/office-monitor-test.request";
+        if(EditorApplication.isPlayingOrWillChangePlaymode || EditorApplication.isCompiling || !System.IO.File.Exists(request)) return;
+        System.IO.File.Delete(request);
+        TestOfficeInEditor();
+    }
+    private static void StartTest(bool officeOnly)
+    {
         OfficeAssetManifestEditor.Ensure();
-        CreateLab();
+        if(!officeOnly) CreateLab();
         SessionState.SetBool("archive.mechanics.test",true);
+        SessionState.SetBool("archive.mechanics.officeOnly",officeOnly);
         SessionState.SetString("archive.mechanics.oldStart",AssetDatabase.GetAssetPath(EditorSceneManager.playModeStartScene));
-        EditorSceneManager.playModeStartScene=AssetDatabase.LoadAssetAtPath<SceneAsset>(System.Environment.GetCommandLineArgs().Contains("-archive-office-test") ? "Assets/ArchiveNull/Scenes/MainMenu.unity" : LabPath);
+        EditorSceneManager.playModeStartScene=AssetDatabase.LoadAssetAtPath<SceneAsset>(officeOnly ? "Assets/ArchiveNull/Scenes/MainMenu.unity" : LabPath);
         EditorApplication.EnterPlaymode();
     }
 }

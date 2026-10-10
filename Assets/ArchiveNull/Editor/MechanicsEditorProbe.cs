@@ -26,7 +26,7 @@ public static class MechanicsEditorProbe
         EditorApplication.playModeStateChanged+=state=>
         {
             if(state==PlayModeStateChange.EnteredPlayMode && SessionState.GetBool("archive.mechanics.test",false))
-            { results.Clear(); capturedRebuild=false; Application.runInBackground=true; deadline=EditorApplication.timeSinceStartup+9; phase=Environment.GetCommandLineArgs().Contains("-archive-office-test") ? 4 : 0; Application.logMessageReceived+=Log; }
+            { results.Clear(); capturedRebuild=false; Application.runInBackground=true; deadline=EditorApplication.timeSinceStartup+9; phase=SessionState.GetBool("archive.mechanics.officeOnly",false) ? 4 : 0; Application.logMessageReceived+=Log; }
             if(state==PlayModeStateChange.EnteredEditMode && SessionState.GetBool("archive.mechanics.restore",false))
             {
                 EditorSceneManager.playModeStartScene=AssetDatabase.LoadAssetAtPath<SceneAsset>(SessionState.GetString("archive.mechanics.oldStart","")); SessionState.SetBool("archive.mechanics.restore",false);
@@ -180,10 +180,51 @@ public static class MechanicsEditorProbe
             {
                 var desktop=UnityEngine.Object.FindAnyObjectByType<ModernOfficeDesktop>();
                 Check(desktop.IsOpen && desktop.IsReady,"focusing monitor opens desktop and finishes session boot"); desktop.OpenCases();
-                CaptureCanvas(GameObject.Find("Archive OS").GetComponent<Canvas>(),"modern-desktop.png");
+                Check(desktop.MonitorCanvas.renderMode==RenderMode.WorldSpace && desktop.MonitorCanvas.transform.parent.name=="Screen","desktop canvas belongs to physical monitor surface");
+                Check(desktop.IsWindowAnimating,"application window starts animated opening");
+                phase=8; deadline=EditorApplication.timeSinceStartup+.4;
+            }
+            else if(phase==8)
+            {
+                var desktop=UnityEngine.Object.FindAnyObjectByType<ModernOfficeDesktop>();
+                Check(!desktop.IsWindowAnimating && desktop.IsWindowVisible,"application opening animation finishes with visible window");
+                Canvas.ForceUpdateCanvases();
+                var folder=desktop.MonitorCanvas.GetComponentsInChildren<UnityEngine.UI.Button>().First(b=>b.name.StartsWith("CARPETA"));
+                Vector2 buttonPoint=RectTransformUtility.WorldToScreenPoint(desktop.MonitorCanvas.worldCamera,folder.transform.position);
+                var pointer=new UnityEngine.EventSystems.PointerEventData(UnityEngine.EventSystems.EventSystem.current){position=buttonPoint};
+                var hits=new List<UnityEngine.EventSystems.RaycastResult>(); UnityEngine.EventSystems.EventSystem.current.RaycastAll(pointer,hits);
+                Check(hits.Any(h=>h.gameObject==folder.gameObject),"physical monitor buttons receive scene cursor raycasts");
+                Vector2 confined=desktop.ConfinePointer(new Vector2(-1000,-1000));
+                Check(RectTransformUtility.RectangleContainsScreenPoint((RectTransform)desktop.MonitorCanvas.transform,confined,desktop.MonitorCanvas.worldCamera),"cursor confinement maps outside pointer onto physical screen");
+                Check(desktop.MonitorCanvas.GetComponentsInChildren<UnityEngine.UI.Graphic>(true).All(g=>g.GetComponent<CanvasRenderer>()!=null),"all desktop graphics have CanvasRenderer");
+                var focus=UnityEngine.Object.FindAnyObjectByType<CRTMenuCameraFocus>(); focus.ReturnToFarPose();
+                Check(!desktop.IsOpen && desktop.IsPowered && desktop.IsWindowVisible,"leaving monitor preserves powered desktop and open window");
+                Check(!desktop.MonitorCanvas.GetComponent<CanvasGroup>().blocksRaycasts,"unfocused monitor releases scene pointer input");
+                desktop.Open();
+                Capture(Camera.main,"modern-desktop.png");
+                Call(desktop,"AnimateWindow",false,false);
+                phase=9; deadline=EditorApplication.timeSinceStartup+.25;
+            }
+            else if(phase==9)
+            {
+                var desktop=UnityEngine.Object.FindAnyObjectByType<ModernOfficeDesktop>();
+                Check(!desktop.IsWindowVisible && !desktop.IsWindowAnimating,"minimize animation finishes with window hidden");
+                desktop.RestoreWindow(); phase=10; deadline=EditorApplication.timeSinceStartup+.35;
+            }
+            else if(phase==10)
+            {
+                var desktop=UnityEngine.Object.FindAnyObjectByType<ModernOfficeDesktop>();
+                Check(desktop.IsWindowVisible && !desktop.IsWindowAnimating,"taskbar restores minimized window with completed animation");
+                Call(desktop,"AnimateWindow",false,true);
+                phase=11; deadline=EditorApplication.timeSinceStartup+.25;
+            }
+            else if(phase==11)
+            {
+                var desktop=UnityEngine.Object.FindAnyObjectByType<ModernOfficeDesktop>();
+                Check(!desktop.IsWindowVisible && !desktop.IsWindowAnimating,"close animation removes application window without runtime exceptions");
                 EvidenceInventory.Instance.RestoreEvidence(Array.Empty<EvidenceData>());
                 PlayerPrefs.DeleteKey(EvidenceDrivenMemoryUnlock.ContractorOfficeUnlockedPref); PlayerPrefs.SetInt("crt.archive.unlocked",1);
-                desktop.OpenMemories(); CaptureCanvas(GameObject.Find("Archive OS").GetComponent<Canvas>(),"memory-folders.png");
+                desktop.OpenMemories();
                 Check(CaseEvidenceCatalog.ContractorAccessHint.Contains("teléfono"),"locked office explains missing investigation requirements");
                 var menu=UnityEngine.Object.FindAnyObjectByType<CRTMainMenuController>();
                 Check(!menu.DesktopMount(1),"locked contractor memory cannot be mounted");
@@ -201,7 +242,9 @@ public static class MechanicsEditorProbe
                 Call(desktop,"OpenSettings"); Check(GlobalPauseMenu.IsPaused,"desktop configuration opens game settings");
                 UnityEngine.Object.FindAnyObjectByType<GlobalPauseMenu>().Resume();
                 Check(Cursor.lockState==CursorLockMode.None && Cursor.visible,"closing options returns usable desktop pointer");
-                desktop.Close(); MemoryLoadingScreen.Load("F1-Office"); phase=5;
+                menu.DisableMonitorCanvasForTransition();
+                Check(!desktop.IsOpen && !desktop.IsPowered,"scene transition powers off monitor session");
+                MemoryLoadingScreen.Load("F1-Office"); phase=5;
             }
             else if(phase==5)
             {
