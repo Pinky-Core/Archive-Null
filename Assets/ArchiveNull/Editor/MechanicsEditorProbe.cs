@@ -12,6 +12,8 @@ using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
+using UnityEngine.InputSystem;
+using UnityEngine.InputSystem.LowLevel;
 
 [InitializeOnLoad]
 public static class MechanicsEditorProbe
@@ -166,6 +168,14 @@ public static class MechanicsEditorProbe
                 CaptureCanvas(GameObject.Find("ConfirmationDialog").GetComponent<Canvas>(),"session-confirmation.png"); UnityEngine.Object.Destroy(GameObject.Find("ConfirmationDialog"));
                 var desktop=UnityEngine.Object.FindAnyObjectByType<ModernOfficeDesktop>();
                 Check(desktop!=null,"office installs modern operating system desktop");
+                Check(UnityEngine.Object.FindAnyObjectByType<GlobalPauseMenu>()==null && !GlobalPauseMenu.IsPaused,"real office has no pause overlay instance");
+                var arrival=UnityEngine.Object.FindAnyObjectByType<CRTMenuCameraFocus>();
+                if(SessionState.GetBool("archive.mechanics.officeOnly",false)) Check(arrival.IsInStandPose && Vector3.Distance(Camera.main.transform.position,arrival.ArrivalPosition)<.05f,"new office session spawns standing at doorway");
+                else Check(arrival.IsInFarPose,"return from memory starts seated in office");
+                PlayerPrefs.SetInt(OfficeSpeakerTutorial.CompletedPref,1);
+                Check(!(bool)Call(arrival,"ShouldStartAtFarPose"),"completed tutorial does not make a new session start seated");
+                var walking=UnityEngine.Object.FindAnyObjectByType<OfficeFreeLookController>();
+                Check(walking!=null && walking.HasCarpetFootsteps,"office locomotion initializes carpet footstep audio");
                 PlayerPrefs.DeleteKey("archive.office.casefile.discovered"); PlayerPrefs.DeleteKey(OfficeSpeakerTutorial.CompletedPref);
                 var focus=UnityEngine.Object.FindAnyObjectByType<CRTMenuCameraFocus>(); focus.MoveToStandPose(); focus.MoveToFarPose();
                 Check(focus.IsInStandPose,"first-time seating blocked before primary dossier is opened");
@@ -180,6 +190,8 @@ public static class MechanicsEditorProbe
             {
                 var desktop=UnityEngine.Object.FindAnyObjectByType<ModernOfficeDesktop>();
                 Check(desktop.IsOpen && desktop.IsReady,"focusing monitor opens desktop and finishes session boot"); desktop.OpenCases();
+                Check(desktop.HasComputerPointer && !Cursor.visible,"monitor uses game cursor with system pointer hidden");
+                Check(desktop.HasComputerAudio,"monitor initializes computer interaction sounds");
                 Check(desktop.MonitorCanvas.renderMode==RenderMode.WorldSpace && desktop.MonitorCanvas.transform.parent.name=="Screen","desktop canvas belongs to physical monitor surface");
                 Check(desktop.IsWindowAnimating,"application window starts animated opening");
                 phase=8; deadline=EditorApplication.timeSinceStartup+.4;
@@ -222,6 +234,40 @@ public static class MechanicsEditorProbe
             {
                 var desktop=UnityEngine.Object.FindAnyObjectByType<ModernOfficeDesktop>();
                 Check(!desktop.IsWindowVisible && !desktop.IsWindowAnimating,"close animation removes application window without runtime exceptions");
+                var focus=UnityEngine.Object.FindAnyObjectByType<CRTMenuCameraFocus>();focus.MoveToStandPose();
+                phase=12;deadline=EditorApplication.timeSinceStartup+.8;
+            }
+            else if(phase==12)
+            {
+                var focus=UnityEngine.Object.FindAnyObjectByType<CRTMenuCameraFocus>();
+                Check(focus.IsInStandPose && Mathf.Abs(Camera.main.transform.position.y-focus.StandingEyeHeight)<.015f,"standing up preserves doorway eye height");
+                var walking=UnityEngine.Object.FindAnyObjectByType<OfficeFreeLookController>();
+                Transform rig=(Transform)Field(walking,"_cameraRoot");
+                GameInputAction[] actions={GameInputAction.MoveBackward,GameInputAction.MoveLeft,GameInputAction.MoveForward,GameInputAction.MoveRight};
+                Vector3[] directions={-rig.forward,-rig.right,rig.forward,rig.right};
+                bool free=false;
+                for(int i=0;i<directions.Length;i++)
+                {
+                    Vector3 candidate=rig.position+Vector3.ProjectOnPlane(directions[i],Vector3.up).normalized*.4f;
+                    Vector3 resolved=(Vector3)Call(walking,"ResolveCollision",rig.position,candidate);
+                    if(Vector3.Distance(resolved,rig.position)<.25f) continue;
+                    InputSystem.QueueStateEvent(Keyboard.current,new KeyboardState(GlobalInputBindings.GetKey(actions[i]))); free=true;break;
+                }
+                Check(free,"standing position offers a free direction for office walking");
+                phase=15;deadline=EditorApplication.timeSinceStartup+.35;
+            }
+            else if(phase==15)
+            {
+                var walking=UnityEngine.Object.FindAnyObjectByType<OfficeFreeLookController>();
+                InputSystem.QueueStateEvent(Keyboard.current,new KeyboardState());
+                Check((float)Field(walking,"walkingEnvelope")>.1f,"actual office movement drives body motion envelope");
+                Check((int)Field(walking,"stepIndex")>0,"actual office movement plays carpet footsteps");
+                var focus=UnityEngine.Object.FindAnyObjectByType<CRTMenuCameraFocus>();
+                focus.FocusComputer();phase=13;deadline=EditorApplication.timeSinceStartup+.8;
+            }
+            else if(phase==13)
+            {
+                var desktop=UnityEngine.Object.FindAnyObjectByType<ModernOfficeDesktop>();
                 EvidenceInventory.Instance.RestoreEvidence(Array.Empty<EvidenceData>());
                 PlayerPrefs.DeleteKey(EvidenceDrivenMemoryUnlock.ContractorOfficeUnlockedPref); PlayerPrefs.SetInt("crt.archive.unlocked",1);
                 desktop.OpenMemories();
@@ -239,9 +285,29 @@ public static class MechanicsEditorProbe
                 Check(PlayerPrefs.GetInt("crt.archive.unlocked")==2,"persisted office access repairs a stale archive index");
 
                 Check(menu.DesktopMount(1) && menu.MountedArchiveSceneName=="F1-Office","desktop mounts unlocked contractor memory");
-                Call(desktop,"OpenSettings"); Check(GlobalPauseMenu.IsPaused,"desktop configuration opens game settings");
-                UnityEngine.Object.FindAnyObjectByType<GlobalPauseMenu>().Resume();
-                Check(Cursor.lockState==CursorLockMode.None && Cursor.visible,"closing options returns usable desktop pointer");
+                desktop.OpenSettings();
+                Check(desktop.IsSettingsOpen && !GlobalPauseMenu.IsPaused && Time.timeScale==1 && UnityEngine.Object.FindAnyObjectByType<GlobalPauseMenu>()==null,"configuration stays inside monitor without pausing office");
+                var sliders=desktop.MonitorCanvas.GetComponentsInChildren<UnityEngine.UI.Slider>();
+                Check(sliders.Length==2,"monitor general settings provide sensitivity and body motion sliders");
+                sliders[1].value=.4f;Check(Mathf.Abs(PlayerPrefs.GetFloat("archive.headbob.intensity")-.4f)<.001f,"monitor settings persist body motion changes");
+                Call(desktop,"ShowSettings","Sonido");
+                Check(desktop.MonitorCanvas.GetComponentsInChildren<UnityEngine.UI.Slider>().Length==3,"monitor sound settings expose master effects and voice sliders");
+                Call(desktop,"ShowSettings","Video");
+                Check(desktop.IsSettingsOpen,"monitor renders video options without pause UI");
+                Call(desktop,"ShowSettings","Controles");
+                Check(desktop.IsSettingsOpen,"monitor renders control bindings without pause UI");
+                Call(desktop,"ShowSettings","General");phase=14;deadline=EditorApplication.timeSinceStartup+.35;
+            }
+            else if(phase==14)
+            {
+                var desktop=UnityEngine.Object.FindAnyObjectByType<ModernOfficeDesktop>();
+                Canvas.ForceUpdateCanvases();Capture(Camera.main,"monitor-settings.png");
+                Check(!Cursor.visible && Cursor.lockState==CursorLockMode.None,"computer settings retain custom cursor control");
+                var pointer=desktop.MonitorCanvas.transform.Find("Desktop/Archive OS pointer");
+                Check(pointer!=null && pointer.gameObject.activeInHierarchy,"custom computer pointer is visible on monitor canvas");
+                GlobalPauseMenu.OpenSettingsRuntime();
+                Check(UnityEngine.Object.FindAnyObjectByType<GlobalPauseMenu>()==null && !GlobalPauseMenu.IsPaused,"legacy settings entry cannot create pause in MainMenu");
+                var menu=UnityEngine.Object.FindAnyObjectByType<CRTMainMenuController>();
                 menu.DisableMonitorCanvasForTransition();
                 Check(!desktop.IsOpen && !desktop.IsPowered,"scene transition powers off monitor session");
                 MemoryLoadingScreen.Load("F1-Office"); phase=5;
@@ -264,6 +330,7 @@ public static class MechanicsEditorProbe
             {
                 if(MemoryLoadingScreen.IsBusy) return;
                 Check(UnityEngine.SceneManagement.SceneManager.GetActiveScene().name=="MainMenu","complete office-memory-office round trip");
+                Check(UnityEngine.Object.FindAnyObjectByType<CRTMenuCameraFocus>().IsInFarPose,"memory exit returns player seated at desk");
                 results.Add("MEASURE warm office assets: "+MemoryLoadingScreen.LastAssetLoadSeconds.ToString("F2")+" seconds");
                 Finish();
             }
@@ -322,6 +389,7 @@ public static class MechanicsEditorProbe
     private static void Check(bool condition,string message) { if(!condition) throw new InvalidOperationException(message); results.Add("PASS "+message); }
     private static void Finish()
     {
+        if(Keyboard.current!=null) InputSystem.QueueStateEvent(Keyboard.current,new KeyboardState());
         SessionState.SetBool("archive.mechanics.failed",results.Any(line=>line.StartsWith("FAIL")));
         Directory.CreateDirectory("Artifacts/EditorValidation"); File.WriteAllLines("Artifacts/EditorValidation/editor-mechanics.txt",results);
         Application.logMessageReceived-=Log; SessionState.SetBool("archive.mechanics.test",false); SessionState.SetBool("archive.mechanics.restore",true); EditorApplication.ExitPlaymode();
