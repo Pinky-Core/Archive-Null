@@ -14,6 +14,7 @@ namespace ArchiveNull.UI
     /// <summary>
     /// Builds and coordinates the office's diegetic CRT interface, archive selection and feedback.
     /// </summary>
+    [DefaultExecutionOrder(-100)]
     public sealed partial class CRTMainMenuController : MonoBehaviour
     {
         private const string IdleTitle = "Archive: {null}";
@@ -310,6 +311,12 @@ namespace ArchiveNull.UI
             EnsureAudioSource();
             NormalizeSettingsData();
             LoadPreferences();
+
+            // Repair authored UI before theme updates ask TMP for its renderer.
+            if (_sceneCanvas != null)
+                foreach (Graphic graphic in _sceneCanvas.GetComponentsInChildren<Graphic>(true))
+                    if (graphic.GetComponent<CanvasRenderer>() == null)
+                        graphic.gameObject.AddComponent<CanvasRenderer>();
 
             if (_useSceneLayout && TryBindSceneLayout())
             {

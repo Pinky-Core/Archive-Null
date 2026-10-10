@@ -153,13 +153,13 @@ namespace ArchiveNull.UI
         }
         private RectTransform Panel(Transform parent,string name,Color color,Vector2 position,Vector2 size)
         {
-            var go=new GameObject(name,typeof(RectTransform),typeof(Image)); go.transform.SetParent(parent,false);
+            var go=new GameObject(name,typeof(RectTransform),typeof(CanvasRenderer),typeof(Image)); go.transform.SetParent(parent,false);
             var image=go.GetComponent<Image>(); image.color=color; image.raycastTarget=color.a>0;
             var rect=image.rectTransform; rect.anchorMin=rect.anchorMax=new Vector2(.5f,.5f); rect.sizeDelta=size; rect.anchoredPosition=position; return rect;
         }
         private TMP_Text Text(Transform parent,string value,float size,Vector2 position,Vector2 dimensions,Color color)
         {
-            var go=new GameObject("Label",typeof(RectTransform),typeof(TextMeshProUGUI));go.transform.SetParent(parent,false);
+            var go=new GameObject("Label",typeof(RectTransform),typeof(CanvasRenderer),typeof(TextMeshProUGUI));go.transform.SetParent(parent,false);
             var text=go.GetComponent<TMP_Text>();text.text=value;text.font=Resources.Load<TMP_FontAsset>("Fonts & Materials/LiberationSans SDF");text.fontSize=size;text.color=color;text.alignment=TextAlignmentOptions.Center;text.raycastTarget=false;
             text.rectTransform.sizeDelta=dimensions;text.rectTransform.anchoredPosition=position; return text;
         }
