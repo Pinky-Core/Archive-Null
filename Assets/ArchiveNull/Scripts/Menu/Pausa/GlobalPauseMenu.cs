@@ -105,6 +105,13 @@ public sealed class GlobalPauseMenu : MonoBehaviour
     private GameInputAction pendingRebindAction;
     public static bool IsPaused => instance != null && instance.isPaused;
 
+    public static void OpenSettingsRuntime()
+    {
+        if (instance == null) instance = new GameObject("GlobalPauseMenu").AddComponent<GlobalPauseMenu>();
+        if (!instance.isPaused) instance.Pause();
+        instance.ShowOptions();
+    }
+
     private void Awake()
     {
         if (instance != null && instance != this)
@@ -134,7 +141,7 @@ public sealed class GlobalPauseMenu : MonoBehaviour
             return;
         }
 
-        if (isBusy || string.Equals(SceneManager.GetActiveScene().name, MainMenuSceneName, System.StringComparison.OrdinalIgnoreCase))
+        if (isBusy || (!isPaused && string.Equals(SceneManager.GetActiveScene().name, MainMenuSceneName, System.StringComparison.OrdinalIgnoreCase)))
         {
             return;
         }
@@ -171,8 +178,8 @@ public sealed class GlobalPauseMenu : MonoBehaviour
         RestoreGameplayCanvases();
         Time.timeScale = 1f;
         isPaused = false;
-        bool inspecting = InspectObject.IsAnyInspecting;
-        SetPlayerInputEnabled(!inspecting);
+        bool inspecting = InspectObject.IsAnyInspecting || CaseFileReader.IsAnyCaseFileOpen || (FindAnyObjectByType<ModernOfficeDesktop>() is ModernOfficeDesktop desktop && desktop.IsOpen);
+        SetPlayerInputEnabled(!InspectObject.IsAnyInspecting);
         Cursor.lockState = inspecting ? CursorLockMode.None : CursorLockMode.Locked;
         Cursor.visible = inspecting;
     }

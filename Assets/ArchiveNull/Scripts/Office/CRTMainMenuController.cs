@@ -14,7 +14,7 @@ namespace ArchiveNull.UI
     /// <summary>
     /// Builds and coordinates the office's diegetic CRT interface, archive selection and feedback.
     /// </summary>
-    public sealed class CRTMainMenuController : MonoBehaviour
+    public sealed partial class CRTMainMenuController : MonoBehaviour
     {
         private const string IdleTitle = "Archive: {null}";
         private const string BootPrompt = "PRESS ENTER OR CLICK TO INITIALIZE";
@@ -329,6 +329,7 @@ namespace ArchiveNull.UI
             BuildMenus();
             ApplyRuntimeSettings();
             InitializePoweredOffState();
+            InstallModernDesktop();
         }
 
         private void Start()
@@ -352,6 +353,7 @@ namespace ArchiveNull.UI
                 return;
             }
 
+            if (desktop != null) return;
             UpdateVisualNoise();
             HandleInput();
         }
@@ -2193,6 +2195,7 @@ namespace ArchiveNull.UI
         private void DeleteAllDataConfirmed()
         {
             GameSaveSystem.DeleteAllGameplayData();
+            if(desktop!=null) { desktop.Close(); FindAnyObjectByType<CRTMenuCameraFocus>()?.MoveToStandPose(); }
             _unlockedArchive = 1;
             _mountedArchive = -1;
             SetStatus(Localize("DATOS DE GAMEPLAY ELIMINADOS.", "GAMEPLAY DATA DELETED."));
@@ -2733,7 +2736,7 @@ namespace ArchiveNull.UI
         public int MountedArchiveIndex => _mountedArchive;
         public int MountedArchiveSceneBuildIndex => HasMountedArchive ? GetArchiveSceneBuildIndex(_mountedArchive) : -1;
         public string MountedArchiveSceneName => HasMountedArchive ? GetArchiveSceneName(_mountedArchive) : string.Empty;
-        public string MountedArchiveName => HasMountedArchive ? GetArchiveName(_mountedArchive) : string.Empty;
+        public string MountedArchiveName => HasMountedArchive ? DesktopArchiveName(_mountedArchive) : string.Empty;
 
         public void MarkArchiveCompleted(int archiveIndex)
         {
@@ -2999,6 +3002,7 @@ namespace ArchiveNull.UI
 
         public void FocusOpenMenu()
         {
+            if (desktop != null) { desktop.Open(); return; }
             if (_sequenceRunning)
             {
                 return;
@@ -3019,6 +3023,7 @@ namespace ArchiveNull.UI
 
         public void SuspendTerminalInteraction()
         {
+            if (desktop != null) { desktop.Close(); return; }
             if (_state == MenuState.MainMenu || _state == MenuState.Settings || _state == MenuState.LevelSelect)
             {
                 _state = _poweredOn ? MenuState.AwaitingAccess : MenuState.PoweredOff;
@@ -3035,6 +3040,7 @@ namespace ArchiveNull.UI
 
         public void DisableMonitorCanvasForTransition()
         {
+            if (desktop != null) desktop.Close();
             if (_canvas != null)
             {
                 _canvas.enabled = false;
