@@ -10,17 +10,13 @@ namespace ArchiveNull.UI
         {
             // Preserve serialized archive/event references while retiring the CRT presentation.
             foreach (Transform child in _screen) child.gameObject.SetActive(false);
-            _screenImage.color = new Color(.025f,.055f,.10f);
-            var label = CreateText("Desktop standby", _screen, "ARCHIVE OS\n\nOperador 253\nSesión disponible", 34,
-                TMPro.TextAlignmentOptions.Center, Color.white, TMPro.FontStyles.Normal);
-            label.font=Resources.Load<TMPro.TMP_FontAsset>("Fonts & Materials/LiberationSans SDF");
-            label.rectTransform.anchorMin=Vector2.zero; label.rectTransform.anchorMax=Vector2.one;
-            label.rectTransform.offsetMin=label.rectTransform.offsetMax=Vector2.zero;
+            _screenImage.color = Color.black;
             _scanlinesEnabled=_chromaticEnabled=false;
             _useProceduralRetroSounds=false;
-            SetMonitorLightImmediate(.25f);
-            desktop=gameObject.AddComponent<ModernOfficeDesktop>(); desktop.Initialize(this);
+            SetMonitorLightImmediate(0f);
+            desktop=gameObject.AddComponent<ModernOfficeDesktop>(); desktop.Initialize(this, _screen, _canvas);
         }
+        public void SetDesktopPower(bool powered) => SetMonitorLightImmediate(powered ? .25f : 0f);
         public int DesktopArchiveCount => GetEffectiveArchiveCount();
         public bool DesktopArchiveSupported(int index) => GetArchiveSceneName(index) is "F1-House" or "F1-Office";
         public string DesktopArchiveName(int index) => GetArchiveSceneName(index) switch

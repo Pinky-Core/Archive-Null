@@ -3047,7 +3047,7 @@ namespace ArchiveNull.UI
 
         public void DisableMonitorCanvasForTransition()
         {
-            if (desktop != null) desktop.Close();
+            if (desktop != null) desktop.PowerOff();
             if (_canvas != null)
             {
                 _canvas.enabled = false;

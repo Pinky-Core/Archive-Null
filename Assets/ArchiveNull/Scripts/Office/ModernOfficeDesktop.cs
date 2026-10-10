@@ -12,22 +12,30 @@ namespace ArchiveNull.UI
     {
         private CRTMainMenuController owner;
         private Canvas canvas;
+        private CanvasGroup interaction;
+        private bool focused;
         private RectTransform desktop, window, content, boot;
         private TMP_Text title, status, clock;
         private bool ready;
         private string currentApp;
         private readonly Color ink=new(.86f,.91f,.98f), muted=new(.53f,.63f,.76f), blue=new(.17f,.48f,.94f);
-        public bool IsOpen => canvas != null && canvas.enabled;
+        public bool IsOpen => focused;
+        public bool IsPowered => desktop != null && desktop.gameObject.activeSelf;
+        public Canvas MonitorCanvas => canvas;
         public bool IsReady => ready;
-        public void Initialize(CRTMainMenuController controller)
+        public void Initialize(CRTMainMenuController controller, RectTransform surface, Canvas sceneCanvas)
         {
             owner=controller;
-            var go=new GameObject("Archive OS",typeof(Canvas),typeof(CanvasScaler),typeof(GraphicRaycaster));
-            // The authored monitor controller is scaled. A screen overlay needs its own root.
+            var go=new GameObject("Archive OS",typeof(RectTransform),typeof(Canvas),typeof(GraphicRaycaster),typeof(CanvasGroup));
+            go.transform.SetParent(surface, false);
             canvas=go.GetComponent<Canvas>();
-            canvas.renderMode=RenderMode.ScreenSpaceOverlay; canvas.sortingOrder=9000;
-            var scaler=go.GetComponent<CanvasScaler>(); scaler.uiScaleMode=CanvasScaler.ScaleMode.ScaleWithScreenSize;
-            scaler.referenceResolution=new Vector2(1920,1080); scaler.matchWidthOrHeight=.5f;
+            canvas.renderMode=RenderMode.WorldSpace;
+            canvas.worldCamera=sceneCanvas.worldCamera != null ? sceneCanvas.worldCamera : Camera.main;
+            var rect=(RectTransform)go.transform;
+            rect.anchorMin=rect.anchorMax=new Vector2(.5f,.5f); rect.sizeDelta=new Vector2(1920,1080);
+            rect.localScale=new Vector3(surface.rect.width/1920f,surface.rect.height/1080f,1);
+            rect.localPosition=new Vector3(0,0,-.01f);
+            interaction=go.GetComponent<CanvasGroup>(); interaction.interactable=interaction.blocksRaycasts=false;
             desktop=Panel(go.transform,"Desktop",new Color(.022f,.047f,.09f),Vector2.zero,new Vector2(1920,1080));
             desktop.anchorMin=Vector2.zero; desktop.anchorMax=Vector2.one; desktop.sizeDelta=Vector2.zero;
             // Quiet, layered wallpaper; the work window stays visually separate from the desktop.
@@ -44,14 +52,20 @@ namespace ArchiveNull.UI
             Button(taskbar,"Volver a la oficina",new Vector2(470,0),new Vector2(260,48),owner.DesktopLeave);
             clock=Text(taskbar,"",18,new Vector2(785,0),new Vector2(270,45),ink);
             status=Text(desktop,"OPERADOR 253   /   SESIÓN LOCAL",18,new Vector2(380,-437),new Vector2(990,45),muted);
-            canvas.enabled=false;
+            desktop.gameObject.AddComponent<RectMask2D>();
+            desktop.gameObject.SetActive(false);
         }
         public void Open()
         {
-            canvas.enabled=true; Cursor.lockState=CursorLockMode.None; Cursor.visible=true;
+            focused=true; desktop.gameObject.SetActive(true);
+            interaction.interactable=interaction.blocksRaycasts=true;
+            owner.SetDesktopPower(true);
+            Cursor.lockState=CursorLockMode.None; Cursor.visible=true;
             if(!ready && boot==null) StartCoroutine(Boot());
         }
-        public void Close() { if(canvas!=null) canvas.enabled=false; }
+        // Leaving the seat releases input but preserves the monitor's visible session.
+        public void Close() { focused=false; if(interaction!=null) interaction.interactable=interaction.blocksRaycasts=false; }
+        public void PowerOff() { Close(); if(desktop!=null) desktop.gameObject.SetActive(false); owner.SetDesktopPower(false); }
         private void OnDestroy() { if(canvas!=null) Destroy(canvas.gameObject); }
         private IEnumerator Boot()
         {
@@ -75,6 +89,20 @@ namespace ArchiveNull.UI
             if(clock!=null) clock.text=System.DateTime.Now.ToString("HH:mm   ·   dd/MM/yyyy");
             if(GlobalPauseMenu.IsPaused || CaseFileReader.IsAnyCaseFileOpen || RuntimeConfirmationDialog.IsOpen) return;
             if(ready && owner.HasMountedArchive) status.text="MEMORIA PREPARADA   ·   "+owner.MountedArchiveName+"   /   Salí del escritorio y equipá el visor";
+        }
+        public Vector2 ConfinePointer(Vector2 screenPoint)
+        {
+            if(!RectTransformUtility.ScreenPointToLocalPointInRectangle(desktop,screenPoint,canvas.worldCamera,out var local)) return screenPoint;
+            var bounds=desktop.rect;
+            local.x=Mathf.Clamp(local.x,bounds.xMin+8,bounds.xMax-8);
+            local.y=Mathf.Clamp(local.y,bounds.yMin+8,bounds.yMax-8);
+            return RectTransformUtility.WorldToScreenPoint(canvas.worldCamera,desktop.TransformPoint(local));
+        }
+        private void LateUpdate()
+        {
+            if(!IsOpen || GlobalPauseMenu.IsPaused || CaseFileReader.IsAnyCaseFileOpen || RuntimeConfirmationDialog.IsOpen || ArchiveNull.Accusation.AccusationPanel.IsAnyOpen || Mouse.current==null) return;
+            Vector2 pointer=Mouse.current.position.ReadValue(), confined=ConfinePointer(pointer);
+            if((confined-pointer).sqrMagnitude>1) Mouse.current.WarpCursorPosition(confined);
         }
         private void App(string code,string label,Vector2 position,UnityEngine.Events.UnityAction action)
         {
@@ -170,13 +198,18 @@ namespace ArchiveNull.UI
             Text(rect,value,23,Vector2.zero,size-new Vector2(24,6),ink); return button;
         }
     }
-    public sealed class DesktopWindowDrag : MonoBehaviour, IDragHandler
+    public sealed class DesktopWindowDrag : MonoBehaviour, IBeginDragHandler, IDragHandler
     {
         public RectTransform Target;
+        private Vector2 grabOffset;
+        public void OnBeginDrag(PointerEventData data)
+        {
+            if(RectTransformUtility.ScreenPointToLocalPointInRectangle((RectTransform)Target.parent,data.position,data.pressEventCamera,out var point)) grabOffset=Target.anchoredPosition-point;
+        }
         public void OnDrag(PointerEventData data)
         {
-            var canvas=GetComponentInParent<Canvas>();
-            Target.anchoredPosition+=data.delta/canvas.scaleFactor;
+            if(!RectTransformUtility.ScreenPointToLocalPointInRectangle((RectTransform)Target.parent,data.position,data.pressEventCamera,out var point)) return;
+            Target.anchoredPosition=point+grabOffset;
             Target.anchoredPosition=new Vector2(Mathf.Clamp(Target.anchoredPosition.x,-250,250),Mathf.Clamp(Target.anchoredPosition.y,-55,80));
         }
     }
