@@ -1,10 +1,16 @@
 PASS real office has no memory boundary or reconstruction wave
 PASS office installs headset session UI
 PASS office installs modern operating system desktop
+PASS real office has no pause overlay instance
+PASS new office session spawns standing at doorway
+PASS completed tutorial does not make a new session start seated
+PASS office locomotion initializes carpet footstep audio
 PASS first-time seating blocked before primary dossier is opened
 PASS opening primary dossier enables workstation
 PASS suspect photographs load from portrait atlas
 PASS focusing monitor opens desktop and finishes session boot
+PASS monitor uses game cursor with system pointer hidden
+PASS monitor initializes computer interaction sounds
 PASS desktop canvas belongs to physical monitor surface
 PASS application window starts animated opening
 PASS application opening animation finishes with visible window
@@ -16,6 +22,10 @@ PASS unfocused monitor releases scene pointer input
 PASS minimize animation finishes with window hidden
 PASS taskbar restores minimized window with completed animation
 PASS close animation removes application window without runtime exceptions
+PASS standing up preserves doorway eye height
+PASS standing position offers a free direction for office walking
+PASS actual office movement drives body motion envelope
+PASS actual office movement plays carpet footsteps
 PASS locked office explains missing investigation requirements
 PASS locked contractor memory cannot be mounted
 PASS partial phone investigation keeps office locked: f1_house_cube
@@ -23,8 +33,15 @@ PASS partial phone investigation keeps office locked: phone_messages
 PASS registering note, messages and calls unlocks office through inventory event
 PASS persisted office access repairs a stale archive index
 PASS desktop mounts unlocked contractor memory
-PASS desktop configuration opens game settings
-PASS closing options returns usable desktop pointer
+PASS configuration stays inside monitor without pausing office
+PASS monitor general settings provide sensitivity and body motion sliders
+PASS monitor settings persist body motion changes
+PASS monitor sound settings expose master effects and voice sliders
+PASS monitor renders video options without pause UI
+PASS monitor renders control bindings without pause UI
+PASS computer settings retain custom cursor control
+PASS custom computer pointer is visible on monitor canvas
+PASS legacy settings entry cannot create pause in MainMenu
 PASS scene transition powers off monitor session
 PASS office dependencies retained for return journey
 PASS contractor memory retains its fixed boundary
@@ -35,4 +52,5 @@ PASS tag finds supported free floor in F1-Office (scale 2,13)
 PASS placed tripod can be targeted for mounting or moving in F1-Office
 PASS scaled tripod finds supported free floor in F1-Office (scale 2,13)
 PASS complete office-memory-office round trip
-MEASURE warm office assets: 1,23 seconds
+PASS memory exit returns player seated at desk
+MEASURE warm office assets: 1,24 seconds
