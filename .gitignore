@@ -12,6 +12,10 @@
 /[Uu]ser[Ss]ettings/
 *.log
 
+# Datos locales generados por las verificaciones del editor
+/Artifacts/EditorValidation/preferences-before-test.xml
+/Artifacts/EditorValidation/house-mechanics-results.txt
+
 # MemoryCaptures can get excessive in size.
 # They also could contain extremely sensitive data
 /[Mm]emoryCaptures/
