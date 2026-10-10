@@ -6,6 +6,7 @@ namespace ArchiveNull.UI
     public sealed partial class CRTMainMenuController
     {
         private ModernOfficeDesktop desktop;
+        [SerializeField, Range(.5f,1f)] private float desktopScreenHeight = .9f;
         private void InstallModernDesktop()
         {
             // Preserve serialized archive/event references while retiring the CRT presentation.
@@ -14,7 +15,7 @@ namespace ArchiveNull.UI
             _scanlinesEnabled=_chromaticEnabled=false;
             _useProceduralRetroSounds=false;
             SetMonitorLightImmediate(0f);
-            desktop=gameObject.AddComponent<ModernOfficeDesktop>(); desktop.Initialize(this, _screen, _canvas);
+            desktop=gameObject.AddComponent<ModernOfficeDesktop>(); desktop.Initialize(this, _screen, _canvas, desktopScreenHeight);
         }
         public void SetDesktopPower(bool powered) => SetMonitorLightImmediate(powered ? .25f : 0f);
         public int DesktopArchiveCount => GetEffectiveArchiveCount();

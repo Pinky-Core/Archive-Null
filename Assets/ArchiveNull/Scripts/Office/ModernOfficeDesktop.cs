@@ -27,7 +27,7 @@ namespace ArchiveNull.UI
         public bool IsPowered => desktop != null && desktop.gameObject.activeSelf;
         public Canvas MonitorCanvas => canvas;
         public bool IsReady => ready;
-        public void Initialize(CRTMainMenuController controller, RectTransform surface, Canvas sceneCanvas)
+        public void Initialize(CRTMainMenuController controller, RectTransform surface, Canvas sceneCanvas, float visibleHeight)
         {
             owner=controller;
             var go=new GameObject("Archive OS",typeof(RectTransform),typeof(Canvas),typeof(GraphicRaycaster),typeof(CanvasGroup));
@@ -37,8 +37,11 @@ namespace ArchiveNull.UI
             canvas.worldCamera=sceneCanvas.worldCamera != null ? sceneCanvas.worldCamera : Camera.main;
             var rect=(RectTransform)go.transform;
             rect.anchorMin=rect.anchorMax=new Vector2(.5f,.5f); rect.sizeDelta=new Vector2(1920,1080);
-            rect.localScale=new Vector3(surface.rect.width/1920f,surface.rect.height/1080f,1);
-            rect.localPosition=new Vector3(0,0,-.01f);
+            // The authored Screen extends under the lower plastic bezel. Keep the top
+            // alignment while fitting the usable area; expose the fit on the controller.
+            visibleHeight=Mathf.Clamp(visibleHeight,.5f,1f);
+            rect.localScale=new Vector3(surface.rect.width/1920f,surface.rect.height*visibleHeight/1080f,1);
+            rect.localPosition=new Vector3(0,surface.rect.height*(1-visibleHeight)*.5f,-.01f);
             interaction=go.GetComponent<CanvasGroup>(); interaction.interactable=interaction.blocksRaycasts=false;
             desktop=Panel(go.transform,"Desktop",new Color(.022f,.047f,.09f),Vector2.zero,new Vector2(1920,1080));
             desktop.anchorMin=Vector2.zero; desktop.anchorMax=Vector2.one; desktop.sizeDelta=Vector2.zero;
