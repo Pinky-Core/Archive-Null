@@ -95,6 +95,9 @@ public sealed class GameSaveSystem : MonoBehaviour
     private static void Install()
     {
         laboratorySession = SceneManager.GetActiveScene().name == "MechanicsLab";
+#if UNITY_EDITOR
+        laboratorySession |= Array.IndexOf(Environment.GetCommandLineArgs(), "-archive-editor-test") >= 0;
+#endif
         SceneManager.sceneLoaded -= HandleSceneLoaded;
         SceneManager.sceneLoaded += HandleSceneLoaded;
         HandleSceneLoaded(SceneManager.GetActiveScene(), LoadSceneMode.Single);
