@@ -22,6 +22,7 @@ namespace ArchiveNull.UI
             desktop=gameObject.AddComponent<ModernOfficeDesktop>(); desktop.Initialize(this, _screen, _canvas, desktopScreenHeight);
         }
         public void SetDesktopPower(bool powered) => SetMonitorLightImmediate(powered ? .25f : 0f);
+        public bool IsDesktopRebinding => desktop!=null && desktop.IsRebinding;
         public int DesktopArchiveCount => GetEffectiveArchiveCount();
         public bool DesktopArchiveSupported(int index) => GetArchiveSceneName(index) is "F1-House" or "F1-Office";
         public string DesktopArchiveName(int index) => GetArchiveSceneName(index) switch
