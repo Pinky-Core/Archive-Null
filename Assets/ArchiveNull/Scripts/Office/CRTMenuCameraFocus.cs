@@ -168,6 +168,7 @@ namespace ArchiveNull.UI
 
         private void HandleInput()
         {
+            if(GetComponent<ModernOfficeDesktop>() is ModernOfficeDesktop desktop && desktop.IsRebinding) return;
             if (CaseFileReader.IsAnyCaseFileOpen)
             {
                 return;

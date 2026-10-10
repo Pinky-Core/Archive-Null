@@ -107,6 +107,11 @@ public sealed class GlobalPauseMenu : MonoBehaviour
 
     public static void OpenSettingsRuntime()
     {
+        if (SceneManager.GetActiveScene().name == MainMenuSceneName)
+        {
+            FindAnyObjectByType<ModernOfficeDesktop>()?.OpenSettings();
+            return;
+        }
         if (instance == null) instance = new GameObject("GlobalPauseMenu").AddComponent<GlobalPauseMenu>();
         if (!instance.isPaused) instance.Pause();
         instance.ShowOptions();
@@ -114,6 +119,7 @@ public sealed class GlobalPauseMenu : MonoBehaviour
 
     private void Awake()
     {
+        if(SceneManager.GetActiveScene().name==MainMenuSceneName) { enabled=false; Destroy(gameObject); return; }
         if (instance != null && instance != this)
         {
             Destroy(gameObject);
@@ -186,6 +192,7 @@ public sealed class GlobalPauseMenu : MonoBehaviour
 
     public void Pause()
     {
+        if(SceneManager.GetActiveScene().name==MainMenuSceneName) return;
         CachePlayerReferences();
         SetPlayerInputEnabled(false);
         Cursor.lockState = CursorLockMode.None;

@@ -8,7 +8,7 @@ using UnityEngine.EventSystems;
 
 namespace ArchiveNull.UI
 {
-    public sealed class ModernOfficeDesktop : MonoBehaviour
+    public sealed partial class ModernOfficeDesktop : MonoBehaviour
     {
         private CRTMainMenuController owner;
         private Canvas canvas;
@@ -30,6 +30,7 @@ namespace ArchiveNull.UI
         public void Initialize(CRTMainMenuController controller, RectTransform surface, Canvas sceneCanvas, float visibleHeight)
         {
             owner=controller;
+            AudioListener.volume=PlayerPrefs.GetFloat("global.pause.master.volume",1);
             var go=new GameObject("Archive OS",typeof(RectTransform),typeof(Canvas),typeof(GraphicRaycaster),typeof(CanvasGroup));
             go.transform.SetParent(surface, false);
             canvas=go.GetComponent<Canvas>();
@@ -71,7 +72,7 @@ namespace ArchiveNull.UI
             if(!ready && boot==null) StartCoroutine(Boot());
         }
         // Leaving the seat releases input but preserves the monitor's visible session.
-        public void Close() { focused=false; if(interaction!=null) interaction.interactable=interaction.blocksRaycasts=false; }
+        public void Close() { focused=false; pendingBinding=null; if(interaction!=null) interaction.interactable=interaction.blocksRaycasts=false; }
         public void PowerOff() { Close(); if(desktop!=null) desktop.gameObject.SetActive(false); owner.SetDesktopPower(false); }
         private void OnDestroy() { if(canvas!=null) Destroy(canvas.gameObject); }
         private IEnumerator Boot()
@@ -93,6 +94,7 @@ namespace ArchiveNull.UI
         private void Update()
         {
             if(!IsOpen) return;
+            UpdateSettingsInput();
             if(clock!=null) clock.text=System.DateTime.Now.ToString("HH:mm   ·   dd/MM/yyyy");
             if(GlobalPauseMenu.IsPaused || CaseFileReader.IsAnyCaseFileOpen || RuntimeConfirmationDialog.IsOpen) return;
             if(ready && owner.HasMountedArchive) status.text="MEMORIA PREPARADA   ·   "+owner.MountedArchiveName+"   /   Salí del escritorio y equipá el visor";
@@ -214,10 +216,6 @@ namespace ArchiveNull.UI
         {
             if(ArchiveNull.Accusation.AccusationPanel.CanPresentReport(out string reason)) ArchiveNull.Accusation.AccusationPanel.OpenRuntime();
             else { Window("Informe final"); Text(content,"Investigación pendiente",34,new Vector2(0,140),new Vector2(1100,80),ink); Text(content,reason,26,new Vector2(0,-10),new Vector2(1050,240),muted); }
-        }
-        private void OpenSettings()
-        {
-            GlobalPauseMenu.OpenSettingsRuntime();
         }
         private void OpenStart()
         {
