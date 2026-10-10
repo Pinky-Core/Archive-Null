@@ -11,6 +11,10 @@ namespace ArchiveNull.UI
         {
             // Preserve serialized archive/event references while retiring the CRT presentation.
             foreach (Transform child in _screen) child.gameObject.SetActive(false);
+            // Retire input from the authored CRT canvas permanently. Its inactive
+            // labels must never remain pointer targets alongside the new desktop.
+            foreach(var text in _canvas.GetComponentsInChildren<TMPro.TMP_Text>(true)) text.raycastTarget=false;
+            foreach(var raycaster in _canvas.GetComponents<UnityEngine.UI.GraphicRaycaster>()) raycaster.enabled=false;
             _screenImage.color = Color.black;
             _scanlinesEnabled=_chromaticEnabled=false;
             _useProceduralRetroSounds=false;
