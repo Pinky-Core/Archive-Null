@@ -1238,17 +1238,17 @@ RectTransform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 130972485}
-  m_LocalRotation: {x: -0, y: 0.012242512, z: -0, w: 0.9999251}
-  m_LocalPosition: {x: 0, y: 0, z: 20.891914}
-  m_LocalScale: {x: 17.39671, y: 14.238851, z: 9.353068}
+  m_LocalRotation: {x: 0, y: 0.012129704, z: 0, w: 0.99992645}
+  m_LocalPosition: {x: 0, y: 0, z: 18.97}
+  m_LocalScale: {x: 26.067228, y: 14.238851, z: 9.353068}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 762844055}
   m_Father: {fileID: 808390113}
-  m_LocalEulerAnglesHint: {x: 0, y: 1.403, z: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 1.39, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -10.167333, y: -72.0001}
+  m_AnchoredPosition: {x: 31, y: -72.00004}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &130972487
@@ -1533,7 +1533,7 @@ MonoBehaviour:
   m_linkedTextComponent: {fileID: 0}
   parentLinkedComponent: {fileID: 0}
   m_enableKerning: 0
-  m_ActiveFontFeatures: 6e72656b
+  m_ActiveFontFeatures: 6e72656bu
   m_enableExtraPadding: 0
   checkPaddingRequired: 0
   m_isRichText: 1
@@ -1721,7 +1721,7 @@ MonoBehaviour:
   m_linkedTextComponent: {fileID: 0}
   parentLinkedComponent: {fileID: 0}
   m_enableKerning: 0
-  m_ActiveFontFeatures: 6e72656b
+  m_ActiveFontFeatures: 6e72656bu
   m_enableExtraPadding: 0
   checkPaddingRequired: 0
   m_isRichText: 1
@@ -1964,7 +1964,7 @@ MonoBehaviour:
   m_linkedTextComponent: {fileID: 0}
   parentLinkedComponent: {fileID: 0}
   m_enableKerning: 0
-  m_ActiveFontFeatures: 6e72656b
+  m_ActiveFontFeatures: 6e72656bu
   m_enableExtraPadding: 0
   checkPaddingRequired: 0
   m_isRichText: 1
@@ -2981,7 +2981,7 @@ MonoBehaviour:
   m_linkedTextComponent: {fileID: 0}
   parentLinkedComponent: {fileID: 0}
   m_enableKerning: 0
-  m_ActiveFontFeatures: 6e72656b
+  m_ActiveFontFeatures: 6e72656bu
   m_enableExtraPadding: 0
   checkPaddingRequired: 0
   m_isRichText: 1
@@ -3118,7 +3118,7 @@ MonoBehaviour:
   m_linkedTextComponent: {fileID: 0}
   parentLinkedComponent: {fileID: 0}
   m_enableKerning: 0
-  m_ActiveFontFeatures: 6e72656b
+  m_ActiveFontFeatures: 6e72656bu
   m_enableExtraPadding: 0
   checkPaddingRequired: 0
   m_isRichText: 1
@@ -3304,7 +3304,7 @@ MonoBehaviour:
   m_linkedTextComponent: {fileID: 0}
   parentLinkedComponent: {fileID: 0}
   m_enableKerning: 0
-  m_ActiveFontFeatures: 6e72656b
+  m_ActiveFontFeatures: 6e72656bu
   m_enableExtraPadding: 0
   checkPaddingRequired: 0
   m_isRichText: 1
@@ -3960,7 +3960,7 @@ MonoBehaviour:
   m_linkedTextComponent: {fileID: 0}
   parentLinkedComponent: {fileID: 0}
   m_enableKerning: 0
-  m_ActiveFontFeatures: 6e72656b
+  m_ActiveFontFeatures: 6e72656bu
   m_enableExtraPadding: 0
   checkPaddingRequired: 0
   m_isRichText: 1
@@ -4729,7 +4729,7 @@ MonoBehaviour:
   m_linkedTextComponent: {fileID: 0}
   parentLinkedComponent: {fileID: 0}
   m_enableKerning: 0
-  m_ActiveFontFeatures: 6e72656b
+  m_ActiveFontFeatures: 6e72656bu
   m_enableExtraPadding: 0
   checkPaddingRequired: 0
   m_isRichText: 1
@@ -5329,7 +5329,7 @@ MonoBehaviour:
   m_linkedTextComponent: {fileID: 0}
   parentLinkedComponent: {fileID: 0}
   m_enableKerning: 0
-  m_ActiveFontFeatures: 6e72656b
+  m_ActiveFontFeatures: 6e72656bu
   m_enableExtraPadding: 0
   checkPaddingRequired: 0
   m_isRichText: 1
@@ -6118,7 +6118,7 @@ MonoBehaviour:
   m_linkedTextComponent: {fileID: 0}
   parentLinkedComponent: {fileID: 0}
   m_enableKerning: 0
-  m_ActiveFontFeatures: 6e72656b
+  m_ActiveFontFeatures: 6e72656bu
   m_enableExtraPadding: 0
   checkPaddingRequired: 0
   m_isRichText: 1
@@ -7114,7 +7114,6 @@ MonoBehaviour:
   _mouseFollowSpeed: 4
   _allowReturnWithEscape: 0
   _allowReturnWithRightClick: 1
-  _allowStandExitFromFarWithEscape: 1
   _returnToFarFallbackLayers:
     serializedVersion: 2
     m_Bits: 4294967295
@@ -7258,7 +7257,7 @@ MonoBehaviour:
   m_linkedTextComponent: {fileID: 0}
   parentLinkedComponent: {fileID: 0}
   m_enableKerning: 0
-  m_ActiveFontFeatures: 6e72656b
+  m_ActiveFontFeatures: 6e72656bu
   m_enableExtraPadding: 0
   checkPaddingRequired: 0
   m_isRichText: 1
@@ -7529,7 +7528,7 @@ MonoBehaviour:
   m_linkedTextComponent: {fileID: 0}
   parentLinkedComponent: {fileID: 0}
   m_enableKerning: 0
-  m_ActiveFontFeatures: 6e72656b
+  m_ActiveFontFeatures: 6e72656bu
   m_enableExtraPadding: 0
   checkPaddingRequired: 0
   m_isRichText: 1
@@ -7883,6 +7882,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ArchiveNull.UI.OfficeDissolveTransition
   officeRoot: {fileID: 482749372}
   fallbackDissolveShader: {fileID: 4800000, guid: bb82048c173156e4598be1adb174f664, type: 3}
+  limitMemoryRadius: 0
+  maximumMemoryRadius: 15
+  memoryOrigin: {fileID: 0}
+  memoryCenter: {x: 0, y: 0, z: 0}
+  boundaryWidth: 0.65
   dissolveDuration: 1.25
   rebuildOnMainMenuReturn: 1
   restoreOriginalMaterialsAfterRebuild: 0
@@ -8487,34 +8491,26 @@ MonoBehaviour:
 
       Lugar: casa familiar Herrera.
 
-      Estado
-      inicial: muerte en interior cerrado.
+      Estado inicial: muerte en interior cerrado.
 
 
-      La escena fue clasificada como
-      posible suicidio, pero hay inconsistencias suficientes para montar una memoria
-      investigable.'
+      La escena fue clasificada como posible suicidio, pero hay inconsistencias suficientes para montar una memoria investigable.'
     showPortrait: 0
     portraitName: 
     portraitAccent: {r: 0.52, g: 0.45, b: 0.36, a: 1}
   - title: RESUMEN INICIAL
-    body: 'La puerta principal fue encontrada cerrada desde adentro. Cerca del cuerpo
-      habia un frasco de pastillas y un mensaje breve enviado a Sofia Roldan.
+    body: 'La puerta principal fue encontrada cerrada desde adentro. Cerca del cuerpo habia un frasco de pastillas y un mensaje breve enviado a Sofia Roldan.
 
 
-      Objetivo
-      del operador: registrar evidencias, separar pistas reales de pistas circunstanciales
-      y evitar una acusacion prematura.'
+      Objetivo del operador: registrar evidencias, separar pistas reales de pistas circunstanciales y evitar una acusacion prematura.'
     showPortrait: 0
     portraitName: 
     portraitAccent: {r: 0.52, g: 0.45, b: 0.36, a: 1}
   - title: 'VICTIMA: JULIAN HERRERA'
-    body: 'Arquitecto. Administraba la casa familiar y llevaba registros escritos
-      de temas legales y obras pendientes.
+    body: 'Arquitecto. Administraba la casa familiar y llevaba registros escritos de temas legales y obras pendientes.
 
 
-      Perfil preliminar: metodico, reservado,
-      con conflictos familiares recientes por la propiedad.'
+      Perfil preliminar: metodico, reservado, con conflictos familiares recientes por la propiedad.'
     showPortrait: 1
     portraitName: JULIAN HERRERA
     portraitAccent: {r: 0.46, g: 0.42, b: 0.34, a: 1}
@@ -8522,19 +8518,15 @@ MonoBehaviour:
     body: 'Hermano menor de Julian. Tenia interes en vender la casa familiar.
 
 
-      Dato
-      preliminar: discutio con la victima durante el ultimo dia conocido. Motivo
-      economico posible, sin confirmacion de presencia durante la muerte.'
+      Dato preliminar: discutio con la victima durante el ultimo dia conocido. Motivo economico posible, sin confirmacion de presencia durante la muerte.'
     showPortrait: 1
     portraitName: NICOLAS HERRERA
     portraitAccent: {r: 0.33, g: 0.43, b: 0.48, a: 1}
   - title: SOFIA ROLDAN
-    body: 'Expareja de Julian. Recibio el mensaje final y conserva vinculos emocionales
-      con la victima.
+    body: 'Expareja de Julian. Recibio el mensaje final y conserva vinculos emocionales con la victima.
 
 
-      Dato preliminar: hubo una discusion previa. No asumir
-      culpabilidad por cercania emocional.'
+      Dato preliminar: hubo una discusion previa. No asumir culpabilidad por cercania emocional.'
     showPortrait: 1
     portraitName: SOFIA ROLDAN
     portraitAccent: {r: 0.54, g: 0.38, b: 0.38, a: 1}
@@ -8542,9 +8534,7 @@ MonoBehaviour:
     body: 'Vecino y antiguo contratista vinculado a trabajos en la casa.
 
 
-      Dato
-      preliminar: testigo secundario. Conocia accesos y rutinas del lugar por trabajos
-      anteriores.'
+      Dato preliminar: testigo secundario. Conocia accesos y rutinas del lugar por trabajos anteriores.'
     showPortrait: 1
     portraitName: VICTOR SALAS
     portraitAccent: {r: 0.42, g: 0.35, b: 0.28, a: 1}
@@ -8553,11 +8543,9 @@ MonoBehaviour:
 
       2. Observar la sala y la cocina.
 
-      3.
-      Fotografiar evidencias.
+      3. Fotografiar evidencias.
 
-      4. Usar UV si una superficie parece limpia o
-      manipulada.
+      4. Usar UV si una superficie parece limpia o manipulada.
 
       5. Volver a la oficina y revisar el tablero antes de acusar.'
     showPortrait: 0
@@ -10370,7 +10358,7 @@ MonoBehaviour:
   m_linkedTextComponent: {fileID: 0}
   parentLinkedComponent: {fileID: 0}
   m_enableKerning: 0
-  m_ActiveFontFeatures: 6e72656b
+  m_ActiveFontFeatures: 6e72656bu
   m_enableExtraPadding: 0
   checkPaddingRequired: 0
   m_isRichText: 1
@@ -11426,7 +11414,7 @@ MonoBehaviour:
   m_linkedTextComponent: {fileID: 0}
   parentLinkedComponent: {fileID: 0}
   m_enableKerning: 0
-  m_ActiveFontFeatures: 6e72656b
+  m_ActiveFontFeatures: 6e72656bu
   m_enableExtraPadding: 0
   checkPaddingRequired: 0
   m_isRichText: 1
@@ -11546,6 +11534,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: eb79f4dd3371daf40bd99eeced274a6f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ArchiveNull.UI.CRTMainMenuController
+  desktopScreenHeight: 0.9
   _idleTitle: 'Archive: {null}'
   _bootPrompt: PRESS ENTER OR CLICK TO INITIALIZE
   _bootMessages:
@@ -11604,7 +11593,7 @@ MonoBehaviour:
   - ARCHIVE_04.NULL
   _archiveCaseNames:
   - CASE_01
-  _archiveSceneBuildIndices: 01000000
+  _archiveSceneBuildIndices: 01000000i
   _clearMountedArchiveOnStartup: 1
   _useSceneLayout: 1
   _sceneCanvas: {fileID: 808390112}
@@ -11936,7 +11925,7 @@ MonoBehaviour:
   m_linkedTextComponent: {fileID: 0}
   parentLinkedComponent: {fileID: 0}
   m_enableKerning: 0
-  m_ActiveFontFeatures: 6e72656b
+  m_ActiveFontFeatures: 6e72656bu
   m_enableExtraPadding: 0
   checkPaddingRequired: 0
   m_isRichText: 1
@@ -12314,7 +12303,7 @@ MonoBehaviour:
   m_linkedTextComponent: {fileID: 0}
   parentLinkedComponent: {fileID: 0}
   m_enableKerning: 0
-  m_ActiveFontFeatures: 6e72656b
+  m_ActiveFontFeatures: 6e72656bu
   m_enableExtraPadding: 0
   checkPaddingRequired: 0
   m_isRichText: 1
@@ -12875,50 +12864,38 @@ MonoBehaviour:
   lineGap: 0.35
   subtitleFadeDuration: 0.2
   initialDelay: 0.7
-  movementPromptDelay: 1.2
   sitPromptDelay: 2.2
   lines:
   - step: 0
-    subtitle: "Bienvenido Operador 253, se le asigno el caso JH. La v\xEDctima hallada
-      muerta en la sala principal de su casa familiar."
+    subtitle: "Bienvenido Operador 253, se le asigno el caso JH. La v\xEDctima hallada muerta en la sala principal de su casa familiar."
     voiceClip: {fileID: 0}
     fallbackDuration: 6
   - step: 1
-    subtitle: "La escena fue clasificada como posible suicidio: un frasco de pastillas
-      y un mensaje final sostienen esa lectura. Hay inconsistencias. Lea el expediente
-      sobre la mesa izquierda para tener m\xE1s informaci\xF3n."
+    subtitle: "La escena fue clasificada como posible suicidio: un frasco de pastillas y un mensaje final sostienen esa lectura. Hay inconsistencias. Lea el expediente sobre la mesa izquierda para tener m\xE1s informaci\xF3n."
     voiceClip: {fileID: 0}
     fallbackDuration: 7
   - step: 2
-    subtitle: Su tarea no es confirmar una sospecha. Debe separar evidencia real,
-      circunstancial y plantada. Cuando termine de leer, tome asiento frente al terminal
-      (Haga click sobre la silla o Mesa).
+    subtitle: Su tarea no es confirmar una sospecha. Debe separar evidencia real, circunstancial y plantada. Cuando termine de leer, tome asiento frente al terminal (Haga click sobre la silla o Mesa).
     voiceClip: {fileID: 0}
     fallbackDuration: 6
   - step: 3
-    subtitle: "La pantalla esta lista para recibir entrada, p\xFAlsela para acceder
-      (Haga Click sobre la pantalla)."
+    subtitle: "La pantalla esta lista para recibir entrada, p\xFAlsela para acceder (Haga Click sobre la pantalla)."
     voiceClip: {fileID: 0}
     fallbackDuration: 3.2
   - step: 4
-    subtitle: "Use el terminal para revisar las opciones, all\xED podr\xE1s modificar
-      controles, audio e idioma de la experiencia. Una vez finalizado monte la memoria
-      en [Expedientes]."
+    subtitle: "Use el terminal para revisar las opciones, all\xED podr\xE1s modificar controles, audio e idioma de la experiencia. Una vez finalizado monte la memoria en [Expedientes]."
     voiceClip: {fileID: 0}
     fallbackDuration: 4.4
   - step: 5
-    subtitle: "Puede apartarse del monitor para volver a la posicion de espera (P\xFAlse
-      Click Derecho del Mouse)."
+    subtitle: "Puede apartarse del monitor para volver a la posicion de espera (P\xFAlse Click Derecho del Mouse)."
     voiceClip: {fileID: 0}
     fallbackDuration: 3.5
   - step: 6
-    subtitle: "El visor est\xE1 preparado, puede encontrarlo a su izquierda, p\xFAlselo
-      para equipartelo."
+    subtitle: "El visor est\xE1 preparado, puede encontrarlo a su izquierda, p\xFAlselo para equipartelo."
     voiceClip: {fileID: 0}
     fallbackDuration: 3
   - step: 7
-    subtitle: Sincronizacion iniciada. Cuando este preparado, ejecute la memoria
-      (Pulsa Click o Enter).
+    subtitle: Sincronizacion iniciada. Cuando este preparado, ejecute la memoria (Pulsa Click o Enter).
     voiceClip: {fileID: 0}
     fallbackDuration: 3.6
 --- !u!1001 &1675663788
@@ -13100,7 +13077,7 @@ MonoBehaviour:
   m_linkedTextComponent: {fileID: 0}
   parentLinkedComponent: {fileID: 0}
   m_enableKerning: 0
-  m_ActiveFontFeatures: 6e72656b
+  m_ActiveFontFeatures: 6e72656bu
   m_enableExtraPadding: 0
   checkPaddingRequired: 0
   m_isRichText: 1
@@ -13337,7 +13314,7 @@ CanvasRenderer:
   m_CullTransparentMesh: 1
 --- !u!212 &1692602180
 SpriteRenderer:
-  serializedVersion: 2
+  serializedVersion: 3
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -13394,6 +13371,7 @@ SpriteRenderer:
   m_SpriteTileMode: 0
   m_WasSpriteAssigned: 0
   m_SpriteSortPoint: 0
+  m_BlendShapeWeights: []
 --- !u!1001 &1693653548
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -13485,7 +13463,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5732330933328310903, guid: a7c8d5abfd365bc49914ef428ffdc098, type: 3}
       propertyPath: m_LocalScale.x
-      value: 1.658486
+      value: 2.3746202
       objectReference: {fileID: 0}
     - target: {fileID: 5732330933328310903, guid: a7c8d5abfd365bc49914ef428ffdc098, type: 3}
       propertyPath: m_LocalScale.y
@@ -13497,7 +13475,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5732330933328310903, guid: a7c8d5abfd365bc49914ef428ffdc098, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 0.99180245
+      value: 0.99161
       objectReference: {fileID: 0}
     - target: {fileID: 5732330933328310903, guid: a7c8d5abfd365bc49914ef428ffdc098, type: 3}
       propertyPath: m_LocalPosition.y
@@ -13505,7 +13483,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5732330933328310903, guid: a7c8d5abfd365bc49914ef428ffdc098, type: 3}
       propertyPath: m_LocalPosition.z
-      value: -15.149664
+      value: -15.15
       objectReference: {fileID: 0}
     - target: {fileID: 5732330933328310903, guid: a7c8d5abfd365bc49914ef428ffdc098, type: 3}
       propertyPath: m_LocalRotation.w
@@ -13779,7 +13757,7 @@ MonoBehaviour:
   m_linkedTextComponent: {fileID: 0}
   parentLinkedComponent: {fileID: 0}
   m_enableKerning: 0
-  m_ActiveFontFeatures: 6e72656b
+  m_ActiveFontFeatures: 6e72656bu
   m_enableExtraPadding: 0
   checkPaddingRequired: 0
   m_isRichText: 1
@@ -14660,7 +14638,7 @@ MonoBehaviour:
   m_linkedTextComponent: {fileID: 0}
   parentLinkedComponent: {fileID: 0}
   m_enableKerning: 0
-  m_ActiveFontFeatures: 6e72656b
+  m_ActiveFontFeatures: 6e72656bu
   m_enableExtraPadding: 0
   checkPaddingRequired: 0
   m_isRichText: 1
@@ -14941,7 +14919,7 @@ MonoBehaviour:
   m_linkedTextComponent: {fileID: 0}
   parentLinkedComponent: {fileID: 0}
   m_enableKerning: 0
-  m_ActiveFontFeatures: 6e72656b
+  m_ActiveFontFeatures: 6e72656bu
   m_enableExtraPadding: 0
   checkPaddingRequired: 0
   m_isRichText: 1
@@ -15356,7 +15334,7 @@ MonoBehaviour:
   m_linkedTextComponent: {fileID: 0}
   parentLinkedComponent: {fileID: 0}
   m_enableKerning: 0
-  m_ActiveFontFeatures: 6e72656b
+  m_ActiveFontFeatures: 6e72656bu
   m_enableExtraPadding: 0
   checkPaddingRequired: 0
   m_isRichText: 1
@@ -16490,7 +16468,6 @@ MonoBehaviour:
   photoSpacing: {x: 0.22, y: -0.24}
   photosPerRow: 2
   surfaceOffset: 0.045
-  photoScaleMultiplier: 1
   photoRotationOffset: {x: 0, y: 0, z: 0}
   photoRaycastLayers:
     serializedVersion: 2
@@ -16983,7 +16960,7 @@ MonoBehaviour:
   m_linkedTextComponent: {fileID: 0}
   parentLinkedComponent: {fileID: 0}
   m_enableKerning: 0
-  m_ActiveFontFeatures: 6e72656b
+  m_ActiveFontFeatures: 6e72656bu
   m_enableExtraPadding: 0
   checkPaddingRequired: 0
   m_isRichText: 1
