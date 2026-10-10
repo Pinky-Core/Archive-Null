@@ -5,7 +5,7 @@ using ArchiveNull.Evidence;
 namespace ArchiveNull.UI
 {
     [DisallowMultipleComponent]
-    public sealed class OfficeFreeLookController : MonoBehaviour
+    public sealed partial class OfficeFreeLookController : MonoBehaviour
     {
         [Header("References")]
         [SerializeField] private CRTMenuCameraFocus _computerFocus;
@@ -63,10 +63,13 @@ namespace ArchiveNull.UI
             _pitch = NormalizeAngle(euler.x);
             _yaw = euler.y;
             _lockedHeight = _cameraRoot.position.y;
+            InitializeWalkingFeedback();
         }
 
         private void Update()
         {
+            RestoreWalkingPose();
+            WalkingSpeed=0;
             SyncFlightState();
 
             if (_cameraRoot == null || IsComputerFocused() || !_freeFlightEnabled || !CanMoveFreely() || IsUiBlockingLook())
@@ -155,13 +158,15 @@ namespace ArchiveNull.UI
             }
 
             Vector2 delta = Mouse.current.delta.ReadValue();
-            _yaw += delta.x * _lookSensitivity;
-            _pitch = Mathf.Clamp(_pitch - delta.y * _lookSensitivity, _minimumPitch, _maximumPitch);
+            float sensitivity=PlayerPrefs.GetFloat("global.pause.look.sensitivity",2)*.04f;
+            _yaw += delta.x * sensitivity;
+            _pitch = Mathf.Clamp(_pitch - delta.y * sensitivity, _minimumPitch, _maximumPitch);
             _cameraRoot.rotation = Quaternion.Euler(_pitch, _yaw, 0f);
         }
 
         private void HandleMove()
         {
+            Vector3 beforeMove=_cameraRoot.position;
             if (Keyboard.current == null)
             {
                 return;
@@ -176,10 +181,10 @@ namespace ArchiveNull.UI
                 right = Vector3.ProjectOnPlane(right, Vector3.up).normalized;
             }
 
-            if (Keyboard.current.wKey.isPressed) input += forward;
-            if (Keyboard.current.sKey.isPressed) input -= forward;
-            if (Keyboard.current.dKey.isPressed) input += right;
-            if (Keyboard.current.aKey.isPressed) input -= right;
+            if (GlobalInputBindings.IsPressed(GameInputAction.MoveForward)) input += forward;
+            if (GlobalInputBindings.IsPressed(GameInputAction.MoveBackward)) input -= forward;
+            if (GlobalInputBindings.IsPressed(GameInputAction.MoveRight)) input += right;
+            if (GlobalInputBindings.IsPressed(GameInputAction.MoveLeft)) input -= right;
             if (!_lockMovementHeight)
             {
                 if (Keyboard.current.eKey.isPressed) input += Vector3.up;
@@ -192,7 +197,7 @@ namespace ArchiveNull.UI
             }
 
             float speed = _moveSpeed;
-            if (Keyboard.current.leftShiftKey.isPressed || Keyboard.current.rightShiftKey.isPressed)
+            if (GlobalInputBindings.IsPressed(GameInputAction.Run))
             {
                 speed *= _fastMoveMultiplier;
             }
@@ -209,6 +214,7 @@ namespace ArchiveNull.UI
             }
 
             _cameraRoot.position = nextPosition;
+            WalkingSpeed=Vector3.ProjectOnPlane(nextPosition-beforeMove,Vector3.up).magnitude/Mathf.Max(.001f,Time.deltaTime);
         }
 
         private Vector3 ResolveCollision(Vector3 currentPosition, Vector3 targetPosition)
