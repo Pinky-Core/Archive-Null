@@ -40,3 +40,13 @@ La pausa usa una captura desenfocada del mundo, navegación superior y acciones 
 ## Marcadores amarillos
 
 En la rueda G, elegir MARCADORES. Clic inicia un holograma: Q/R o la rueda lo rotan, clic confirma y Esc/clic derecho cancela. E sobre un marcador lo recoge. Se numeran consecutivamente por memoria: recoger el 2 de una serie 1–2–3 deja 1–2, con el antiguo 3 renumerado. Las posiciones y el orden se guardan con la partida; las fotografías ya tomadas conservan los números que tenían al capturarse. Se permiten hasta 99 por memoria.
+
+## Escritorio de la oficina
+
+El ordenador usa Archive OS: arranque de sesión, aplicaciones, ventanas movibles/minimizables, barra de tareas y carpetas Expedientes / La llave por dentro / Memorias. La configuración abre las opciones del juego. El expediente puede releerse desde su carpeta. Se retiraron las dos tarjetas de presentación iniciales.
+
+La primera sesión exige abrir el expediente físico antes de sentarse o acceder al ordenador. El indicador superior guía: expediente → asiento → escritorio → seleccionar memoria → visor. Los retratos de Julián, Nicolás, Sofía y Víctor están en Resources/CasePortraits/People.png (atlas 2×2, personajes ficticios).
+
+F1-Office requiere registrar la nota del estante de F1-House y leer Mensajes y Llamadas del teléfono; la nota proporciona el PIN. La huella por sí sola no completa esos requisitos. La carpeta de memorias indica cuáles faltan. Un desbloqueo guardado repara un índice antiguo desactualizado al abrir la carpeta.
+
+F1-House oculta trípode y linterna blanca y bloquea sus atajos. La UV, el revelador y los marcadores permanecen disponibles. La colocación usa rayos que excluyen al operador y comprobación de penetración real para evitar falsos obstáculos producidos por los límites de mallas grandes.
