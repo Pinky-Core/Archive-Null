@@ -3,6 +3,8 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
+using UnityEngine.EventSystems;
+using System.Collections.Generic;
 
 namespace ArchiveNull.UI
 {
@@ -19,6 +21,7 @@ namespace ArchiveNull.UI
         private TMP_Text label, percent;
         private float displayedProgress;
         private ThreadPriority previousPriority;
+        private readonly List<BaseRaycaster> suspendedRaycasters=new();
         public static bool Load(string scene, OfficeDissolveTransition closingMemory = null)
         {
             if(IsBusy || !Application.CanStreamedLevelBeLoaded(scene)) return false;
@@ -30,6 +33,11 @@ namespace ArchiveNull.UI
         private IEnumerator Run(string scene, OfficeDissolveTransition closingMemory)
         {
             Time.timeScale=1;
+            // The outgoing scene is not interactive during a transition. Disabling
+            // its raycasters also prevents pointer queries while Unity unloads UI
+            // renderers before the old hierarchy has finished being released.
+            foreach(var raycaster in FindObjectsByType<BaseRaycaster>(FindObjectsSortMode.None))
+                if(raycaster.enabled) { suspendedRaycasters.Add(raycaster); raycaster.enabled=false; }
             previousPriority=Application.backgroundLoadingPriority;
             bool returning=scene=="MainMenu";
             BuildUi(returning,scene);
@@ -84,8 +92,14 @@ namespace ArchiveNull.UI
             status.SetActive(false);
             yield return Fade(1,0,returning ? .65f : .35f);
             IsBusy=false;
+            RestoreRaycasters();
             Debug.Log($"[MemoryLoading] {scene}: assets {LastAssetLoadSeconds:F2}s; black before load {BlackBeforeLoadSeconds:F2}s; office cache {OfficeAssetCache.RetainedCount} assets.");
             Destroy(gameObject);
+        }
+        private void RestoreRaycasters()
+        {
+            foreach(var raycaster in suspendedRaycasters) if(raycaster!=null) raycaster.enabled=true;
+            suspendedRaycasters.Clear();
         }
         private void BuildUi(bool returning,string scene)
         {
@@ -128,6 +142,6 @@ namespace ArchiveNull.UI
             for(float time=0;time<duration;time+=Time.unscaledDeltaTime) { group.alpha=Mathf.SmoothStep(from,to,time/duration); yield return null; }
             group.alpha=to;
         }
-        private void OnDestroy() { Application.backgroundLoadingPriority=previousPriority; IsBusy=IsLoadingAssets=false; }
+        private void OnDestroy() { RestoreRaycasters(); Application.backgroundLoadingPriority=previousPriority; IsBusy=IsLoadingAssets=false; }
     }
 }
