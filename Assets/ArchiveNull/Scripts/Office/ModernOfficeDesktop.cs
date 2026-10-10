@@ -17,7 +17,11 @@ namespace ArchiveNull.UI
         private RectTransform desktop, window, content, boot;
         private TMP_Text title, status, clock;
         private bool ready;
-        private string currentApp;
+        private Coroutine windowAnimation;
+        private CanvasGroup windowGroup;
+        private Vector2 windowPosition;
+        public bool IsWindowAnimating => windowAnimation != null;
+        public bool IsWindowVisible => window != null && window.gameObject.activeSelf;
         private readonly Color ink=new(.86f,.91f,.98f), muted=new(.53f,.63f,.76f), blue=new(.17f,.48f,.94f);
         public bool IsOpen => focused;
         public bool IsPowered => desktop != null && desktop.gameObject.activeSelf;
@@ -48,7 +52,7 @@ namespace ArchiveNull.UI
             App("04","Configuración",new Vector2(-810,-275),OpenSettings);
             var taskbar=Panel(desktop,"Taskbar",new Color(.035f,.055f,.085f,.98f),new Vector2(0,-504),new Vector2(1920,72));
             Button(taskbar,"Inicio",new Vector2(-830,0),new Vector2(150,48),OpenStart);
-            Button(taskbar,"Explorador",new Vector2(-620,0),new Vector2(200,48),()=>{if(window!=null) window.gameObject.SetActive(true); else OpenCases();});
+            Button(taskbar,"Explorador",new Vector2(-620,0),new Vector2(200,48),RestoreWindow);
             Button(taskbar,"Volver a la oficina",new Vector2(470,0),new Vector2(260,48),owner.DesktopLeave);
             clock=Text(taskbar,"",18,new Vector2(785,0),new Vector2(270,45),ink);
             status=Text(desktop,"OPERADOR 253   /   SESIÓN LOCAL",18,new Vector2(380,-437),new Vector2(990,45),muted);
@@ -115,19 +119,60 @@ namespace ArchiveNull.UI
         }
         private void Window(string heading)
         {
+            if(windowAnimation!=null) { StopCoroutine(windowAnimation); windowAnimation=null; }
             if(window!=null) { window.gameObject.SetActive(false); Destroy(window.gameObject); }
             window=Panel(desktop,"Application window",new Color(.065f,.085f,.12f),new Vector2(100,20),new Vector2(1300,780));
+            windowGroup=window.gameObject.AddComponent<CanvasGroup>();
             var header=Panel(window,"Title bar",new Color(.09f,.12f,.17f),new Vector2(0,356),new Vector2(1300,68));
             var drag=header.gameObject.AddComponent<DesktopWindowDrag>(); drag.Target=window;
             title=Text(header,heading,24,new Vector2(-160,0),new Vector2(880,55),ink); title.alignment=TextAlignmentOptions.MidlineLeft;
-            Button(header,"—",new Vector2(520,0),new Vector2(64,50),()=>window.gameObject.SetActive(false));
-            Button(header,"×",new Vector2(596,0),new Vector2(64,50),()=>{Destroy(window.gameObject);window=null;});
+            Button(header,"—",new Vector2(520,0),new Vector2(64,50),()=>AnimateWindow(false,false));
+            Button(header,"×",new Vector2(596,0),new Vector2(64,50),()=>AnimateWindow(false,true));
             content=Panel(window,"Content",Color.clear,new Vector2(0,-30),new Vector2(1220,650));
             Text(content,"OPERADOR 253   /   ARCHIVO LOCAL",15,new Vector2(0,-300),new Vector2(1100,35),muted);
+            windowPosition=window.anchoredPosition;
+            AnimateWindow(true,false);
+        }
+        public void RestoreWindow()
+        {
+            if(window==null) { OpenCases(); return; }
+            if(window.gameObject.activeSelf) return;
+            window.anchoredPosition=windowPosition;
+            AnimateWindow(true,false);
+        }
+        private void AnimateWindow(bool opening,bool destroy)
+        {
+            if(window==null) return;
+            if(windowAnimation!=null) StopCoroutine(windowAnimation);
+            if(!opening) windowPosition=window.anchoredPosition;
+            window.gameObject.SetActive(true);
+            windowAnimation=StartCoroutine(WindowTransition(opening,destroy));
+        }
+        private IEnumerator WindowTransition(bool opening,bool destroy)
+        {
+            windowGroup.interactable=windowGroup.blocksRaycasts=false;
+            float duration=opening ? .24f : .16f;
+            Vector2 from=opening ? windowPosition+new Vector2(0,-24) : window.anchoredPosition;
+            Vector2 to=opening ? windowPosition : windowPosition+new Vector2(0,-18);
+            float fromAlpha=opening ? 0 : windowGroup.alpha;
+            float fromScale=opening ? .96f : window.localScale.x;
+            for(float elapsed=0;elapsed<duration;elapsed+=Time.unscaledDeltaTime)
+            {
+                float t=elapsed/duration, eased=1-Mathf.Pow(1-t,3);
+                window.anchoredPosition=Vector2.Lerp(from,to,eased);
+                window.localScale=Vector3.one*Mathf.Lerp(fromScale,opening ? 1 : .97f,eased);
+                windowGroup.alpha=Mathf.Lerp(fromAlpha,opening ? 1 : 0,eased);
+                yield return null;
+            }
+            window.anchoredPosition=windowPosition; window.localScale=Vector3.one;
+            windowGroup.alpha=opening ? 1 : 0;
+            windowGroup.interactable=windowGroup.blocksRaycasts=opening;
+            if(!opening) { window.gameObject.SetActive(false); if(destroy) { Destroy(window.gameObject); window=null; } }
+            windowAnimation=null;
         }
         public void OpenCases()
         {
-            currentApp="cases"; Window("Explorador  /  Expedientes");
+            Window("Explorador  /  Expedientes");
             Text(content,"Tus expedientes",32,new Vector2(0,250),new Vector2(1100,65),ink).alignment=TextAlignmentOptions.MidlineLeft;
             Button(content,"CARPETA   /   La llave por dentro",new Vector2(0,130),new Vector2(1120,105),OpenCaseFolder);
             Text(content,"Caso 01   ·   Julián Herrera   ·   Investigación en curso",21,new Vector2(0,40),new Vector2(1100,70),muted);
@@ -142,7 +187,7 @@ namespace ArchiveNull.UI
         }
         public void OpenMemories()
         {
-            currentApp="memories"; Window("Explorador  /  La llave por dentro  /  Memorias");
+            Window("Explorador  /  La llave por dentro  /  Memorias");
             Button(content,"← Expediente",new Vector2(-430,260),new Vector2(260,48),OpenCaseFolder);
             int count=owner.DesktopArchiveCount, rowIndex=0;
             for(int i=0;i<count && i<4;i++)
