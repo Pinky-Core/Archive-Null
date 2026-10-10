@@ -163,8 +163,10 @@ namespace ArchiveNull.Evidence
         private Transform mountedOriginalParent;
         public bool MountedPowered { get; private set; }
         public void RegisterTool(ToolSlot slot, GameObject tool) { extraTools[slot]=tool; CacheToolPose(tool); ApplyToolImmediate(tool, equippedTool==slot); }
+        public bool IsToolAvailable(ToolSlot slot) => gameObject.scene.name != "F1-House" || (slot != ToolSlot.Tripod && slot != ToolSlot.Flashlight);
         public bool SelectTool(ToolSlot slot)
         {
+            if (!IsToolAvailable(slot)) return false;
             if (MountedTool==slot) { ShowActionMessage("Recuperá esta herramienta del trípode."); return false; }
             hoveredTool=slot; EquipHoveredTool(true); return equippedTool==slot;
         }
@@ -590,6 +592,7 @@ namespace ArchiveNull.Evidence
 
         private void EquipHoveredTool(bool closeWheel)
         {
+            if(!IsToolAvailable(hoveredTool)) return;
             if(MountedTool==hoveredTool) { ShowActionMessage("EN TRÍPODE: recuperá la herramienta para equiparla."); if(closeWheel) SetInventoryWheel(false); return; }
             if (equippedTool == hoveredTool)
             {
@@ -1470,7 +1473,7 @@ namespace ArchiveNull.Evidence
             Stretch(outerRing.rectTransform);
             outerRing.sprite = CreateRingSprite(512, 0.48f, 0.2f);
 
-            ToolSlot[] slots={ToolSlot.InventoryItem,ToolSlot.Hand,ToolSlot.Camera,ToolSlot.UvLight,ToolSlot.Flashlight,ToolSlot.Brush,ToolSlot.Tripod,ToolSlot.Tags};
+            ToolSlot[] slots = gameObject.scene.name == "F1-House" ? new[]{ToolSlot.InventoryItem,ToolSlot.Hand,ToolSlot.Camera,ToolSlot.UvLight,ToolSlot.Brush,ToolSlot.Tags} : new[]{ToolSlot.InventoryItem,ToolSlot.Hand,ToolSlot.Camera,ToolSlot.UvLight,ToolSlot.Flashlight,ToolSlot.Brush,ToolSlot.Tripod,ToolSlot.Tags};
             for(int i=0;i<slots.Length;i++) CreateWheelSegment(rootRect,slots[i],i*360f/slots.Length,180f/slots.Length-1);
 
             RectTransform centerDisk = CreateRectObject("CenterDisk", rootRect).GetComponent<RectTransform>();

@@ -97,7 +97,7 @@ namespace ArchiveNull.Evidence
         private bool Modal => GlobalPauseMenu.IsPaused || EvidenceNotebookUI.IsAnyNotebookOpen || RuntimeConfirmationDialog.IsOpen || InspectObject.IsAnyInspecting || PhoneEvidenceReader.IsAnyOpen || ArchiveNull.Accusation.AccusationPanel.IsAnyOpen || ArchiveNull.UI.MemoryLoadingScreen.IsBusy || ArchiveNull.UI.SceneRebuildTransition.IsBusy;
         private bool AimingAtTripod()
         {
-            return tripod!=null && Physics.Raycast(view.ViewportPointToRay(new Vector3(.5f,.5f,0)),out var hit,3f*sceneScale,~(1<<31),QueryTriggerInteraction.Ignore) && hit.transform.IsChildOf(tripod.transform);
+            return tripod!=null && PlacementSurface.Raycast(view.ViewportPointToRay(new Vector3(.5f,.5f,0)),3f*sceneScale,transform,out var hit) && hit.transform.IsChildOf(tripod.transform);
         }
         private void Update()
         {
@@ -151,7 +151,7 @@ namespace ArchiveNull.Evidence
         private int placementFrame;
         public void BeginPlacement()
         {
-            if(tripodPlacing) return;
+            if(tripodPlacing || !equipment.IsToolAvailable(Slot.Tripod)) return;
             equipment.StowForExternalTool();
             BrushActive=false; tripodPlacing=true; placementFrame=Time.frameCount; yaw=tripod!=null ? tripod.transform.eulerAngles.y : view.transform.eulerAngles.y;
             preview=CreateTripod(hologram);
@@ -165,17 +165,15 @@ namespace ArchiveNull.Evidence
         private void UpdatePlacement()
         {
             valid=false;
-            if(!Physics.Raycast(view.ViewportPointToRay(new Vector3(.5f,.5f,0)),out var hit,5f*sceneScale,~(1<<31),QueryTriggerInteraction.Ignore)) { preview.SetActive(false); return; }
+            if(!PlacementSurface.Raycast(view.ViewportPointToRay(new Vector3(.5f,.5f,0)),5f*sceneScale,transform,out var hit)) { preview.SetActive(false); return; }
             preview.SetActive(true); preview.transform.SetPositionAndRotation(hit.point+Vector3.up*.02f*sceneScale,Quaternion.Euler(0,yaw,0));
             valid=hit.normal.y>.9f;
             if(ArchiveNull.UI.OfficeDissolveTransition.ActiveMemory!=null && Vector3.Distance(ArchiveNull.UI.OfficeDissolveTransition.ActiveMemory.ConstrainPosition(hit.point,.6f*sceneScale),hit.point)>.01f) valid=false;
-            int count=Physics.OverlapBoxNonAlloc(hit.point+Vector3.up*.83f*sceneScale,new Vector3(.43f,.75f,.43f)*sceneScale,overlaps,preview.transform.rotation,~(1<<31),QueryTriggerInteraction.Ignore);
-            if(count==overlaps.Length) valid=false;
-            for(int i=0;i<count;i++) if(!overlaps[i].transform.IsChildOf(transform) && (tripod==null || !overlaps[i].transform.IsChildOf(tripod.transform))) valid=false;
+            if(!PlacementSurface.Clear(hit.point+Vector3.up*.83f*sceneScale,new Vector3(.43f,.75f,.43f)*sceneScale,preview.transform.rotation,transform,tripod!=null ? tripod.transform : null)) valid=false;
             for(int i=0;i<3;i++)
             {
                 Vector3 foot=hit.point+Quaternion.Euler(0,yaw+i*120,0)*new Vector3(0,.2f,.38f)*sceneScale;
-                if(!Physics.Raycast(foot,Vector3.down,out var support,.35f*sceneScale,~(1<<31),QueryTriggerInteraction.Ignore) || support.normal.y<.9f) valid=false;
+                if(!PlacementSurface.Raycast(new Ray(foot,Vector3.down),.35f*sceneScale,transform,out var support) || support.normal.y<.9f) valid=false;
             }
             hologram.color=valid ? new Color(.1f,.95f,1,.38f):new Color(1,.15f,.1f,.4f);
         }

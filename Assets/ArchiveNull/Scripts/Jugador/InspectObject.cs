@@ -164,7 +164,7 @@ public class InspectObject : MonoBehaviour
             if (playerCamera == null) return;
             Ray ray = playerCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
             var tools=playerCamera.GetComponentInParent<ArchiveNull.Evidence.TestingToolsController>();
-            if(tools!=null && Physics.Raycast(ray,out RaycastHit toolHit,3*ArchiveNull.Evidence.TestingToolsController.PlayerScale(tools.transform,playerCamera.transform),~(1<<31),QueryTriggerInteraction.Ignore))
+            if(tools!=null && ArchiveNull.Evidence.PlacementSurface.Raycast(ray,3*ArchiveNull.Evidence.TestingToolsController.PlayerScale(tools.transform,playerCamera.transform),tools.transform,out RaycastHit toolHit))
             {
                 var marker=toolHit.collider.GetComponentInParent<ArchiveNull.Evidence.EvidenceMarker>();
                 if(marker!=null || tools.OwnsTripod(toolHit.collider))

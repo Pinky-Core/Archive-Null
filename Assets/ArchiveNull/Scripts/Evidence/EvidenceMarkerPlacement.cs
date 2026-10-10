@@ -37,7 +37,7 @@ namespace ArchiveNull.Evidence
         private int startedFrame;
         public int Count => placed.Count;
         public string Controls => IsPlacing ? (valid ? "COLOCAR MARCADOR " + (Count+1) : "BUSCÁ UNA SUPERFICIE LIBRE")+"\nClic  colocar   ·   Q/R o rueda  rotar   ·   Esc  cancelar" : "MARCADORES DE EVIDENCIA\nClic  colocar   ·   E sobre marcador  recoger   ·   G  guardar";
-        private bool Modal => GlobalPauseMenu.IsPaused || EvidenceNotebookUI.IsAnyNotebookOpen || RuntimeConfirmationDialog.IsOpen || InspectObject.IsAnyInspecting || ArchiveNull.UI.MemoryLoadingScreen.IsBusy || ArchiveNull.UI.SceneRebuildTransition.IsBusy;
+        private bool Modal => GlobalPauseMenu.IsPaused || EvidenceNotebookUI.IsAnyNotebookOpen || RuntimeConfirmationDialog.IsOpen || InspectObject.IsAnyInspecting || PhoneEvidenceReader.IsAnyOpen || ArchiveNull.Accusation.AccusationPanel.IsAnyOpen || ArchiveNull.UI.MemoryLoadingScreen.IsBusy || ArchiveNull.UI.SceneRebuildTransition.IsBusy;
         private void Start()
         {
             view=GetComponentInChildren<Camera>(); equipment=GetComponentInChildren<EvidenceCameraController>();
@@ -67,7 +67,7 @@ namespace ArchiveNull.Evidence
                 return;
             }
             if(EvidenceCameraController.IsAnyRadialMenuOpen || EvidenceCameraController.IsAnyCameraModeActive || TestingToolsController.IsPlacing) return;
-            if(GlobalInputBindings.WasPressed(GameInputAction.Interact) && Physics.Raycast(view.ViewportPointToRay(new Vector3(.5f,.5f,0)),out var hit,3*scale,~(1<<31),QueryTriggerInteraction.Ignore))
+            if(GlobalInputBindings.WasPressed(GameInputAction.Interact) && PlacementSurface.Raycast(view.ViewportPointToRay(new Vector3(.5f,.5f,0)),3*scale,transform,out var hit))
             {
                 EvidenceMarker marker=hit.collider.GetComponentInParent<EvidenceMarker>();
                 if(marker!=null) { handledFrame=Time.frameCount; Remove(marker); return; }
@@ -83,18 +83,16 @@ namespace ArchiveNull.Evidence
         private void UpdatePreview()
         {
             valid=false;
-            if(!Physics.Raycast(view.ViewportPointToRay(new Vector3(.5f,.5f,0)),out var hit,5*scale,~(1<<31),QueryTriggerInteraction.Ignore)) { preview.SetActive(false); return; }
+            if(!PlacementSurface.Raycast(view.ViewportPointToRay(new Vector3(.5f,.5f,0)),5*scale,transform,out var hit)) { preview.SetActive(false); return; }
             preview.SetActive(true); preview.transform.SetPositionAndRotation(hit.point+Vector3.up*.008f*scale,Quaternion.Euler(0,yaw,0));
             valid=hit.normal.y>.92f;
             var boundary=ArchiveNull.UI.OfficeDissolveTransition.ActiveMemory;
             if(boundary!=null && Vector3.Distance(boundary.ConstrainPosition(hit.point,.15f*scale),hit.point)>.01f) valid=false;
-            int count=Physics.OverlapBoxNonAlloc(preview.transform.position+Vector3.up*.13f*scale,new Vector3(.11f,.115f,.095f)*scale,overlaps,preview.transform.rotation,~(1<<31),QueryTriggerInteraction.Ignore);
-            if(count==overlaps.Length) valid=false;
-            for(int i=0;i<count;i++) if(!overlaps[i].transform.IsChildOf(transform)) valid=false;
+            if(!PlacementSurface.Clear(preview.transform.position+Vector3.up*.13f*scale,new Vector3(.11f,.115f,.095f)*scale,preview.transform.rotation,transform)) valid=false;
             for(int x=-1;x<=1;x+=2) for(int z=-1;z<=1;z+=2)
             {
                 Vector3 foot=hit.point+preview.transform.rotation*new Vector3(x*.09f,.04f,z*.07f)*scale;
-                if(!Physics.Raycast(foot,Vector3.down,out var support,.065f*scale,~(1<<31),QueryTriggerInteraction.Ignore) || support.normal.y<.92f) valid=false;
+                if(!PlacementSurface.Raycast(new Ray(foot,Vector3.down),.065f*scale,transform,out var support) || support.normal.y<.92f) valid=false;
             }
             hologram.color=valid ? new Color(.1f,.95f,1,.6f) : new Color(1,.3f,.15f,.65f);
         }
