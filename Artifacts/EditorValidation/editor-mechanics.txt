@@ -1,55 +1,3 @@
-PASS laboratory installs player, tools and photographic camera
-PASS independent head bob pivot installed
-PASS memory rebuild completed
-PASS tripod can be placed on supported free floor; eye=(0.00, 1.85, -5.00)
-PASS tripod keeps chosen rotation
-PASS cancel moving restores original tripod
-PASS place evidence marker 1
-PASS place evidence marker 2
-PASS place evidence marker 3
-PASS collecting marker 2 renumbers former marker 3 to 2
-PASS placed marker records are available to save system
-PASS new tripod is empty
-PASS wheel selects Brush
-PASS mount transfers same object: Brush
-PASS mounted tool unavailable in hand: Brush
-PASS retrieving restores tool: Brush
-PASS wheel selects Flashlight
-PASS mount transfers same object: Flashlight
-PASS mounted tool unavailable in hand: Flashlight
-PASS retrieving restores tool: Flashlight
-PASS wheel selects UvLight
-PASS mount transfers same object: UvLight
-PASS mounted tool unavailable in hand: UvLight
-PASS retrieving restores tool: UvLight
-PASS held camera renders live image on LCD (physical=True, mode=True, paused=False, notebook=False)
-PASS handheld feed originates at physical lens
-PASS lens zoom does not change player view
-PASS photograph reaches discard gallery
-PASS LCD turns black when camera mode ends
-PASS camera mounts on empty tripod
-PASS mounted lens stays on camera when player moves
-PASS mounted camera cannot be duplicated in the wheel
-PASS camera can be retrieved and equipped again
-PASS empty hand has no persistent controls panel
-PASS equipping markers shows their specific controls
-PASS reagent exposure reveals hidden trace
-PASS walking near boundary never moves memory origin
-PASS asynchronous memory loading starts
-PASS house wave runs with loading and scene blackouts removed
-PASS house reconstruction was visible before completion
-PASS loading screen completes before entering house
-PASS assets wait until blackout has been displayed
-PASS reconstruction wave uses slower playback
-PASS house uses expanded radius
-PASS tag placement confirms and persists in F1-House
-PASS pickup ray reaches marker without hitting operator in F1-House
-PASS marker can be collected in F1-House
-PASS tag finds supported free floor in F1-House (scale 2,13)
-PASS house blocks tripod and white flashlight, including shortcuts
-PASS house retains UV and evidence markers
-PASS authored materials restored after reconstruction
-PASS exit wave retracts toward player position
 PASS real office has no memory boundary or reconstruction wave
 PASS office installs headset session UI
 PASS office installs modern operating system desktop
@@ -57,6 +5,17 @@ PASS first-time seating blocked before primary dossier is opened
 PASS opening primary dossier enables workstation
 PASS suspect photographs load from portrait atlas
 PASS focusing monitor opens desktop and finishes session boot
+PASS desktop canvas belongs to physical monitor surface
+PASS application window starts animated opening
+PASS application opening animation finishes with visible window
+PASS physical monitor buttons receive scene cursor raycasts
+PASS cursor confinement maps outside pointer onto physical screen
+PASS all desktop graphics have CanvasRenderer
+PASS leaving monitor preserves powered desktop and open window
+PASS unfocused monitor releases scene pointer input
+PASS minimize animation finishes with window hidden
+PASS taskbar restores minimized window with completed animation
+PASS close animation removes application window without runtime exceptions
 PASS locked office explains missing investigation requirements
 PASS locked contractor memory cannot be mounted
 PASS partial phone investigation keeps office locked: f1_house_cube
@@ -66,6 +25,7 @@ PASS persisted office access repairs a stale archive index
 PASS desktop mounts unlocked contractor memory
 PASS desktop configuration opens game settings
 PASS closing options returns usable desktop pointer
+PASS scene transition powers off monitor session
 PASS office dependencies retained for return journey
 PASS contractor memory retains its fixed boundary
 PASS tag placement confirms and persists in F1-Office
@@ -75,4 +35,4 @@ PASS tag finds supported free floor in F1-Office (scale 2,13)
 PASS placed tripod can be targeted for mounting or moving in F1-Office
 PASS scaled tripod finds supported free floor in F1-Office (scale 2,13)
 PASS complete office-memory-office round trip
-MEASURE warm office assets: 1,21 seconds
+MEASURE warm office assets: 1,23 seconds

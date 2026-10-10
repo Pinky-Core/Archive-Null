@@ -43,7 +43,11 @@ En la rueda G, elegir MARCADORES. Clic inicia un holograma: Q/R o la rueda lo ro
 
 ## Escritorio de la oficina
 
-El ordenador usa Archive OS: arranque de sesión, aplicaciones, ventanas movibles/minimizables, barra de tareas y carpetas Expedientes / La llave por dentro / Memorias. La configuración abre las opciones del juego. El expediente puede releerse desde su carpeta. Se retiraron las dos tarjetas de presentación iniciales.
+El ordenador usa Archive OS en un Canvas de espacio de mundo sobre la pantalla física del monitor, sin cubrir la cámara del jugador. El cursor queda limitado a esa superficie mientras se usa el ordenador; los diálogos, expediente y configuración permiten su propio cursor. Las ventanas abren, cierran y minimizan con fundido y movimiento breve; Explorador en la barra de tareas restaura la ventana minimizada. Al apartarse del ordenador, el monitor conserva su sesión y la ventana abierta, pero deja de recibir clics. La transición a una memoria apaga la pantalla.
+
+Archive OS incluye arranque de sesión, aplicaciones y carpetas Expedientes / La llave por dentro / Memorias. La configuración abre las opciones del juego. El expediente puede releerse desde su carpeta. Se retiraron las dos tarjetas de presentación iniciales. `Archive NULL > Test office monitor in editor` verifica el monitor en el editor ya abierto sin crear una build ni regenerar el laboratorio.
+
+La altura útil de la pantalla se ajusta con `desktopScreenHeight` en el controlador del monitor, conservando el borde superior para que la barra no quede oculta detrás del marco inferior. Durante una carga se suspenden los raycasters del entorno saliente para evitar consultar renderers que Unity está descargando. La regresión del monitor recorrió oficina → F1-Office → oficina con 37 comprobaciones aprobadas y cero fallos de runtime.
 
 La primera sesión exige abrir el expediente físico antes de sentarse o acceder al ordenador. El indicador superior guía: expediente → asiento → escritorio → seleccionar memoria → visor. Los retratos de Julián, Nicolás, Sofía y Víctor están en Resources/CasePortraits/People.png (atlas 2×2, personajes ficticios).
 
