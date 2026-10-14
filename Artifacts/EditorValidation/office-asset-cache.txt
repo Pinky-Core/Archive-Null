@@ -1,0 +1,5 @@
+PASS office warmup retains 399 persistent runtime assets
+PASS office warmup contains no Editor paths or DontSaveInBuild objects
+PASS filter rejects the editor Volume icon path
+PASS filter rejects temporary textures
+LIMIT player build was not executed; native shared-memory allocator failure is not validated by this check
