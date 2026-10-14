@@ -80,6 +80,7 @@ Validación|Aislar partidas usadas en pruebas|El argumento del editor fuerza gua
 Validación|Laboratorio de mecánicas en editor|Una escena permite probar colocación, fotografía, revelado y obstáculos.|Assets/ArchiveNull/Editor/MechanicsLabEditor.cs|Recorrido de laboratorio en Play Mode sin build de ejecutable.
 Validación|Recorrido automático ampliado|El probe permite el recorrido completo o la validación específica del monitor, tutorial, progresión y herramientas de oficina.|Assets/ArchiveNull/Editor/MechanicsEditorProbe.cs|Resultado del último recorrido en la hoja Resumen y en editor-mechanics.txt; el alcance depende del modo ejecutado.
 Validación|Prueba de oficina independiente|El comando OfficeOnly inicia el recorrido del editor en MainMenu.|Tools/Test-EditorMechanics.ps1|Revisión del argumento y entrada de editor; guardados aislados.
+Carga|Precarga de oficina compatible con el jugador|El manifiesto excluye carpetas Editor y objetos DontSaveInBuild, repara listas antiguas y se regenera antes de empaquetar.|Assets/ArchiveNull/Editor/OfficeAssetManifestEditor.cs|Compilación y validación en el editor en office-asset-cache.txt; no se ejecutó un build para verificar el fallo nativo de memoria compartida.
 `.trim().split('\n').map((line, index) => {
   const [area, title, behavior, source, validation] = line.split('|');
   const file = source.startsWith('Assets/') || source.startsWith('Tools/') ? source : script + source;
@@ -91,6 +92,8 @@ const logPath = 'Artifacts/EditorValidation/editor-mechanics.txt';
 const log = fs.readFileSync(path.join(root, logPath), 'utf8');
 const passed = (log.match(/^PASS /gm) || []).length;
 const failed = (log.match(/^FAIL /gm) || []).length;
+const warmupPath = 'Artifacts/EditorValidation/office-asset-cache.txt';
+const warmupLog = fs.existsSync(path.join(root, warmupPath)) ? fs.readFileSync(path.join(root, warmupPath), 'utf8') : '';
 const revision = runGit('rev-parse', '--short', 'HEAD');
 const localDate = new Intl.DateTimeFormat('sv-SE', { timeZone: 'America/Argentina/Buenos_Aires' }).format(new Date());
 const commits = runGit('log', '-12', '--format=%h%x09%s%x09%b%x1e').split('\x1e').map(s => s.trim()).filter(Boolean).map(s => s.split('\t'));
@@ -107,6 +110,7 @@ const sheets = [
     ['Alcance', 'Inventario de implementaciones presentes. No es una reconstrucción de fechas históricas ni de autorías.'],
     ['Validación registrada', `${passed} PASS y ${failed} FAIL en el último informe del editor.`],
     ['Fuente de resultados', logPath],
+    ['Comprobación de precarga', warmupLog ? `${(warmupLog.match(/^PASS /gm) || []).length} PASS registrados en ${warmupPath}. No se ejecutó un build para verificar el fallo nativo de memoria compartida.` : 'Sin informe de precarga registrado.'],
     ['Referencia de Git por cambio', 'La columna indica el último commit del archivo consultado, no necesariamente el commit de origen de cada comportamiento.'],
     ['Commits recientes', `La hoja Commits muestra los ${commits.length} commits locales más recientes anteriores a esta exportación.`],
     ['Límites', 'Las pruebas automatizadas cubren sus comprobaciones concretas. No certifican percepción visual, sensación corporal ni 60 FPS en todos los equipos.'],
