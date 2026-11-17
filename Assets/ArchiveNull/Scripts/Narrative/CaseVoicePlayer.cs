@@ -19,7 +19,7 @@ namespace ArchiveNull.Narrative
             if(clip==null) {Debug.LogWarning("Missing case voice: "+path);return;}
             current.resource=path;current.source.clip=clip;current.source.volume=GlobalPauseMenu.VoiceVolume;current.source.Play();
         }
-        public static void Stop() {if(current!=null && current.source!=null) current.source.Stop();}
+        public static void Stop(string prefix=null) {if(current!=null && current.source!=null && (prefix==null || current.resource.StartsWith(prefix,System.StringComparison.Ordinal))) current.source.Stop();}
         private void Update() {if(source!=null) source.volume=GlobalPauseMenu.VoiceVolume;}
         private void OnDestroy() {if(current==this) current=null;}
     }

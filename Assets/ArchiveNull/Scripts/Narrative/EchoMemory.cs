@@ -80,7 +80,7 @@ namespace ArchiveNull.Narrative
         private static void Stretch(RectTransform rect) {rect.anchorMin=Vector2.zero;rect.anchorMax=Vector2.one;rect.offsetMin=rect.offsetMax=Vector2.zero;}
         private void Cleanup()
         {
-            CaseVoicePlayer.Stop();IsPlaying=false;finishedFrame=Time.frameCount;
+            CaseVoicePlayer.Stop("echo_");IsPlaying=false;finishedFrame=Time.frameCount;
             if(cameraHost!=null) {cameraHost.GetComponent<Camera>().targetTexture=null;Destroy(cameraHost);}
             if(screen!=null) Destroy(screen);if(stage!=null) Destroy(stage);if(shadow!=null) Destroy(shadow);
             if(texture!=null) {texture.Release();Destroy(texture);}

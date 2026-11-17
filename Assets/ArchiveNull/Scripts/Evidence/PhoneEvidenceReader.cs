@@ -203,6 +203,7 @@ namespace ArchiveNull.Evidence
 
             evidenceTarget ??= GetComponent<EvidenceTarget>();
             PrepareVoiceMessages();
+            ownerName=CorrectSpanish(ownerName);
             playerCamera = Camera.main;
             if (pickupColliders == null || pickupColliders.Length == 0)
             {
@@ -1299,7 +1300,7 @@ namespace ArchiveNull.Evidence
 
         private void SetUiVisible(bool visible, bool immediate)
         {
-            if(!visible) CaseVoicePlayer.Stop();
+            if(!visible) CaseVoicePlayer.Stop("phone_");
             if (phoneGroup == null)
             {
                 return;
