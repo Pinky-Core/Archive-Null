@@ -285,7 +285,6 @@ public sealed class GlobalPauseMenu : MonoBehaviour
         caseSummaryText=CreateText("Case details",(RectTransform)caseSummaryRoot.transform,"",27,FontStyles.Normal,TextAlignmentOptions.TopLeft); Stretch(caseSummaryText.rectTransform); caseSummaryText.color=new Color(.89f,.88f,.81f);
         TMP_Text footer=CreateText("Footer",root,L("ESC  Continuar      ·      Clic  Seleccionar","ESC  Resume      ·      Click  Select"),18,FontStyles.Normal,TextAlignmentOptions.Right);
         SetPoint(footer.rectTransform,new Vector2(1,0),new Vector2(-380,46),new Vector2(660,36)); footer.color=new Color(.77f,.76f,.68f);
-        TMP_Text brand=CreateText("Archive",root,"ARCHIVE: NULL",15,FontStyles.Normal,TextAlignmentOptions.Left); SetPoint(brand.rectTransform,new Vector2(0,0),new Vector2(230,46),new Vector2(340,36)); brand.color=new Color(.55f,.52f,.41f);
         optionsPanel=CreatePanel("Options content",root,new Vector2(1020,690),new Vector2(.5f,.5f),new Color(.015f,.014f,.011f,.42f)).gameObject;
         RectTransform optionsRect=(RectTransform)optionsPanel.transform;
         optionsHeaderText=CreateText("OptionsTitle",optionsRect,L("Configuración","Settings"),31,FontStyles.Normal,TextAlignmentOptions.Left);
@@ -624,7 +623,7 @@ public sealed class GlobalPauseMenu : MonoBehaviour
         Stretch(labelText.rectTransform);
         labelText.rectTransform.offsetMin = new Vector2(16f, 36f);
         labelText.rectTransform.offsetMax = new Vector2(-16f, -8f);
-        labelText.color = new Color(0.55f, 0.78f, 0.73f, 1f);
+        labelText.color = new Color(.94f,.84f,.58f,1f);
 
         TMP_Text valueText = CreateText("Value", rect, value, 20, FontStyles.Bold, TextAlignmentOptions.Left);
         Stretch(valueText.rectTransform);
@@ -635,7 +634,7 @@ public sealed class GlobalPauseMenu : MonoBehaviour
     private void CreateInfoLine(RectTransform parent, string value, Vector2 anchoredPosition)
     {
         TMP_Text text = CreateText("Info", parent, value, 17, FontStyles.Normal, TextAlignmentOptions.Left);
-        text.color = new Color(0.56f, 0.78f, 0.73f, 1f);
+        text.color = new Color(.86f,.84f,.75f,1f);
         SetPoint(text.rectTransform, new Vector2(0.5f, 1f), anchoredPosition, new Vector2(720f, 44f));
     }
 
@@ -1139,7 +1138,8 @@ public sealed class GlobalPauseMenu : MonoBehaviour
         tmp.fontSize = size;
         tmp.fontStyle = style;
         tmp.alignment = alignment;
-        tmp.color = new Color(.83f,.9f,.97f,1);
+        tmp.color = new Color(.94f,.92f,.84f,1);
+        tmp.raycastTarget = false;
         return tmp;
     }
 
