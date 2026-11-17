@@ -111,7 +111,6 @@ namespace ArchiveNull.UI
             RectTransform black=Panel("Blackout",transform,Vector2.zero,Vector2.one,Vector2.zero,Vector2.zero,Color.black);
             status=Panel("Session status",black,new Vector2(.5f,.5f),new Vector2(.5f,.5f),new Vector2(900,350),Vector2.zero,Color.clear).gameObject;
             RectTransform content=(RectTransform)status.transform;
-            Text("Brand",content,"ARCHIVE: NULL     /     INTERFAZ NEURAL",18,new Vector2(0,135),new Vector2(900,35),new Color(.42f,.57f,.66f));
             Text("Direction",content,returning ? "VOLVER A LA OFICINA" : "ENTRAR EN LA MEMORIA",44,new Vector2(0,58),new Vector2(900,70),new Color(.91f,.95f,.98f));
             Text("Context",content,returning ? "Evidencias, fotografías y notas conservadas." : scene+"    /    Reconstrucción del entorno",20,new Vector2(0,-8),new Vector2(900,40),new Color(.5f,.61f,.69f));
             var track=Panel("Progress track",content,new Vector2(.5f,.5f),new Vector2(.5f,.5f),new Vector2(900,3),new Vector2(0,-76),new Color(.1f,.15f,.19f));

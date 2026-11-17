@@ -41,8 +41,6 @@ public static class RuntimeConfirmationDialog
         // Session sheet: generous spacing and a clear primary/secondary action hierarchy.
         RectTransform panel=CreateImage("Session sheet",canvasRect,new Color(.025f,.046f,.07f,1)).rectTransform;
         panel.anchorMin=panel.anchorMax=panel.pivot=new Vector2(.5f,.5f); panel.sizeDelta=new Vector2(960,450);
-        TMP_Text badge=CreateText("Session label",panel,"ARCHIVE: NULL   /   SESIÓN",16,FontStyles.Normal,TextAlignmentOptions.TopLeft);
-        SetRect(badge.rectTransform,Vector2.zero,Vector2.one,new Vector2(.5f,.5f),new Vector2(52,378),new Vector2(-52,-35)); badge.color=new Color(.43f,.74f,.96f);
         TMP_Text titleText=CreateText("Title",panel,title,38,FontStyles.Normal,TextAlignmentOptions.TopLeft);
         SetRect(titleText.rectTransform,Vector2.zero,Vector2.one,new Vector2(.5f,.5f),new Vector2(52,284),new Vector2(-52,-88));
         TMP_Text messageText=CreateText("Message",panel,message,24,FontStyles.Normal,TextAlignmentOptions.TopLeft);
