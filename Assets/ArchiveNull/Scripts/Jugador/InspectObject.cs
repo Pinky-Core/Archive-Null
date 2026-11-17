@@ -246,6 +246,8 @@ public class InspectObject : MonoBehaviour
         }
 
         CacheAndDisableInspectedColliders();
+        var foreground=GetComponent<InspectionForeground>() ?? gameObject.AddComponent<InspectionForeground>();
+        foreground.Begin(playerCamera,currentObject.transform);
         inspectAnchorDistance = Vector3.Distance(playerCamera.transform.position, inspectPosition.position);
         inspectDistance = Mathf.Clamp(inspectAnchorDistance, GetMinimumSafeInspectDistance(), Mathf.Max(maxInspectDistance, inspectAnchorDistance));
         currentObject.transform.SetParent(inspectPosition, true);
@@ -297,7 +299,7 @@ public class InspectObject : MonoBehaviour
             return;
         }
 
-        string readableName = inspectedObject.name.Replace('_', ' ').Trim();
+        string readableName = EvidenceTextLocalization.ReadableObjectName(inspectedObject.name);
         if (string.IsNullOrWhiteSpace(readableName) || readableName.StartsWith("Cube", System.StringComparison.OrdinalIgnoreCase))
         {
             readableName = GameLocalization.Text("un objeto sin identificar", "an unidentified object");
@@ -615,6 +617,7 @@ public class InspectObject : MonoBehaviour
 
     void RestoreInspectedColliders()
     {
+        GetComponent<InspectionForeground>()?.End();
         if (inspectedColliders == null || inspectedColliderStates == null)
         {
             return;
