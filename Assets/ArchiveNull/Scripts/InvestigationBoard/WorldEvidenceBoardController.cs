@@ -100,7 +100,7 @@ namespace ArchiveNull.InvestigationBoard
         private void Update()
         {
             UpdateBoardHelp();
-            if (EvidenceNotebookUI.IsAnyNotebookOpen || RuntimeConfirmationDialog.IsOpen || ArchiveNull.Accusation.AccusationPanel.IsAnyOpen) return;
+            if (GlobalPauseMenu.IsPaused || ArchiveNull.UI.CaseFileReader.IsAnyCaseFileOpen || EvidenceNotebookUI.IsAnyNotebookOpen || RuntimeConfirmationDialog.IsOpen || ArchiveNull.Accusation.AccusationPanel.IsAnyOpen) return;
             HandleMouse();
             UpdateReticle();
             connectionManager?.UpdateVisuals();
@@ -227,7 +227,7 @@ namespace ArchiveNull.InvestigationBoard
                 var rect=boardHelp.rectTransform;rect.anchorMin=rect.anchorMax=new Vector2(.5f,0);rect.pivot=new Vector2(.5f,0);rect.anchoredPosition=new Vector2(0,100);rect.sizeDelta=new Vector2(1050,120);
             }
             bool near=boardCollider.Raycast(interactionCamera.ScreenPointToRay(Mouse.current!=null ? Mouse.current.position.ReadValue() : new Vector2(Screen.width*.5f,Screen.height*.5f)),out _,interactionDistance);
-            bool blocked=EvidenceNotebookUI.IsAnyNotebookOpen || GlobalPauseMenu.IsPaused || RuntimeConfirmationDialog.IsOpen || ArchiveNull.Accusation.AccusationPanel.IsAnyOpen;
+            bool blocked=ArchiveNull.UI.CaseFileReader.IsAnyCaseFileOpen || EvidenceNotebookUI.IsAnyNotebookOpen || GlobalPauseMenu.IsPaused || RuntimeConfirmationDialog.IsOpen || ArchiveNull.Accusation.AccusationPanel.IsAnyOpen;
             boardHelp.gameObject.SetActive(near && !blocked);
             if(!near || blocked) return;
             boardHelp.text=photosById.Count==0 ? "Primero fotografiá evidencias en una memoria. Aparecerán aquí al volver."
