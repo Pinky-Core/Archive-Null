@@ -18,7 +18,7 @@ namespace ArchiveNull.Evidence
         public static readonly Entry[] Entries =
         {
             new(1, "f1_house_documento", "Documento sucesorio adulterado", "La copia favorece la venta que propone Nicolás. La firma de Elena difiere de la original. Demuestra un conflicto documental, pero no ubica a Nicolás en la casa a la hora de la muerte."),
-            new(2, "f1_house_cube", "Nota de Julián", "Revisar firma de mamá y copia de Nicolás. Comprobantes Obra Salas: números repetidos, montos distintos. Llamar al Dr. Funes mañana. Avisar a Sofía si no respondo. Teléfono: 2530."),
+            new(2, "f1_house_cube", "Nota de Julián", "Revisar firma de mamá y copia de Nicolás. Comprobantes Obra Salas: números repetidos, montos distintos. Llamar al Dr. Funes mañana. Avisar a Sofía si no respondo."),
             new(3, "f1_house_pastillero", "Pastillero junto al cuerpo", "El frasco fue colocado junto al cuerpo. No hay huellas claras que demuestren una ingesta voluntaria; su presencia por sí sola no explica cómo llegó la medicación a Julián."),
             new(4, "f1_house_guest_cup", "Taza de la visita", "Una segunda taza muestra que Julián recibió a alguien. La huella de una visita anterior no determina quién estuvo presente durante la muerte."),
             new(5, "f1_house_cup", "Taza lavada de Julián", "La taza de té de Julián está recién lavada. Quedan restos de azúcar y polvo en el borde interior. Comparar con el azucarero y la medicación encontrada en la oficina de Salas."),
@@ -109,7 +109,7 @@ namespace ArchiveNull.Evidence
         public static string NextObjective()
         {
             if (!CanVisitContractor)
-                return GameLocalization.Text("Casa Herrera: revisá la nota del estante y leé mensajes y llamadas del teléfono. El PIN est? en la pegatina junto al tel?fono.", "Herrera house: examine the shelf note and read the phone's messages and calls. The PIN is on the sticker beside the phone.");
+                return GameLocalization.Text("Casa Herrera: revisá la nota del estante y leé mensajes y llamadas del teléfono. El PIN está en la pegatina junto al teléfono.", "Herrera house: examine the shelf note and read the phone's messages and calls. The PIN is on the sticker beside the phone.");
             for (int i = 0; i < ArgumentLinks.Length; i++)
                 if (!HasArgument(i, out string reason)) return reason;
             return GameLocalization.Text("La cadena está respaldada. Presentá el informe final en el terminal de la oficina.", "The evidence chain is supported. Submit the final report at the office terminal.");
