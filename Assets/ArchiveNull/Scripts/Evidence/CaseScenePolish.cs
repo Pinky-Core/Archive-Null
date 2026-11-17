@@ -66,7 +66,7 @@ namespace ArchiveNull.Evidence
         private static void AddText(Transform paper,string value,Color color)
         {
             var obj=new GameObject("Handwriting");obj.transform.SetParent(paper,false);obj.transform.localPosition=new Vector3(0,0,-.55f);
-            var text=obj.AddComponent<TextMeshPro>();text.text=value;text.color=color;text.fontSize=.45f;text.alignment=TextAlignmentOptions.Center;text.textWrappingMode=TextWrappingModes.Normal;
+            var text=obj.AddComponent<TextMeshPro>();text.text=value;text.color=color;text.fontSize=value.Contains("PIN") ? 2f:.7f;text.alignment=TextAlignmentOptions.Center;text.textWrappingMode=TextWrappingModes.Normal;
             text.rectTransform.sizeDelta=new Vector2(.9f,.9f);
         }
         private void OnDestroy() {foreach(var material in ownedMaterials) if(material!=null) Destroy(material);}
