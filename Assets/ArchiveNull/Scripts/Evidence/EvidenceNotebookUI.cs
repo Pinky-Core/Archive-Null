@@ -662,6 +662,7 @@ namespace ArchiveNull.Evidence
             text.alignment = alignment;
             text.color = new Color(0.82f, 0.96f, 0.91f, 1f);
             text.textWrappingMode = TextWrappingModes.Normal;
+            text.raycastTarget = false;
             return text;
         }
 
