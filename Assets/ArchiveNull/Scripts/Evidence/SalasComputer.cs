@@ -26,8 +26,18 @@ namespace ArchiveNull.Evidence
         }
         private void Start()
         {
-            foreach(var renderer in FindObjectsByType<Renderer>(FindObjectsSortMode.None))
-                if(renderer.name.ToLowerInvariant().Contains("monitor")) {monitor=renderer;break;}
+            int best=0;
+            foreach(var renderer in FindObjectsByType<MeshRenderer>())
+            {
+                if(renderer.gameObject.layer is 30 or 31 || renderer.GetComponentInParent<FirstPersonMovement>()!=null) continue;
+                string names=renderer.name;
+                var mesh=renderer.GetComponent<MeshFilter>();if(mesh!=null && mesh.sharedMesh!=null) names+=" "+mesh.sharedMesh.name;
+                for(Transform parent=renderer.transform.parent;parent!=null;parent=parent.parent) names+=" "+parent.name;
+                foreach(var material in renderer.sharedMaterials) if(material!=null) names+=" "+material.name;
+                names=names.ToLowerInvariant();
+                int score=names.Contains("monitor") ? 4 : names.Contains("computer") || names.Contains("laptop") || names.Contains("ordenador") ? 3 : names.Contains("screen") || names.Contains("pantalla") ? 2 : names.Contains("pc_") ? 1:0;
+                if(score>best) {best=score;monitor=renderer;}
+            }
             if(monitor==null) return;
             var host=new GameObject("Computer prompt",typeof(Canvas),typeof(CanvasScaler));host.transform.SetParent(transform,false);host.GetComponent<Canvas>().renderMode=RenderMode.ScreenSpaceOverlay;
             var scaler=host.GetComponent<CanvasScaler>();scaler.uiScaleMode=CanvasScaler.ScaleMode.ScaleWithScreenSize;scaler.referenceResolution=new Vector2(1920,1080);
@@ -56,7 +66,7 @@ namespace ArchiveNull.Evidence
             movement=FindAnyObjectByType<FirstPersonMovement>();look=FindAnyObjectByType<FirstPersonLook>();movementEnabled=movement!=null && movement.enabled;lookEnabled=look!=null && look.enabled;
             if(movement!=null) movement.enabled=false;if(look!=null) look.enabled=false;IsOpen=true;Cursor.lockState=CursorLockMode.None;Cursor.visible=true;
             screen=new GameObject("Salas workstation",typeof(Canvas),typeof(CanvasScaler),typeof(GraphicRaycaster));screen.transform.SetParent(transform,false);
-            var canvas=screen.GetComponent<Canvas>();canvas.renderMode=RenderMode.ScreenSpaceOverlay;canvas.sortingOrder=910;
+            var canvas=screen.GetComponent<Canvas>();canvas.renderMode=RenderMode.ScreenSpaceOverlay;canvas.sortingOrder=23000;
             var scaler=screen.GetComponent<CanvasScaler>();scaler.uiScaleMode=CanvasScaler.ScaleMode.ScaleWithScreenSize;scaler.referenceResolution=new Vector2(1920,1080);
             var panel=new GameObject("Documents",typeof(RectTransform),typeof(Image));panel.transform.SetParent(screen.transform,false);var rect=(RectTransform)panel.transform;rect.sizeDelta=new Vector2(1260,760);panel.GetComponent<Image>().color=new Color(.025f,.045f,.065f,.98f);
             Text(rect,"OBRA SALAS · DOCUMENTOS",32,new Vector2(0,305),new Vector2(1100,70));
