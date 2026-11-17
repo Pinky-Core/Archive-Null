@@ -131,10 +131,11 @@ public static class FeedbackEditorProbe
         Check(!trace.IsFullyRevealed,"UV does not reveal a powder-only fingerprint");
         for(int i=0;i<100;i++) {trace.ReceivePowder(1);yield return null;}
         Check(trace.IsFullyRevealed,"powder permanently reveals a latent fingerprint");Object.Destroy(latent);
-        var inspect=Object.FindObjectsByType<InspectObject>().First(controller=>controller.enabled);var sample=GameObject.CreatePrimitive(PrimitiveType.Cube);sample.name="Inspection regression";sample.transform.localScale=Vector3.one*.1f;sample.transform.position=Camera.main.transform.position+Camera.main.transform.forward;
+        var inspect=Object.FindObjectsByType<InspectObject>().First(controller=>controller.enabled);var sample=GameObject.Find("Phone PIN reminder");
         Call(inspect,"TryPickObject",sample);yield return new WaitForSecondsRealtime(.4f);
         Check(sample.layer==30 && inspect.GetComponent<InspectionForeground>().IsActive,"inspection uses a separate foreground camera and layer");
-        Call(inspect,"RestoreObject");Check(sample.layer==0 && !inspect.GetComponent<InspectionForeground>().IsActive,"returning object restores its original layer");Object.Destroy(sample);
+        Capture("pin-inspection");yield return new WaitForEndOfFrame();
+        Call(inspect,"RestoreObject");Check(sample.layer==0 && !inspect.GetComponent<InspectionForeground>().IsActive,"returning object restores its original layer");
         var phone=Object.FindAnyObjectByType<PhoneEvidenceReader>();phone.Collect();Object.FindAnyObjectByType<EvidenceCameraController>().SelectTool(EvidenceCameraController.ToolSlot.InventoryItem);yield return new WaitForSecondsRealtime(.6f);Call(phone,"Unlock");
         var screenType=typeof(PhoneEvidenceReader).GetNestedType("PhoneScreen",BindingFlags.NonPublic);Call(phone,"OpenScreen",Enum.Parse(screenType,"Chat"));yield return new WaitForSecondsRealtime(.3f);
         var voiceButton=Object.FindObjectsByType<VoiceMessageButton>(FindObjectsInactive.Include).FirstOrDefault(b=>b.gameObject.activeInHierarchy);
@@ -167,6 +168,11 @@ public static class FeedbackEditorProbe
         var connections=(ArchiveNull.InvestigationBoard.WorldBoardConnectionManager)Field(board,"connectionManager");connections.HandlePhotoClicked(photo);
         yield return null;Call(board,"UpdateBoardHelp");
         Check(((TMPro.TMP_Text)Field(board,"boardHelp")).text.Contains("2."),"board tutorial advances to choosing a second photograph");
+        Vector3 photoPoint=photo.InteractionCollider.bounds.center;
+        Camera.main.transform.position=photoPoint+normal*1.8f;Camera.main.transform.LookAt(photoPoint);Cursor.lockState=CursorLockMode.None;
+        Mouse.current.WarpCursorPosition(new Vector2(Screen.width*.5f,Screen.height*.5f));yield return null;Call(board,"UpdateBoardHelp");
+        Check(((RectTransform)Field(board,"photoPreview")).gameObject.activeSelf,"pointing at a board photograph opens its enlarged preview");
+        Check(((Image)Field(board,"previewImage")).sprite!=null,"enlarged preview displays the photograph sprite");
         Capture("board");yield return new WaitForEndOfFrame();
     }
     private static void Check(bool ok,string value) {if(!ok) throw new InvalidOperationException(value);results.Add("PASS "+value);}
