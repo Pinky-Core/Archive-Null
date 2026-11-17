@@ -3,6 +3,7 @@ using ArchiveNull.Evidence;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;
+using TMPro;
 
 namespace ArchiveNull.InvestigationBoard
 {
@@ -36,6 +37,8 @@ namespace ArchiveNull.InvestigationBoard
 
         private readonly Dictionary<string, WorldEvidencePhoto> photosById = new Dictionary<string, WorldEvidencePhoto>();
         private WorldEvidencePhoto draggedPhoto;
+        private TMP_Text boardHelp;
+        [SerializeField, Range(1f,2f)] private float photoMagnification=1.55f;
         private Vector3 dragStartPosition;
         private Vector3 dragSurfaceOffset;
         private bool draggedEnough;
@@ -96,6 +99,7 @@ namespace ArchiveNull.InvestigationBoard
 
         private void Update()
         {
+            UpdateBoardHelp();
             if (EvidenceNotebookUI.IsAnyNotebookOpen || RuntimeConfirmationDialog.IsOpen || ArchiveNull.Accusation.AccusationPanel.IsAnyOpen) return;
             HandleMouse();
             UpdateReticle();
@@ -139,7 +143,7 @@ namespace ArchiveNull.InvestigationBoard
             Vector3 templateLocalScale = photoPrefab.transform.localScale;
             WorldEvidencePhoto photo = Instantiate(photoPrefab, spawnParent, false);
             photo.transform.localRotation = templateLocalRotation;
-            photo.transform.localScale = templateLocalScale;
+            photo.transform.localScale = templateLocalScale * photoMagnification;
             photo.Bind(data);
             photosById.Add(data.evidenceId, photo);
 
@@ -208,6 +212,27 @@ namespace ArchiveNull.InvestigationBoard
 
                 draggedPhoto = null;
             }
+        }
+
+        private void UpdateBoardHelp()
+        {
+            if(interactionCamera==null || boardCollider==null) return;
+            if(boardHelp==null)
+            {
+                var canvas=new GameObject("Board instructions",typeof(Canvas),typeof(CanvasScaler));canvas.transform.SetParent(transform,false);
+                canvas.GetComponent<Canvas>().renderMode=RenderMode.ScreenSpaceOverlay;canvas.GetComponent<Canvas>().sortingOrder=840;
+                var scaler=canvas.GetComponent<CanvasScaler>();scaler.uiScaleMode=CanvasScaler.ScaleMode.ScaleWithScreenSize;scaler.referenceResolution=new Vector2(1920,1080);
+                var label=new GameObject("Instructions",typeof(RectTransform),typeof(TextMeshProUGUI));label.transform.SetParent(canvas.transform,false);boardHelp=label.GetComponent<TMP_Text>();
+                boardHelp.fontSize=23;boardHelp.alignment=TextAlignmentOptions.Bottom;boardHelp.raycastTarget=false;boardHelp.color=new Color(1,.92f,.65f);boardHelp.outlineWidth=.2f;
+                var rect=boardHelp.rectTransform;rect.anchorMin=rect.anchorMax=new Vector2(.5f,0);rect.pivot=new Vector2(.5f,0);rect.anchoredPosition=new Vector2(0,100);rect.sizeDelta=new Vector2(1050,120);
+            }
+            bool near=boardCollider.Raycast(interactionCamera.ScreenPointToRay(Mouse.current!=null ? Mouse.current.position.ReadValue() : new Vector2(Screen.width*.5f,Screen.height*.5f)),out _,interactionDistance);
+            bool blocked=EvidenceNotebookUI.IsAnyNotebookOpen || GlobalPauseMenu.IsPaused || RuntimeConfirmationDialog.IsOpen || ArchiveNull.Accusation.AccusationPanel.IsAnyOpen;
+            boardHelp.gameObject.SetActive(near && !blocked);
+            if(!near || blocked) return;
+            boardHelp.text=photosById.Count==0 ? "Primero fotografiá evidencias en una memoria. Aparecerán aquí al volver."
+                : connectionManager!=null && connectionManager.HasPendingPhoto ? "2. Hacé clic en otra foto para conectar ambas.\nArrastrar: mover foto   ·   Clic derecho sobre un hilo: quitar conexión"
+                : "1. Hacé clic en una foto para iniciar una conexión.\nArrastrar: mover foto   ·   Clic derecho sobre un hilo: quitar conexión";
         }
 
         private WorldEvidencePhoto RaycastPhoto()

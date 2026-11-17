@@ -16,6 +16,7 @@ namespace ArchiveNull.InvestigationBoard
         private readonly Dictionary<string, WorldEvidencePhoto> photosById = new Dictionary<string, WorldEvidencePhoto>();
         private readonly Dictionary<string, LineRenderer> linesByKey = new Dictionary<string, LineRenderer>();
         private WorldEvidencePhoto pendingPhoto;
+        public bool HasPendingPhoto=>pendingPhoto!=null;
 
         public event Action OnConnectionsChanged;
 
