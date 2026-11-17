@@ -143,8 +143,8 @@ namespace ArchiveNull.Accusation
             Cursor.visible = true;
             RefreshRows();
             statusText.text = GameLocalization.Text(
-                "Completá cada campo y respaldalo con conexiones en la pizarra. Un nombre correcto sin pruebas no cierra el caso. ESC: volver a investigar.",
-                "Complete each field and support it with board connections. A correct name without evidence cannot close the case. ESC: investigate.");
+                "Completá los campos y presentá el informe. ESC: volver.",
+                "Complete the fields and submit the report. ESC: back.");
         }
 
         private void Close()
