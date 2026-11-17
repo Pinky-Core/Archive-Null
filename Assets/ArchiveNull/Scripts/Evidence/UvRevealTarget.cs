@@ -17,6 +17,23 @@ namespace ArchiveNull.Evidence
         [SerializeField] private float fadeSpeed = 8f;
         [SerializeField] private bool hideOnStart = true;
         [SerializeField] private bool preserveRevealedAmount = true;
+        public enum Method { Ultraviolet, Powder }
+        [SerializeField] private Method revealMethod;
+        public Method RevealMethod { get=>revealMethod; set=>revealMethod=value; }
+        public bool IsFullyRevealed=>exposure>=.99f;
+        public bool AlwaysVisible=>!hideOnStart;
+        public void MakeVisible()
+        {
+            hideOnStart=false;visibility=exposure=1f;
+            if(propertyBlock==null) CacheRendererColors();
+            ApplyVisibility(true);
+        }
+        public void ReceivePowder(float strength)
+        {
+            if(revealMethod!=Method.Powder) return;
+            preserveRevealedAmount=true;
+            AccumulateExposure(strength);
+        }
 
         private float visibility;
         private float exposure;
@@ -110,6 +127,11 @@ namespace ArchiveNull.Evidence
         }
 
         public void ReceiveUvIllumination(float strength)
+        {
+            if(revealMethod!=Method.Ultraviolet) return;
+            AccumulateExposure(strength);
+        }
+        private void AccumulateExposure(float strength)
         {
             lastRevealTime = Time.time;
             exposure = Mathf.Clamp01(exposure + Mathf.Clamp01(strength) * Time.deltaTime / Mathf.Max(0.05f, revealSeconds));

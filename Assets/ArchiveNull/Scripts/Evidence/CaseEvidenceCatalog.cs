@@ -103,13 +103,13 @@ namespace ArchiveNull.Evidence
                 string note=inventory.HasEvidence("f1_house_cube") ? "✓" : "○";
                 string messages=inventory.HasEvidence("phone_messages") ? "✓" : "○";
                 string calls=inventory.HasEvidence("phone_call_log") ? "✓" : "○";
-                return "Para habilitar la oficina de Salas, registrá en Casa Herrera:\n"+note+" Nota del estante (incluye el PIN)   "+messages+" Mensajes del teléfono   "+calls+" Llamadas del teléfono";
+                return "Para habilitar la oficina de Salas, registrá en Casa Herrera:\n"+note+" Nota de Juli?n   "+messages+" Mensajes del teléfono   "+calls+" Llamadas del teléfono";
             }
         }
         public static string NextObjective()
         {
             if (!CanVisitContractor)
-                return GameLocalization.Text("Casa Herrera: revisá la nota del estante y leé mensajes y llamadas del teléfono. La nota contiene su PIN.", "Herrera house: examine the shelf note and read the phone's messages and calls. The note contains its PIN.");
+                return GameLocalization.Text("Casa Herrera: revisá la nota del estante y leé mensajes y llamadas del teléfono. El PIN est? en la pegatina junto al tel?fono.", "Herrera house: examine the shelf note and read the phone's messages and calls. The PIN is on the sticker beside the phone.");
             for (int i = 0; i < ArgumentLinks.Length; i++)
                 if (!HasArgument(i, out string reason)) return reason;
             return GameLocalization.Text("La cadena está respaldada. Presentá el informe final en el terminal de la oficina.", "The evidence chain is supported. Submit the final report at the office terminal.");

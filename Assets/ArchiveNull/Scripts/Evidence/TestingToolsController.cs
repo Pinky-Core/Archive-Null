@@ -160,7 +160,7 @@ namespace ArchiveNull.Evidence
         public void ApplyReagent(Ray ray)
         {
             if(!Physics.Raycast(ray,out var hit,2.7f*sceneScale,~(1<<31),QueryTriggerInteraction.Ignore)) return;
-            foreach(var trace in UvRevealTarget.ActiveTargets) if(Vector3.Distance(trace.RevealPosition,hit.point)<.45f*sceneScale) trace.ReceiveUvIllumination(1);
+            foreach(var trace in UvRevealTarget.ActiveTargets) if(Vector3.Distance(trace.RevealPosition,hit.point)<.45f*sceneScale) trace.ReceivePowder(1);
         }
         private void UpdatePlacement()
         {
