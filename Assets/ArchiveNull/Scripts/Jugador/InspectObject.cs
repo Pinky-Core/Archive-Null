@@ -113,7 +113,7 @@ public class InspectObject : MonoBehaviour
 
     void Update()
     {
-        if(EchoMemory.BlocksInput) return;
+        if(EchoMemory.BlocksInput || SalasComputer.BlocksInput) return;
         if(ArchiveNull.Evidence.EvidenceMarkerPlacement.HandledInputThisFrame) return;
         if (ArchiveNull.Evidence.TestingToolsController.IsPlacing || ArchiveNull.Evidence.TestingToolsController.BrushActive) return;
         if (GlobalPauseMenu.IsPaused || RuntimeConfirmationDialog.IsOpen || EvidenceNotebookUI.IsAnyNotebookOpen ||
