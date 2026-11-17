@@ -58,14 +58,14 @@ namespace ArchiveNull.Evidence
         private Transform CreatePaper(string name,Vector3 position,Vector2 size,Color color)
         {
             var paper=GameObject.CreatePrimitive(PrimitiveType.Cube);paper.name=name;paper.transform.position=position;
-            paper.transform.localScale=new Vector3(size.x,.002f,size.y);
+            paper.transform.localScale=new Vector3(size.x,size.y,.002f);paper.transform.rotation=Quaternion.Euler(90,0,0);
             var material=new Material(Shader.Find("Universal Render Pipeline/Unlit"));material.color=color;paper.GetComponent<Renderer>().sharedMaterial=material;
             ownedMaterials.Add(material);return paper.transform;
         }
         private readonly System.Collections.Generic.List<Material> ownedMaterials=new();
         private static void AddText(Transform paper,string value,Color color)
         {
-            var obj=new GameObject("Handwriting");obj.transform.SetParent(paper,false);obj.transform.localPosition=new Vector3(0,.55f,0);obj.transform.localRotation=Quaternion.Euler(90,0,0);
+            var obj=new GameObject("Handwriting");obj.transform.SetParent(paper,false);obj.transform.localPosition=new Vector3(0,0,-.55f);
             var text=obj.AddComponent<TextMeshPro>();text.text=value;text.color=color;text.fontSize=.45f;text.alignment=TextAlignmentOptions.Center;text.textWrappingMode=TextWrappingModes.Normal;
             text.rectTransform.sizeDelta=new Vector2(.9f,.9f);
         }
