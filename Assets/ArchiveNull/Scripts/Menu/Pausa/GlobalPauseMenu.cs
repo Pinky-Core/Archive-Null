@@ -470,7 +470,7 @@ public sealed class GlobalPauseMenu : MonoBehaviour
 
     private Button CreateButton(RectTransform parent, string label, Vector2 anchoredPosition, UnityEngine.Events.UnityAction action)
     {
-        RectTransform rect = CreatePanel(label + "Button", parent, new Vector2(360f, 56f), new Vector2(0.5f, 1f), new Color(.10f,.20f,.29f,1));
+        RectTransform rect = CreatePanel(label + "Button", parent, new Vector2(360f, 56f), new Vector2(0.5f, 1f), new Color(.17f,.15f,.10f,1));
         rect.anchoredPosition = anchoredPosition;
         Button button = rect.gameObject.AddComponent<Button>();
         button.targetGraphic = rect.GetComponent<Image>();
@@ -501,7 +501,7 @@ public sealed class GlobalPauseMenu : MonoBehaviour
 
     private void CreateCategoryButton(RectTransform parent, PauseOptionsCategory category, string label, int index)
     {
-        RectTransform rect = CreatePanel(category + "Tab", parent, new Vector2(160f, 38f), new Vector2(0f, 0.5f), new Color(.08f,.14f,.20f,1));
+        RectTransform rect = CreatePanel(category + "Tab", parent, new Vector2(160f, 38f), new Vector2(0f, 0.5f), new Color(.11f,.105f,.085f,1));
         rect.anchoredPosition = new Vector2(index * 170f, 0f);
         Button button = rect.gameObject.AddComponent<Button>();
         button.targetGraphic = rect.GetComponent<Image>();
@@ -583,14 +583,14 @@ public sealed class GlobalPauseMenu : MonoBehaviour
         TMP_Text text = CreateText(label + "Label", parent, label, 19, FontStyles.Bold, TextAlignmentOptions.Left);
         SetPoint(text.rectTransform, new Vector2(0.5f, 1f), anchoredPosition + new Vector2(-250f, 18f), new Vector2(260f, 30f));
 
-        RectTransform sliderRect = CreatePanel(label + "Slider", parent, new Vector2(390f, 26f), new Vector2(0.5f, 1f), new Color(0.035f, 0.065f, 0.06f, 1f));
+        RectTransform sliderRect = CreatePanel(label + "Slider", parent, new Vector2(390f, 26f), new Vector2(0.5f, 1f), new Color(.045f,.042f,.035f,1));
         sliderRect.anchoredPosition = anchoredPosition + new Vector2(148f, 4f);
         Slider slider = sliderRect.gameObject.AddComponent<Slider>();
         slider.minValue = 0f;
         slider.maxValue = 1f;
         slider.onValueChanged.AddListener(action);
 
-        RectTransform fill = CreatePanel("Fill", sliderRect, new Vector2(0f, 0f), new Vector2(0f, 0.5f), new Color(.4f,.73f,.97f,1));
+        RectTransform fill = CreatePanel("Fill", sliderRect, new Vector2(0f, 0f), new Vector2(0f, 0.5f), new Color(.91f,.74f,.37f,1));
         Stretch(fill);
         slider.fillRect = fill;
         slider.targetGraphic = fill.GetComponent<Image>();
@@ -602,7 +602,7 @@ public sealed class GlobalPauseMenu : MonoBehaviour
         TMP_Text text = CreateText(label + "Label", parent, label, 19, FontStyles.Bold, TextAlignmentOptions.Left);
         SetPoint(text.rectTransform, new Vector2(0.5f, 1f), anchoredPosition + new Vector2(-250f, 18f), new Vector2(260f, 30f));
 
-        RectTransform rect = CreatePanel(label + "Value", parent, new Vector2(390f, 38f), new Vector2(0.5f, 1f), new Color(.08f,.14f,.20f,1));
+        RectTransform rect = CreatePanel(label + "Value", parent, new Vector2(390f, 38f), new Vector2(0.5f, 1f), new Color(.11f,.105f,.085f,1));
         rect.anchoredPosition = anchoredPosition + new Vector2(148f, 8f);
         Button button = rect.gameObject.AddComponent<Button>();
         button.targetGraphic = rect.GetComponent<Image>();
@@ -614,7 +614,7 @@ public sealed class GlobalPauseMenu : MonoBehaviour
 
     private void CreateCompactValueButton(RectTransform parent, string label, string value, Vector2 anchoredPosition, UnityEngine.Events.UnityAction action)
     {
-        RectTransform rect = CreatePanel(label + "CompactValue", parent, new Vector2(380f, 72f), new Vector2(0.5f, 1f), new Color(.08f,.14f,.20f,1));
+        RectTransform rect = CreatePanel(label + "CompactValue", parent, new Vector2(380f, 72f), new Vector2(0.5f, 1f), new Color(.11f,.105f,.085f,1));
         rect.anchoredPosition = anchoredPosition;
         Button button = rect.gameObject.AddComponent<Button>();
         button.targetGraphic = rect.GetComponent<Image>();
@@ -716,14 +716,14 @@ public sealed class GlobalPauseMenu : MonoBehaviour
         TMP_Text text = CreateText(label + "Label", parent, label, 21, FontStyles.Bold, TextAlignmentOptions.Left);
         SetPoint(text.rectTransform, new Vector2(0.5f, 1f), anchoredPosition + new Vector2(-210f, 28f), new Vector2(180f, 34f));
 
-        RectTransform sliderRect = CreatePanel(label + "Slider", parent, new Vector2(360f, 24f), new Vector2(0.5f, 1f), new Color(0.08f, 0.12f, 0.12f, 1f));
+        RectTransform sliderRect = CreatePanel(label + "Slider", parent, new Vector2(360f, 24f), new Vector2(0.5f, 1f), new Color(.08f,.075f,.06f,1));
         sliderRect.anchoredPosition = anchoredPosition + new Vector2(80f, 12f);
         Slider slider = sliderRect.gameObject.AddComponent<Slider>();
         slider.minValue = 0f;
         slider.maxValue = 1f;
         slider.onValueChanged.AddListener(action);
 
-        RectTransform fill = CreatePanel("Fill", sliderRect, new Vector2(0f, 0f), new Vector2(0f, 0.5f), new Color(0.46f, 0.93f, 0.84f, 1f));
+        RectTransform fill = CreatePanel("Fill", sliderRect, new Vector2(0f, 0f), new Vector2(0f, 0.5f), new Color(.91f,.74f,.37f,1));
         Stretch(fill);
         slider.fillRect = fill;
         slider.targetGraphic = fill.GetComponent<Image>();
@@ -735,7 +735,7 @@ public sealed class GlobalPauseMenu : MonoBehaviour
         TMP_Text label = CreateText("QualityLabel", parent, L("GRAFICOS", "GRAPHICS"), 21, FontStyles.Bold, TextAlignmentOptions.Left);
         SetPoint(label.rectTransform, new Vector2(0.5f, 1f), anchoredPosition + new Vector2(-210f, 26f), new Vector2(180f, 34f));
 
-        RectTransform rect = CreatePanel("QualitySelector", parent, new Vector2(360f, 48f), new Vector2(0.5f, 1f), new Color(.10f,.20f,.29f,1));
+        RectTransform rect = CreatePanel("QualitySelector", parent, new Vector2(360f, 48f), new Vector2(0.5f, 1f), new Color(.17f,.15f,.10f,1));
         rect.anchoredPosition = anchoredPosition + new Vector2(80f, 20f);
         Button button = rect.gameObject.AddComponent<Button>();
         button.targetGraphic = rect.GetComponent<Image>();
@@ -774,7 +774,7 @@ public sealed class GlobalPauseMenu : MonoBehaviour
             TMP_Text actionLabel = CreateText(action + "Label", parent, GlobalInputBindings.GetLabel(action, IsSpanish()), 16, FontStyles.Bold, TextAlignmentOptions.Left);
             SetPoint(actionLabel.rectTransform, new Vector2(0.5f, 1f), anchoredPosition + new Vector2(-205f, y), new Vector2(250f, 26f));
 
-            RectTransform buttonRect = CreatePanel(action + "Rebind", parent, new Vector2(160f, 24f), new Vector2(0.5f, 1f), new Color(.10f,.20f,.29f,1));
+            RectTransform buttonRect = CreatePanel(action + "Rebind", parent, new Vector2(160f, 24f), new Vector2(0.5f, 1f), new Color(.17f,.15f,.10f,1));
             buttonRect.anchoredPosition = anchoredPosition + new Vector2(160f, y);
             Button button = buttonRect.gameObject.AddComponent<Button>();
             button.targetGraphic = buttonRect.GetComponent<Image>();
