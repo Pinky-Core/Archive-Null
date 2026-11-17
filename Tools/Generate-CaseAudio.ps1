@@ -1,4 +1,4 @@
-param([Parameter(Mandatory=$true)][string]$PiperExe,[Parameter(Mandatory=$true)][string]$VoiceModel)
+﻿param([Parameter(Mandatory=$true)][string]$PiperExe,[Parameter(Mandatory=$true)][string]$VoiceModel)
 $ErrorActionPreference='Stop'
 $destination=Join-Path $PSScriptRoot '../Assets/ArchiveNull/Resources/CaseAudio'
 New-Item $destination -ItemType Directory -Force | Out-Null
