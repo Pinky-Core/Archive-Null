@@ -39,6 +39,7 @@ public static class MechanicsEditorProbe
     private static void Log(string message,string stack,LogType type) { if(type==LogType.Error || type==LogType.Exception || type==LogType.Assert) results.Add("FAIL runtime: "+message+"\n"+stack); }
     private static void Tick()
     {
+        if(SessionState.GetBool("archive.feedback.test",false)) return;
         if(!EditorApplication.isPlaying || !SessionState.GetBool("archive.mechanics.test",false) || EditorApplication.timeSinceStartup<deadline) return;
         try
         {

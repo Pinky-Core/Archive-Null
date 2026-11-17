@@ -590,6 +590,10 @@ public sealed class GameSaveSystem : MonoBehaviour
         get
         {
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
+#if UNITY_EDITOR
+            if (UnityEditor.SessionState.GetBool("archive.feedback.test", false))
+                return Path.Combine(Application.persistentDataPath,"FeedbackValidation",UnityEditor.SessionState.GetString("archive.feedback.run","current"),"Saves");
+#endif
             if (laboratorySession) return Path.Combine(Application.persistentDataPath, "MechanicsLab", "Saves");
             if (PlayableCaseSmokeTest.Requested) return Path.Combine(Application.persistentDataPath, "Validation", System.Diagnostics.Process.GetCurrentProcess().Id.ToString(), "Saves");
 #endif
