@@ -206,7 +206,7 @@ namespace ArchiveNull.Evidence
 
             if (categoryText != null)
             {
-                categoryText.text = data != null ? data.category.ToString() : "REGISTRO VACIO";
+                categoryText.text = data != null ? data.category.ToString() : "REGISTRO VACÍO";
             }
 
             if (descriptionText != null)
@@ -500,7 +500,7 @@ namespace ArchiveNull.Evidence
             outline.effectColor = new Color(0.45f, 0.76f, 0.69f, 0.32f);
             outline.effectDistance = new Vector2(2f, -2f);
 
-            CreateTabButton("GalleryTab", panelRect, "GALERIA DE EVIDENCIAS", new Vector2(52f, 696f), new Vector2(310f, 44f), () => SelectTab(Tab.Gallery), out galleryTabImage);
+            CreateTabButton("GalleryTab", panelRect, "GALERÍA DE EVIDENCIAS", new Vector2(52f, 696f), new Vector2(310f, 44f), () => SelectTab(Tab.Gallery), out galleryTabImage);
             CreateTabButton("NotebookTab", panelRect, "LIBRETA", new Vector2(372f, 696f), new Vector2(180f, 44f), () => SelectTab(Tab.Notebook), out notebookTabImage);
             CreateTabButton("PhotosTab", panelRect, "FOTOS / DESCARTE", new Vector2(562f, 696f), new Vector2(260f, 44f), () => SelectTab(Tab.Photos), out photosTabImage);
 
@@ -530,7 +530,7 @@ namespace ArchiveNull.Evidence
             titleText.fontSizeMin = 22f;
             titleText.fontSizeMax = 30f;
             SetRect(titleText.rectTransform, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0f, 1f), new Vector2(778f, -170f), new Vector2(-60f, -90f));
-            categoryText = CreateText("Category", galleryRoot, "REGISTRO VACIO", 18f, TextAlignmentOptions.TopLeft);
+            categoryText = CreateText("Category", galleryRoot, "REGISTRO VACÍO", 18f, TextAlignmentOptions.TopLeft);
             categoryText.color = new Color(0.48f, 0.86f, 0.77f, 1f);
             SetRect(categoryText.rectTransform, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0f, 1f), new Vector2(780f, -204f), new Vector2(-60f, -178f));
 

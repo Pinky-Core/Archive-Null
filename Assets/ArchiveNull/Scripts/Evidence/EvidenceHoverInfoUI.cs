@@ -86,7 +86,7 @@ namespace ArchiveNull.Evidence
 
             if (titleText != null)
             {
-                titleText.text = data.evidenceName;
+                titleText.text = EvidenceTextLocalization.Name(data);
             }
 
             if (categoryText != null)
@@ -96,7 +96,7 @@ namespace ArchiveNull.Evidence
 
             if (descriptionText != null)
             {
-                descriptionText.text = data.description;
+                descriptionText.text = EvidenceTextLocalization.Description(data);
             }
 
             SetVisible(true);

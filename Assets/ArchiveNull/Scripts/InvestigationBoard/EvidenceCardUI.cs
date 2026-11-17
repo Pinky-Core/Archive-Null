@@ -44,7 +44,7 @@ namespace ArchiveNull.InvestigationBoard
 
             if (nameText != null)
             {
-                nameText.text = data != null ? data.evidenceName : "Evidence";
+                nameText.text = data != null ? EvidenceTextLocalization.Name(data) : "Evidencia";
             }
 
             if (categoryText != null)

@@ -576,7 +576,7 @@ namespace ArchiveNull.UI
                 }
 
                 builder.Append("- ");
-                builder.Append(data.evidenceName);
+                builder.Append(EvidenceTextLocalization.Name(data));
                 builder.Append(" [");
                 builder.Append(data.category);
                 builder.AppendLine("]");
