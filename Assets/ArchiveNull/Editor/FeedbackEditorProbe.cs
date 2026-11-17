@@ -112,7 +112,8 @@ public static class FeedbackEditorProbe
         var foot=Object.FindObjectsByType<EvidenceTarget>(FindObjectsInactive.Include).First(t=>t.EvidenceData.evidenceId=="f1_house_huella-zapato");
         Check(foot.GetComponentsInChildren<UvRevealTarget>(true).All(t=>t.AlwaysVisible),"door footprint needs no revealing tool");
         Check(EvidenceTextLocalization.ReadableObjectName("Book-1")=="Libro" && EvidenceTextLocalization.ReadableObjectName("Lens")=="Lente","technical object names become readable Spanish names");
-        Capture("house");
+        results.Add("STATE house camera "+Camera.main.transform.position+" rotation "+Camera.main.transform.eulerAngles+" mask "+Camera.main.cullingMask+" far "+Camera.main.farClipPlane+" player "+Object.FindAnyObjectByType<FirstPersonMovement>().transform.position);
+        Capture("house");yield return new WaitForEndOfFrame();
         var movement=Object.FindAnyObjectByType<FirstPersonMovement>();var crouch=movement.GetComponentInChildren<Crouch>();var controller=movement.GetComponentInParent<CharacterController>();
         Check(crouch!=null && crouch.enabled,"active player has crouch component");
         Vector3 playerPosition=movement.transform.position;movement.enabled=false;controller.enabled=false;movement.transform.position=new Vector3(100,80,100);controller.enabled=true;
@@ -134,12 +135,12 @@ public static class FeedbackEditorProbe
         Call(inspect,"TryPickObject",sample);yield return new WaitForSecondsRealtime(.4f);
         Check(sample.layer==30 && inspect.GetComponent<InspectionForeground>().IsActive,"inspection uses a separate foreground camera and layer");
         Call(inspect,"RestoreObject");Check(sample.layer==0 && !inspect.GetComponent<InspectionForeground>().IsActive,"returning object restores its original layer");Object.Destroy(sample);
-        var phone=Object.FindAnyObjectByType<PhoneEvidenceReader>();phone.Collect();phone.Open();yield return new WaitForSecondsRealtime(.6f);Call(phone,"Unlock");
+        var phone=Object.FindAnyObjectByType<PhoneEvidenceReader>();phone.Collect();Object.FindAnyObjectByType<EvidenceCameraController>().SelectTool(EvidenceCameraController.ToolSlot.InventoryItem);yield return new WaitForSecondsRealtime(.6f);Call(phone,"Unlock");
         var screenType=typeof(PhoneEvidenceReader).GetNestedType("PhoneScreen",BindingFlags.NonPublic);Call(phone,"OpenScreen",Enum.Parse(screenType,"Chat"));yield return new WaitForSecondsRealtime(.3f);
         var voiceButton=Object.FindObjectsByType<VoiceMessageButton>(FindObjectsInactive.Include).FirstOrDefault(b=>b.gameObject.activeInHierarchy);
         Check(voiceButton!=null,"phone chat presents a playable voice message");
         voiceButton.GetComponent<Button>().onClick.Invoke();yield return new WaitForSecondsRealtime(.3f);
-        Check(CaseVoicePlayer.IsPlaying(voiceButton.Resource),"voice message plays a real imported Spanish clip");Capture("phone-voice");yield return new WaitForEndOfFrame();phone.SetEquippedState(false);CaseVoicePlayer.Stop();
+        Check(CaseVoicePlayer.IsPlaying(voiceButton.Resource),"voice message plays a real imported Spanish clip");Capture("phone-voice");yield return new WaitForEndOfFrame();Object.FindAnyObjectByType<EvidenceCameraController>().SelectTool(EvidenceCameraController.ToolSlot.Hand);CaseVoicePlayer.Stop();
         var echo=new GameObject("Echo regression").AddComponent<EchoMemory>();echo.Play(Camera.main.transform.position+Camera.main.transform.forward,"echo_cup","El té estaba caliente. Escuché pasos en el lateral.");
         yield return new WaitForSecondsRealtime(.4f);Check(EchoMemory.IsPlaying && GameObject.Find("Echo third-person camera")!=null,"echo opens third-person recollection with shadow figures");
         Check(CaseVoicePlayer.IsPlaying("echo_cup"),"echo plays narrated recollection");
@@ -152,9 +153,21 @@ public static class FeedbackEditorProbe
         var register=terminal.GetComponentsInChildren<Button>().First(b=>b.name=="Registrar comprobantes");Click(register);
         Check(EvidenceInventory.Instance.HasEvidence("f1_ofice_factura1"),"Salas computer adds receipts to evidence inventory");terminal.Close();yield return null;
         Check(!SalasComputer.IsOpen && Object.FindAnyObjectByType<FirstPersonMovement>().enabled,"closing Salas computer restores movement");
-        var pause=Object.FindAnyObjectByType<GlobalPauseMenu>();Call(pause,"Pause");Call(pause,"ShowOptions");yield return new WaitForSecondsRealtime(.3f);Capture("pause-options");pause.Resume();
+        var pause=Object.FindAnyObjectByType<GlobalPauseMenu>();Call(pause,"Pause");Call(pause,"ShowOptions");yield return new WaitForSecondsRealtime(.3f);Capture("pause-options");yield return new WaitForEndOfFrame();pause.Resume();
         MemoryLoadingScreen.Load("MainMenu");while(MemoryLoadingScreen.IsBusy || SceneManager.GetActiveScene().name!="MainMenu") yield return null;
-        yield return new WaitForSecondsRealtime(2);Check(Object.FindAnyObjectByType<CRTMenuCameraFocus>().IsInFarPose,"return journey still ends seated in office");Capture("office-return");
+        yield return new WaitForSecondsRealtime(2);Check(Object.FindAnyObjectByType<CRTMenuCameraFocus>().IsInFarPose,"return journey still ends seated in office");Capture("office-return");yield return new WaitForEndOfFrame();
+        var board=Object.FindAnyObjectByType<ArchiveNull.InvestigationBoard.WorldEvidenceBoardController>();
+        Check(board!=null,"office retains physical evidence board");
+        var template=(ArchiveNull.InvestigationBoard.WorldEvidencePhoto)Field(board,"photoPrefab");
+        var photo=Object.FindObjectsByType<ArchiveNull.InvestigationBoard.WorldEvidencePhoto>().First(p=>p!=template && !string.IsNullOrEmpty(p.EvidenceId));
+        Check(photo.transform.localScale.magnitude>template.transform.localScale.magnitude*1.4f,"spawned board photographs are larger than the template");
+        Object.FindAnyObjectByType<CRTMenuCameraFocus>().enabled=false;Object.FindAnyObjectByType<OfficeFreeLookController>().enabled=false;
+        var surface=(Transform)Field(board,"boardSurface");var collider=(Collider)Field(board,"boardCollider");
+        Vector3 normal=(Vector3)Call(board,"GetBoardNormal");Camera.main.transform.position=collider.bounds.center+normal*1.8f;Camera.main.transform.LookAt(collider.bounds.center);Mouse.current.WarpCursorPosition(new Vector2(Screen.width*.5f,Screen.height*.5f));
+        var connections=(ArchiveNull.InvestigationBoard.WorldBoardConnectionManager)Field(board,"connectionManager");connections.HandlePhotoClicked(photo);
+        yield return null;Call(board,"UpdateBoardHelp");
+        Check(((TMPro.TMP_Text)Field(board,"boardHelp")).text.Contains("2."),"board tutorial advances to choosing a second photograph");
+        Capture("board");yield return new WaitForEndOfFrame();
     }
     private static void Check(bool ok,string value) {if(!ok) throw new InvalidOperationException(value);results.Add("PASS "+value);}
     private static object Field(object target,string name)=>target.GetType().GetField(name,BindingFlags.Instance|BindingFlags.NonPublic).GetValue(target);
