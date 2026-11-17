@@ -5,6 +5,7 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;
+using ArchiveNull.Narrative;
 
 namespace ArchiveNull.Evidence
 {
@@ -201,6 +202,7 @@ namespace ArchiveNull.Evidence
             }
 
             evidenceTarget ??= GetComponent<EvidenceTarget>();
+            PrepareVoiceMessages();
             playerCamera = Camera.main;
             if (pickupColliders == null || pickupColliders.Length == 0)
             {
@@ -210,6 +212,30 @@ namespace ArchiveNull.Evidence
             EnsureEventSystem();
             BuildPhoneUi();
             SetUiVisible(false, true);
+        }
+
+        private void PrepareVoiceMessages()
+        {
+            if(chats==null) return;
+            foreach(var chat in chats)
+            {
+                chat.contact=CorrectSpanish(chat.contact);chat.status=CorrectSpanish(chat.status);chat.preview=CorrectSpanish(chat.preview);
+                var messages=new List<string>(chat.conversation ?? System.Array.Empty<string>());
+                for(int i=0;i<messages.Count;i++) messages[i]=CorrectSpanish(messages[i]);
+                if(chat.contact.Contains("Sofía") && !messages.Exists(line=>line.Contains("phone_julian")))
+                    messages.Insert(Mathf.Min(3,messages.Count),"OUT_AUDIO|18:17|Mañana llevo las copias a Funes. Hay números repetidos y montos distintos. Prefiero confirmarlo antes de denunciar.|phone_julian");
+                if(chat.contact.Contains("Salas") && !messages.Exists(line=>line.Contains("phone_salas")))
+                    messages.Add("IN_AUDIO|19:09|Estoy llegando. Entro por el lateral, como habíamos quedado. Dejame la taza en la mesa.|phone_salas");
+                chat.conversation=messages.ToArray();
+            }
+        }
+        private static string CorrectSpanish(string value)
+        {
+            if(value==null) return "";
+            string[] plain={"Sofia","Roldan","Nicolas","Victor","Julian","Manana","manana","mama","Tambien","tambien","estacion","conexion","ultima","decision","Perdon","tome","Contéstame","Contestame","entres","Le escribi"};
+            string[] accented={"Sofía","Roldán","Nicolás","Víctor","Julián","Mañana","mañana","mamá","También","también","estación","conexión","última","decisión","Perdón","tomé","Contestame","Contestame","entres","Le escribí"};
+            for(int i=0;i<plain.Length;i++) value=value.Replace(plain[i],accented[i]);
+            return value.Replace(" estes "," estés ").Replace(" estes", " estés").Replace(" Quien "," Quién ").Replace(" estas "," estás ").Replace(" Hablamos manana"," Hablamos mañana");
         }
 
         private void OnDisable()
@@ -1093,7 +1119,7 @@ namespace ArchiveNull.Evidence
         private void CreateChatBubble(RectTransform parent, string raw)
         {
             string[] parts = (raw ?? string.Empty).Split('|');
-            bool outgoing = parts.Length > 0 && parts[0] == "OUT";
+            bool outgoing = parts.Length > 0 && parts[0].StartsWith("OUT",System.StringComparison.Ordinal);
             string time = parts.Length > 1 ? parts[1] : string.Empty;
             string message = parts.Length > 2 ? parts[2] : string.Empty;
 
@@ -1131,6 +1157,13 @@ namespace ArchiveNull.Evidence
             float availableTextWidth = Mathf.Max(60f, (contentWidth - 20f) * 0.79f - 24f);
             Vector2 preferred = text.GetPreferredValues(message, availableTextWidth, 0f);
             rowLayout.preferredHeight = Mathf.Max(64f, preferred.y + 43f);
+            if(parts.Length>3 && parts[0].Contains("AUDIO"))
+            {
+                string resource=parts[3];
+                var button=bubble.gameObject.AddComponent<Button>();button.targetGraphic=bubble;button.onClick.AddListener(()=>CaseVoicePlayer.Play(resource));
+                var voice=bubble.gameObject.AddComponent<VoiceMessageButton>();voice.Label=text;voice.Resource=resource;voice.Transcript=message;
+                text.raycastTarget=false;rowLayout.preferredHeight+=44;
+            }
         }
 
         private void ShowScreenNarration(PhoneScreen screen)
@@ -1266,6 +1299,7 @@ namespace ArchiveNull.Evidence
 
         private void SetUiVisible(bool visible, bool immediate)
         {
+            if(!visible) CaseVoicePlayer.Stop();
             if (phoneGroup == null)
             {
                 return;

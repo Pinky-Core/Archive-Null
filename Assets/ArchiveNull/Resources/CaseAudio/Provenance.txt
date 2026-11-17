@@ -1,0 +1,10 @@
+Voces provisionales sintetizadas en español para pruebas del caso.
+Motor de síntesis: Piper 2023.11.14-2, https://github.com/rhasspy/piper (MIT).
+Modelo: es_ES-davefx-medium, revisión v1.0.0 de rhasspy/piper-voices.
+https://huggingface.co/rhasspy/piper-voices/tree/v1.0.0/es/es_ES/davefx/medium
+Según MODEL_CARD, el conjunto de datos de la voz tiene licencia CC0:
+https://github.com/NabuCasa/voice-datasets
+Las frases son texto original del caso; no son grabaciones de actores.
+No se incluye el motor ni el modelo ONNX en el juego.
+Regeneración: Tools/Generate-CaseAudio.ps1 con rutas locales de Piper y modelo.
+Son material provisional que puede reemplazarse por interpretación grabada.
