@@ -99,6 +99,7 @@ namespace ArchiveNull.InvestigationBoard
 
         private void Update()
         {
+            if(interactionCamera==null) interactionCamera=Camera.main;
             UpdateBoardHelp();
             if (GlobalPauseMenu.IsPaused || ArchiveNull.UI.CaseFileReader.IsAnyCaseFileOpen || EvidenceNotebookUI.IsAnyNotebookOpen || RuntimeConfirmationDialog.IsOpen || ArchiveNull.Accusation.AccusationPanel.IsAnyOpen) return;
             HandleMouse();
@@ -216,6 +217,7 @@ namespace ArchiveNull.InvestigationBoard
 
         private void UpdateBoardHelp()
         {
+            if(interactionCamera==null) interactionCamera=Camera.main;
             if(interactionCamera==null || boardCollider==null) return;
             if(boardHelp==null)
             {
