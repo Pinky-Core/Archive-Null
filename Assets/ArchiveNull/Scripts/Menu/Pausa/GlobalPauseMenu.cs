@@ -758,6 +758,7 @@ public sealed class GlobalPauseMenu : MonoBehaviour
             GameInputAction.MoveLeft,
             GameInputAction.MoveRight,
             GameInputAction.Run,
+            GameInputAction.Crouch,
             GameInputAction.Interact,
             GameInputAction.Inspect,
             GameInputAction.Camera,
@@ -769,7 +770,7 @@ public sealed class GlobalPauseMenu : MonoBehaviour
         for (int i = 0; i < actions.Length; i++)
         {
             GameInputAction action = actions[i];
-            float y = -18f - i * 28f;
+            float y = -18f - i * 26f;
             TMP_Text actionLabel = CreateText(action + "Label", parent, GlobalInputBindings.GetLabel(action, IsSpanish()), 16, FontStyles.Bold, TextAlignmentOptions.Left);
             SetPoint(actionLabel.rectTransform, new Vector2(0.5f, 1f), anchoredPosition + new Vector2(-205f, y), new Vector2(250f, 26f));
 
@@ -785,7 +786,7 @@ public sealed class GlobalPauseMenu : MonoBehaviour
         }
 
         rebindHintText = CreateText("RebindHint", parent, string.Empty, 15, FontStyles.Normal, TextAlignmentOptions.Center);
-        SetPoint(rebindHintText.rectTransform, new Vector2(0.5f, 1f), anchoredPosition + new Vector2(0f, -304f), new Vector2(540f, 26f));
+        SetPoint(rebindHintText.rectTransform, new Vector2(0.5f, 1f), anchoredPosition + new Vector2(0f, -322f), new Vector2(540f, 26f));
         RefreshControlsLabel();
     }
 
@@ -803,6 +804,7 @@ public sealed class GlobalPauseMenu : MonoBehaviour
             GameInputAction.MoveLeft,
             GameInputAction.MoveRight,
             GameInputAction.Run,
+            GameInputAction.Crouch,
             GameInputAction.Interact,
             GameInputAction.Inspect,
             GameInputAction.Camera,
