@@ -38,7 +38,7 @@ public static class MechanicsLabEditor
             data.FindProperty("evidenceId").stringValue="lab_sample"; data.FindProperty("evidenceName").stringValue="Muestra de laboratorio"; data.FindProperty("description").stringValue="Fotografía, inspecciona y anota esta muestra de prueba."; data.ApplyModifiedPropertiesWithoutUndo();
             var trace=Make("Reagent sample",new Vector3(-2.55f,.89f,0),new Vector3(.22f,.01f,.22f),material);
             var traceMaterial=new Material(Resources.Load<Shader>("ArchiveTrace")); traceMaterial.color=Color.cyan;
-            AssetDatabase.CreateAsset(traceMaterial,"Assets/ArchiveNull/Materials/MechanicsLabTrace.mat"); trace.GetComponent<Renderer>().sharedMaterial=traceMaterial; trace.AddComponent<UvRevealTarget>();
+            AssetDatabase.CreateAsset(traceMaterial,"Assets/ArchiveNull/Materials/MechanicsLabTrace.mat"); trace.GetComponent<Renderer>().sharedMaterial=traceMaterial; trace.AddComponent<UvRevealTarget>().RevealMethod=UvRevealTarget.Method.Powder;
             var sun=new GameObject("Laboratory light",typeof(Light)); sun.transform.rotation=Quaternion.Euler(45,-30,0); var light=sun.GetComponent<Light>(); light.type=LightType.Directional; light.intensity=1.5f; light.shadows=LightShadows.Soft;
             RenderSettings.ambientLight=new Color(.3f,.35f,.4f);
             var transition=new GameObject("Memory reconstruction"); var wave=transition.AddComponent<OfficeDissolveTransition>(); var waveData=new SerializedObject(wave);
