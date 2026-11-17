@@ -38,6 +38,9 @@ namespace ArchiveNull.InvestigationBoard
         private readonly Dictionary<string, WorldEvidencePhoto> photosById = new Dictionary<string, WorldEvidencePhoto>();
         private WorldEvidencePhoto draggedPhoto;
         private TMP_Text boardHelp;
+        private RectTransform photoPreview;
+        private Image previewImage;
+        private TMP_Text previewTitle;
         [SerializeField, Range(1f,2f)] private float photoMagnification=1.55f;
         private Vector3 dragStartPosition;
         private Vector3 dragSurfaceOffset;
@@ -227,9 +230,18 @@ namespace ArchiveNull.InvestigationBoard
                 var label=new GameObject("Instructions",typeof(RectTransform),typeof(TextMeshProUGUI));label.transform.SetParent(canvas.transform,false);boardHelp=label.GetComponent<TMP_Text>();
                 boardHelp.fontSize=23;boardHelp.alignment=TextAlignmentOptions.Bottom;boardHelp.raycastTarget=false;boardHelp.color=new Color(1,.92f,.65f);boardHelp.outlineWidth=.2f;
                 var rect=boardHelp.rectTransform;rect.anchorMin=rect.anchorMax=new Vector2(.5f,0);rect.pivot=new Vector2(.5f,0);rect.anchoredPosition=new Vector2(0,100);rect.sizeDelta=new Vector2(1050,120);
+                var preview=new GameObject("Enlarged photograph",typeof(RectTransform),typeof(Image));preview.transform.SetParent(canvas.transform,false);photoPreview=(RectTransform)preview.transform;
+                photoPreview.anchorMin=photoPreview.anchorMax=new Vector2(1,.5f);photoPreview.anchoredPosition=new Vector2(-270,70);photoPreview.sizeDelta=new Vector2(460,450);
+                var backdrop=preview.GetComponent<Image>();backdrop.color=new Color(.035f,.033f,.027f,.96f);backdrop.raycastTarget=false;
+                var picture=new GameObject("Photograph",typeof(RectTransform),typeof(Image));picture.transform.SetParent(preview.transform,false);previewImage=picture.GetComponent<Image>();previewImage.preserveAspect=true;previewImage.raycastTarget=false;previewImage.rectTransform.sizeDelta=new Vector2(410,320);previewImage.rectTransform.anchoredPosition=new Vector2(0,-35);
+                var title=new GameObject("Evidence name",typeof(RectTransform),typeof(TextMeshProUGUI));title.transform.SetParent(preview.transform,false);previewTitle=title.GetComponent<TMP_Text>();previewTitle.fontSize=23;previewTitle.alignment=TextAlignmentOptions.Center;previewTitle.color=new Color(1,.93f,.7f);previewTitle.raycastTarget=false;previewTitle.rectTransform.sizeDelta=new Vector2(410,85);previewTitle.rectTransform.anchoredPosition=new Vector2(0,165);
+                photoPreview.gameObject.SetActive(false);
             }
             bool near=boardCollider.Raycast(interactionCamera.ScreenPointToRay(Mouse.current!=null ? Mouse.current.position.ReadValue() : new Vector2(Screen.width*.5f,Screen.height*.5f)),out _,interactionDistance);
             bool blocked=ArchiveNull.UI.CaseFileReader.IsAnyCaseFileOpen || EvidenceNotebookUI.IsAnyNotebookOpen || GlobalPauseMenu.IsPaused || RuntimeConfirmationDialog.IsOpen || ArchiveNull.Accusation.AccusationPanel.IsAnyOpen;
+            var hovered=!blocked && near ? RaycastPhoto():null;
+            photoPreview.gameObject.SetActive(hovered!=null);
+            if(hovered!=null) {previewImage.sprite=hovered.DisplayPhoto;previewTitle.text=EvidenceTextLocalization.Name(hovered.EvidenceData);}
             boardHelp.gameObject.SetActive(near && !blocked);
             if(!near || blocked) return;
             boardHelp.text=photosById.Count==0 ? "Primero fotografiá evidencias en una memoria. Aparecerán aquí al volver."

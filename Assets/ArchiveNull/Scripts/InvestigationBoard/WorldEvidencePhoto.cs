@@ -23,6 +23,7 @@ namespace ArchiveNull.InvestigationBoard
         public EvidenceData EvidenceData => evidenceData;
         public string EvidenceId => evidenceData != null ? evidenceData.evidenceId : string.Empty;
         public Collider InteractionCollider => interactionCollider;
+        public Sprite DisplayPhoto=>photoImage!=null ? photoImage.sprite : photoRenderer!=null ? photoRenderer.sprite:null;
 
         private void Awake()
         {
