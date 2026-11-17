@@ -42,7 +42,7 @@ namespace ArchiveNull.Narrative
             if(Physics.SphereCast(focus,.12f,offset.normalized,out var hit,offset.magnitude,~((1<<30)|(1<<31)),QueryTriggerInteraction.Ignore)) offset=offset.normalized*Mathf.Max(.55f,hit.distance-.16f);
             view.transform.position=focus+offset;view.transform.LookAt(focus);
             texture=new RenderTexture(1280,720,24);texture.Create();view.targetTexture=texture;
-            screen=new GameObject("Echo memory view",typeof(Canvas),typeof(CanvasScaler));var canvas=screen.GetComponent<Canvas>();canvas.renderMode=RenderMode.ScreenSpaceOverlay;canvas.sortingOrder=1900;
+            screen=new GameObject("Echo memory view",typeof(Canvas),typeof(CanvasScaler));var canvas=screen.GetComponent<Canvas>();canvas.renderMode=RenderMode.ScreenSpaceOverlay;canvas.sortingOrder=24000;
             var scaler=screen.GetComponent<CanvasScaler>();scaler.uiScaleMode=CanvasScaler.ScaleMode.ScaleWithScreenSize;scaler.referenceResolution=new Vector2(1920,1080);
             var picture=new GameObject("Memory",typeof(RectTransform),typeof(RawImage));picture.transform.SetParent(screen.transform,false);var image=picture.GetComponent<RawImage>();image.texture=texture;image.raycastTarget=false;Stretch(image.rectTransform);
             var label=new GameObject("Recollection subtitle",typeof(RectTransform),typeof(TextMeshProUGUI));label.transform.SetParent(screen.transform,false);var text=label.GetComponent<TMP_Text>();text.text="<size=20>RECUERDO · ESC para omitir</size>\n"+subtitle;text.fontSize=28;text.alignment=TextAlignmentOptions.Bottom;text.color=Color.white;text.outlineWidth=.25f;text.raycastTarget=false;
