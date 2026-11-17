@@ -48,8 +48,6 @@ namespace ArchiveNull.UI
             desktop.anchorMin=Vector2.zero; desktop.anchorMax=Vector2.one; desktop.sizeDelta=Vector2.zero;
             // Quiet, layered wallpaper; the work window stays visually separate from the desktop.
             Panel(desktop,"Wallpaper light",new Color(.04f,.12f,.23f),new Vector2(460,100),new Vector2(760,1080)).localRotation=Quaternion.Euler(0,0,-25);
-            Text(desktop,"ARCHIVE",64,new Vector2(610,340),new Vector2(440,90),new Color(.19f,.31f,.47f));
-            Text(desktop,"RECONSTRUCCIÓN FORENSE  /  253",17,new Vector2(610,278),new Vector2(440,40),muted);
             App("01","Expedientes",new Vector2(-810,355),OpenCases);
             App("02","Memorias",new Vector2(-810,145),OpenMemories);
             App("03","Informe final",new Vector2(-810,-65),OpenReport);
@@ -59,7 +57,7 @@ namespace ArchiveNull.UI
             Button(taskbar,"Explorador",new Vector2(-620,0),new Vector2(200,48),RestoreWindow);
             Button(taskbar,"Volver a la oficina",new Vector2(470,0),new Vector2(260,48),owner.DesktopLeave);
             clock=Text(taskbar,"",18,new Vector2(785,0),new Vector2(270,45),ink);
-            status=Text(desktop,"OPERADOR 253   /   SESIÓN LOCAL",18,new Vector2(380,-437),new Vector2(990,45),muted);
+            status=Text(desktop,"",18,new Vector2(380,-437),new Vector2(990,45),muted);
             desktop.gameObject.AddComponent<RectMask2D>();
             InitializeFeedback();
             desktop.gameObject.SetActive(false);
@@ -137,7 +135,6 @@ namespace ArchiveNull.UI
             Button(header,"—",new Vector2(520,0),new Vector2(64,50),()=>AnimateWindow(false,false));
             Button(header,"×",new Vector2(596,0),new Vector2(64,50),()=>AnimateWindow(false,true));
             content=Panel(window,"Content",Color.clear,new Vector2(0,-30),new Vector2(1220,650));
-            Text(content,"OPERADOR 253   /   ARCHIVO LOCAL",15,new Vector2(0,-300),new Vector2(1100,35),muted);
             windowPosition=window.anchoredPosition;
             AnimateWindow(true,false);
         }
@@ -223,11 +220,12 @@ namespace ArchiveNull.UI
         }
         private void OpenStart()
         {
-            Window("Inicio  /  Operador 253");
+            Window("Inicio");
             Button(content,"Expedientes",new Vector2(0,180),new Vector2(700,70),OpenCases);
             Button(content,"Configuración",new Vector2(0,80),new Vector2(700,70),OpenSettings);
             Button(content,"Nueva investigación…",new Vector2(0,-20),new Vector2(700,70),owner.DesktopReset);
             Button(content,"Volver a la oficina",new Vector2(0,-120),new Vector2(700,70),owner.DesktopLeave);
+            Button(content,"Cerrar sesión y salir",new Vector2(0,-220),new Vector2(700,70),owner.DesktopQuit);
         }
         private RectTransform Panel(Transform parent,string name,Color color,Vector2 position,Vector2 size)
         {

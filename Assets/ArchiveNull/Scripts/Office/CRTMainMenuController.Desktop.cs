@@ -44,5 +44,6 @@ namespace ArchiveNull.UI
         }
         public void DesktopLeave() { if(_cameraFocus!=null) _cameraFocus.ReturnToFarPose(); else desktop.Close(); }
         public void DesktopReset() => ConfirmDeleteAllData();
+        public void DesktopQuit() => QuitGame();
     }
 }
