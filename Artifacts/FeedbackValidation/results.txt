@@ -1,0 +1,43 @@
+PASS starts in real office
+PASS arrival and standing height include office eye lift
+PASS office has no pause overlay
+PASS Archive OS offers confirmed sign out
+PASS pointer reaches ReconstructionTab (first hit: ReconstructionTab)
+PASS raycast click opens reconstruction tab
+PASS pointer reaches PhotosTab (first hit: PhotosTab)
+PASS photo fixture starts with one photograph
+STATE delete active=True, interactable=True, raycast=True, depth=18, cull=False, tab=Photos, groups=GalleryRoot:True:1;EvidenceNotebookCanvas:True:1
+PASS pointer reaches DeletePhoto (first hit: DeletePhoto)
+PASS raycast click on delete photo opens confirmation
+PASS pointer reaches ELIMINARButton (first hit: Label)
+PASS confirmation deletes the selected photograph
+PASS PIN sticker is separate from Julian's note
+PASS evidence 2 contains investigation notes rather than phone PIN
+PASS door footprint needs no revealing tool
+PASS technical object names become readable Spanish names
+STATE house camera (5.75, 3.65, 13.95) rotation (0.03, 273.68, 0.00) mask -1 far 1000 player (5.42, 0.13, 13.97)
+PASS active player has crouch component
+PASS real crouch input reduces active character capsule
+PASS crouching lowers viewpoint smoothly
+PASS ceiling prevents standing into geometry
+PASS removing ceiling restores standing capsule
+PASS UV does not reveal a powder-only fingerprint
+PASS powder permanently reveals a latent fingerprint
+PASS inspection uses a separate foreground camera and layer
+PASS returning object restores its original layer
+PASS phone chat presents a playable voice message
+PASS voice message plays a real imported Spanish clip
+PASS echo opens third-person recollection with shadow figures
+PASS echo plays narrated recollection
+PASS closing echo restores input state
+PASS Salas computer locates a physical monitor in the scene
+PASS Salas documents open and capture player input
+PASS pointer reaches Registrar comprobantes (first hit: Registrar comprobantes)
+PASS Salas computer adds receipts to evidence inventory
+PASS closing Salas computer restores movement
+PASS return journey still ends seated in office
+PASS office retains physical evidence board
+PASS spawned board photographs are larger than the template
+PASS board tutorial advances to choosing a second photograph
+PASS pointing at a board photograph opens its enlarged preview
+PASS enlarged preview displays the photograph sprite
