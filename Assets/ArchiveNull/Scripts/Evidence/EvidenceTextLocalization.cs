@@ -19,7 +19,17 @@ namespace ArchiveNull.Evidence
             if (id.Contains("ornamentsmall") || id.Contains("azucar")) return GameLocalization.Text("Azucarero", "Sugar bowl");
             if (id.Contains("ornamentmedium") || id.Contains("frasco") || id.Contains("pastilla")) return GameLocalization.Text("Frasco de pastillas", "Pill bottle");
             if (id.Contains("cube") || id.Contains("nota")) return GameLocalization.Text("Nota manuscrita", "Handwritten note");
-            return data.evidenceName;
+            return ReadableObjectName(data.evidenceName);
+        }
+
+        public static string ReadableObjectName(string value)
+        {
+            string text=System.Text.RegularExpressions.Regex.Replace(value ?? "Objeto","(?:[-_ ](?:LOD)?[0-9]+|\\(Clone\\))$", "",System.Text.RegularExpressions.RegexOptions.IgnoreCase).Trim();
+            return text.ToLowerInvariant() switch
+            {
+                "lens"=>"Lente", "book"=>"Libro", "bookcase"=>"Estantería", "document"=>"Documento", "cup"=>"Taza", "phone"=>"Teléfono", "key"=>"Llave", "note"=>"Nota", "bottle"=>"Frasco", "computer"=>"Ordenador", "monitor"=>"Monitor",
+                _=>text.Replace('_',' ')
+            };
         }
 
         public static string Description(EvidenceData data)

@@ -136,6 +136,11 @@ namespace ArchiveNull.Evidence
             runtimeEvidenceData.evidenceId = evidenceId;
             runtimeEvidenceData.evidenceName = string.IsNullOrWhiteSpace(evidenceName) ? gameObject.name : evidenceName;
             runtimeEvidenceData.description = description;
+            if(CaseEvidenceCatalog.Find(evidenceId) is CaseEvidenceCatalog.Entry entry)
+            {
+                runtimeEvidenceData.evidenceName=entry.Name;
+                runtimeEvidenceData.description=entry.Description;
+            }
             runtimeEvidenceData.narrativeLine = narrativeLine;
             runtimeEvidenceData.hintText = hintText;
             runtimeEvidenceData.category = category;
