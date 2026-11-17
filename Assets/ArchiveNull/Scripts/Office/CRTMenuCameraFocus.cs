@@ -77,7 +77,8 @@ namespace ArchiveNull.UI
         private float _farMotionBlendTimer;
         private float standingEyeHeight;
         public float StandingEyeHeight => standingEyeHeight;
-        public Vector3 ArrivalPosition => _firstTimeStartPose!=null ? _firstTimeStartPose.position : GetPosePosition(CameraPose.Stand);
+        [SerializeField, Min(0f)] private float standingEyeLift = .18f;
+        public Vector3 ArrivalPosition => _firstTimeStartPose!=null ? _firstTimeStartPose.position + Vector3.up * standingEyeLift : GetPosePosition(CameraPose.Stand);
 
         public event Action ReturnedToFar;
 
@@ -113,9 +114,9 @@ namespace ArchiveNull.UI
                 _initialCameraPosition = _targetCamera.transform.position;
                 _initialCameraRotation = _targetCamera.transform.rotation;
                 bool startAtFarPose = ShouldStartAtFarPose();
-                standingEyeHeight=_firstTimeStartPose!=null ? _firstTimeStartPose.position.y : _initialCameraPosition.y;
+                standingEyeHeight=(_firstTimeStartPose!=null ? _firstTimeStartPose.position.y : _initialCameraPosition.y) + standingEyeLift;
                 Transform firstTimePose = !startAtFarPose ? _firstTimeStartPose : null;
-                Vector3 startPosition = firstTimePose != null ? firstTimePose.position : startAtFarPose ? GetPosePosition(CameraPose.Far) : GetPosePosition(CameraPose.Stand);
+                Vector3 startPosition = firstTimePose != null ? ArrivalPosition : startAtFarPose ? GetPosePosition(CameraPose.Far) : GetPosePosition(CameraPose.Stand);
                 Quaternion startRotation = firstTimePose != null ? firstTimePose.rotation : startAtFarPose ? GetPoseRotation(CameraPose.Far) : GetPoseRotation(CameraPose.Stand);
                 _currentPose = startAtFarPose ? CameraPose.Far : CameraPose.Stand;
                 _targetCamera.transform.SetPositionAndRotation(startPosition, startRotation);
