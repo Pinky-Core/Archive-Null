@@ -1,130 +1,70 @@
 using UnityEngine;
-using UnityEngine.InputSystem;
+using ArchiveNull.Evidence;
 
+// The active locomotion uses CharacterController, not the disabled legacy capsule.
+[DefaultExecutionOrder(50)]
 public class Crouch : MonoBehaviour
 {
-    public KeyCode key = KeyCode.LeftControl;
-
-    [Header("Slow Movement")]
     public FirstPersonMovement movement;
-    public float movementSpeed = 2;
-
-    [Header("Low Head")]
     public Transform headToLower;
-    [HideInInspector] public float? defaultHeadYLocalPosition;
-    public float crouchYHeadPosition = 1;
-
-    public CapsuleCollider colliderToLower;
-    [HideInInspector] public float? defaultColliderHeight;
-
+    public float movementSpeed=2;
     public bool IsCrouched { get; private set; }
-    public event System.Action CrouchStart, CrouchEnd;
-
-    void Reset()
+    public event System.Action CrouchStart,CrouchEnd;
+    private CharacterController controller;
+    private float standingHeight,standingStep,headY,amount;
+    private Vector3 standingCenter;
+    private readonly Collider[] overlaps=new Collider[32];
+    private bool ready;
+    public bool CanStandNow()
     {
-        movement = GetComponentInParent<FirstPersonMovement>();
-        headToLower = movement.GetComponentInChildren<Camera>().transform;
-        colliderToLower = movement.GetComponentInChildren<CapsuleCollider>();
+        if(!ready) return true;
+        Transform rig=controller.transform;
+        float radius=controller.radius*Mathf.Max(Mathf.Abs(rig.lossyScale.x),Mathf.Abs(rig.lossyScale.z))*.92f;
+        Vector3 center=rig.TransformPoint(standingCenter);
+        float half=standingHeight*Mathf.Abs(rig.lossyScale.y)*.5f;
+        int count=Physics.OverlapCapsuleNonAlloc(center+Vector3.up*(half-radius),center-Vector3.up*(half-radius-.04f),radius,overlaps,~(1<<31),QueryTriggerInteraction.Ignore);
+        if(count==overlaps.Length) return false;
+        for(int i=0;i<count;i++) if(!overlaps[i].transform.IsChildOf(rig)) return false;
+        return true;
     }
-
-    void LateUpdate()
+    private void Start()
     {
-        if (IsConfiguredKeyPressed(key))
-        {
-            if (headToLower)
-            {
-                if (!defaultHeadYLocalPosition.HasValue)
-                {
-                    defaultHeadYLocalPosition = headToLower.localPosition.y;
-                }
-
-                headToLower.localPosition = new Vector3(headToLower.localPosition.x, crouchYHeadPosition, headToLower.localPosition.z);
-            }
-
-            if (colliderToLower)
-            {
-                if (!defaultColliderHeight.HasValue)
-                {
-                    defaultColliderHeight = colliderToLower.height;
-                }
-
-                float loweringAmount;
-                if (defaultHeadYLocalPosition.HasValue)
-                {
-                    loweringAmount = defaultHeadYLocalPosition.Value - crouchYHeadPosition;
-                }
-                else
-                {
-                    loweringAmount = defaultColliderHeight.Value * .5f;
-                }
-
-                colliderToLower.height = Mathf.Max(defaultColliderHeight.Value - loweringAmount, 0);
-                colliderToLower.center = Vector3.up * colliderToLower.height * .5f;
-            }
-
-            if (!IsCrouched)
-            {
-                IsCrouched = true;
-                SetSpeedOverrideActive(true);
-                CrouchStart?.Invoke();
-            }
-        }
-        else if (IsCrouched)
-        {
-            if (headToLower)
-            {
-                headToLower.localPosition = new Vector3(headToLower.localPosition.x, defaultHeadYLocalPosition.Value, headToLower.localPosition.z);
-            }
-
-            if (colliderToLower)
-            {
-                colliderToLower.height = defaultColliderHeight.Value;
-                colliderToLower.center = Vector3.up * colliderToLower.height * .5f;
-            }
-
-            IsCrouched = false;
-            SetSpeedOverrideActive(false);
-            CrouchEnd?.Invoke();
-        }
+        movement=GetComponentInParent<FirstPersonMovement>();
+        if(movement==null) { enabled=false;return; }
+        controller=movement.GetComponentInParent<CharacterController>();
+        var camera=movement.GetComponentInChildren<Camera>();
+        if(headToLower==null && camera!=null) headToLower=camera.transform;
+        if(controller==null || headToLower==null) { enabled=false;return; }
+        standingHeight=controller.height;standingCenter=controller.center;standingStep=controller.stepOffset;headY=headToLower.localPosition.y;ready=true;
+        movement.speedOverrides.Add(SpeedOverride);
     }
-
-    void SetSpeedOverrideActive(bool state)
+    private float SpeedOverride()=>IsCrouched ? movement.speed*.45f : movement.IsRunning ? movement.runSpeed : movement.speed;
+    public void SetRequestedCrouch(bool requested)
     {
-        if (!movement)
-        {
-            return;
-        }
-
-        if (state)
-        {
-            if (!movement.speedOverrides.Contains(SpeedOverride))
-            {
-                movement.speedOverrides.Add(SpeedOverride);
-            }
-        }
-        else if (movement.speedOverrides.Contains(SpeedOverride))
-        {
-            movement.speedOverrides.Remove(SpeedOverride);
-        }
+        if(!ready) return;
+        bool next=requested || (IsCrouched && !CanStandNow());
+        if(next==IsCrouched) return;
+        IsCrouched=next;
+        if(next) CrouchStart?.Invoke();else CrouchEnd?.Invoke();
     }
-
-    float SpeedOverride() => movementSpeed;
-
-    private static bool IsConfiguredKeyPressed(KeyCode keyCode)
+    private void Update()
     {
-        if (Keyboard.current == null)
-        {
-            return false;
-        }
-
-        return keyCode switch
-        {
-            KeyCode.LeftControl => Keyboard.current.leftCtrlKey.isPressed,
-            KeyCode.RightControl => Keyboard.current.rightCtrlKey.isPressed,
-            KeyCode.LeftShift => Keyboard.current.leftShiftKey.isPressed,
-            KeyCode.RightShift => Keyboard.current.rightShiftKey.isPressed,
-            KeyCode.C => Keyboard.current.cKey.isPressed,
-            _ => false
-        };
+        if(!ready) return;
+        bool blocked=GlobalPauseMenu.IsPaused || EvidenceNotebookUI.IsAnyNotebookOpen || PhoneEvidenceReader.IsAnyOpen || InspectObject.IsAnyInspecting || RuntimeConfirmationDialog.IsOpen;
+        if(!blocked) SetRequestedCrouch(GlobalInputBindings.IsPressed(GameInputAction.Crouch));
+        amount=Mathf.MoveTowards(amount,IsCrouched ? 1:0,Time.deltaTime*5);
+        float reduction=standingHeight*.42f*amount;
+        controller.height=Mathf.Max(controller.radius*2,standingHeight-reduction);
+        controller.center=standingCenter-Vector3.up*((standingHeight-controller.height)*.5f);
+        controller.stepOffset=Mathf.Min(standingStep,controller.height*.3f);
+        Vector3 local=headToLower.localPosition;local.y=headY-reduction*controller.transform.lossyScale.y/Mathf.Max(.001f,Mathf.Abs(headToLower.parent.lossyScale.y));headToLower.localPosition=local;
+    }
+    private void OnDisable()
+    {
+        if(movement!=null) movement.speedOverrides.Remove(SpeedOverride);
+        if(!ready) return;
+        controller.height=standingHeight;controller.center=standingCenter;controller.stepOffset=standingStep;
+        if(headToLower!=null) {var p=headToLower.localPosition;p.y=headY;headToLower.localPosition=p;}
+        IsCrouched=false;
     }
 }

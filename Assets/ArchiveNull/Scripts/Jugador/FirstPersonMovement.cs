@@ -82,6 +82,7 @@ public class FirstPersonMovement : MonoBehaviour
         }
 
         ConfigureCharacterController();
+        if(GetComponentInChildren<Crouch>(true)==null) gameObject.AddComponent<Crouch>();
         if (capsuleCollider != null)
         {
             capsuleCollider.enabled = false;
@@ -160,7 +161,7 @@ public class FirstPersonMovement : MonoBehaviour
         }
 
         movementTransform.rotation = Quaternion.Euler(0f, lookAngles.x, 0f);
-        IsRunning = canRun && GlobalInputBindings.IsPressed(GameInputAction.Run);
+        IsRunning = canRun && !(GetComponentInChildren<Crouch>()?.IsCrouched ?? false) && GlobalInputBindings.IsPressed(GameInputAction.Run);
 
         float targetMovingSpeed = IsRunning ? runSpeed : speed;
         if (speedOverrides.Count > 0)

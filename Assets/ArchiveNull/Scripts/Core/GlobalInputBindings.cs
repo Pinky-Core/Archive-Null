@@ -15,7 +15,8 @@ public enum GameInputAction
     Notebook,
     NotebookPrevious,
     NotebookNext,
-    Pause
+    Pause,
+    Crouch
 }
 
 public static class GlobalInputBindings
@@ -70,6 +71,7 @@ public static class GlobalInputBindings
             GameInputAction.MoveLeft => spanish ? "MOVER IZQ" : "MOVE LEFT",
             GameInputAction.MoveRight => spanish ? "MOVER DER" : "MOVE RIGHT",
             GameInputAction.Run => spanish ? "CORRER" : "RUN",
+            GameInputAction.Crouch => spanish ? "AGACHARSE" : "CROUCH",
             GameInputAction.Interact => spanish ? "INTERACTUAR" : "INTERACT",
             GameInputAction.Inspect => spanish ? "INSPECCIONAR" : "INSPECT",
             GameInputAction.ReleaseInspect => spanish ? "SOLTAR INSPECCION" : "RELEASE INSPECT",
@@ -91,6 +93,7 @@ public static class GlobalInputBindings
             GameInputAction.MoveLeft => Key.A,
             GameInputAction.MoveRight => Key.D,
             GameInputAction.Run => Key.LeftShift,
+            GameInputAction.Crouch => Key.LeftCtrl,
             GameInputAction.Interact => Key.E,
             GameInputAction.Inspect => Key.E,
             GameInputAction.ReleaseInspect => Key.E,
