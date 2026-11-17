@@ -81,6 +81,26 @@ Validación|Laboratorio de mecánicas en editor|Una escena permite probar coloca
 Validación|Recorrido automático ampliado|El probe permite el recorrido completo o la validación específica del monitor, tutorial, progresión y herramientas de oficina.|Assets/ArchiveNull/Editor/MechanicsEditorProbe.cs|Resultado del último recorrido en la hoja Resumen y en editor-mechanics.txt; el alcance depende del modo ejecutado.
 Validación|Prueba de oficina independiente|El comando OfficeOnly inicia el recorrido del editor en MainMenu.|Tools/Test-EditorMechanics.ps1|Revisión del argumento y entrada de editor; guardados aislados.
 Carga|Precarga de oficina compatible con el jugador|El manifiesto excluye carpetas Editor y objetos DontSaveInBuild, repara listas antiguas y se regenera antes de empaquetar.|Assets/ArchiveNull/Editor/OfficeAssetManifestEditor.cs|Compilación y validación en el editor en office-asset-cache.txt; no se ejecutó un build para verificar el fallo nativo de memoria compartida.
+Oficina|Vista de pie más alta|Eleva 18 cm la llegada y la altura al levantarse sin modificar las poses sentada y de monitor.|Office/CRTMenuCameraFocus.cs|Regresión de altura en feedback de editor.
+Interfaz|Clics en reconstrucción y descarte|Los textos decorativos no bloquean las pestañas ni el botón de eliminar fotografías.|Evidence/EvidenceNotebookUI.cs|Raycasts de UI, apertura de reconstrucción y borrado confirmado en el editor.
+Caso|PIN separado de la nota de Julián|La evidencia dos conserva anotaciones del caso y una pegatina junto al teléfono muestra el código.|Evidence/CaseScenePolish.cs|Comprobación de pegatina y contenido del catálogo en el editor.
+Caso|Huella de salida siempre visible|El rastro de barro junto a la salida se puede observar sin UV ni pincel.|Evidence/CaseScenePolish.cs|Comprobación del estado de revelado en el editor.
+Herramientas|UV y pincel con funciones distintas|La UV ilumina residuos fluorescentes y el polvo revela huellas latentes permanentemente.|Evidence/UvRevealTarget.cs|Pruebas de rechazo de UV en huella latente y revelado con polvo.
+Caso|Ordenador de Salas utilizable|Permite consultar documentos y registrar los comprobantes del contratista.|Evidence/SalasComputer.cs|Apertura del terminal, registro y restauración de controles en el editor.
+Audio|Notas de voz del teléfono|Añade reproducción, detención, progreso y transcripción a dos mensajes.|Evidence/PhoneEvidenceReader.cs|Prueba de reproducción real; voces sintéticas provisionales en español.
+Narrativa|Recuerdos eco en tercera persona|La taza y nota evocan siluetas, partículas y narración, con opción de omitir.|Narrative/EchoMemory.cs|Prueba de cámara, audio y limpieza; presentación artística provisional.
+Evidencias|Nombres legibles sin sufijos técnicos|Presenta Libro y Lente en lugar de Book-1 y Lens, sin cambiar identificadores.|Evidence/EvidenceTextLocalization.cs|Comprobaciones del formateo y conservación del catálogo.
+Movimiento|Agachado con colisión y techo|Ctrl izquierdo baja suavemente la vista y cápsula activa; impide levantarse sin espacio.|Components/Crouch.cs|Entrada real, cápsula, altura y techo comprobados en memorias.
+Pizarrón|Fotos más grandes y vista ampliada|Amplía las fotografías físicas y muestra imagen y nombre en una vista grande al apuntarlas.|InvestigationBoard/WorldEvidenceBoardController.cs|Regresión de tamaño, vista ampliada y sprite; lectura final evaluable por el jugador.
+Pizarrón|Guía de primera conexión|Explica elegir dos fotografías, arrastrar y borrar hilos según el estado actual.|InvestigationBoard/WorldEvidenceBoardController.cs|Regresión del avance al segundo paso de conexión.
+Informe|Ayuda inicial más breve|Reduce el párrafo de instrucciones y conserva objeciones tras presentar el informe.|Accusation/AccusationPanel.cs|Revisión de texto y compilación; no altera requisitos de pruebas.
+Interfaz|Contraste cálido en opciones de pausa|Usa etiquetas amarillas y texto claro cálido independiente del ordenador.|Menu/Pausa/GlobalPauseMenu.cs|Compilación y captura de las opciones de una memoria.
+Escritorio|Cerrar sesión desde Inicio|El ordenador ofrece salida del juego mediante la confirmación existente.|Office/ModernOfficeDesktop.cs|Presencia del botón comprobada; no se cierra realmente el editor en la prueba.
+Interfaz|Menos rótulos decorativos|Retira operador 253, archivo local y el nombre del juego de escritorio, pausa, carga y confirmaciones.|Office/ModernOfficeDesktop.cs|Revisión de textos y capturas del editor.
+Teléfono|Nombres y acentos corregidos|Corrige nombres de contactos, mañana, mamá y otras palabras de los mensajes del caso.|Evidence/PhoneEvidenceReader.cs|Revisión del contenido al cargar chats; voces generadas con UTF-8.
+Inspección|Capa de primer plano para objetos sostenidos|Una cámara Overlay evita que el entorno recorte el objeto y restaura su capa al devolverlo.|Jugador/InspectionForeground.cs|Prueba de cámara, capa y devolución del objeto en el editor.
+Validación|Regresión aislada del feedback|Recorre oficina, casa y Salas con guardados exclusivos por ejecución y capturas reales.|Assets/ArchiveNull/Editor/FeedbackEditorProbe.cs|Resultado en Artifacts/FeedbackValidation/results.txt; no sustituye una partida humana.
+Documentación|Capturas y secuencias del prototipo|Incorpora imágenes del juego al GDD y enlaza dos GIF y un video explicativo sin sonido.|Tools/Update-GddMedia.ps1|XML del documento y presencia de medios verificados; video exportado sin pista de audio.
 `.trim().split('\n').map((line, index) => {
   const [area, title, behavior, source, validation] = line.split('|');
   const file = source.startsWith('Assets/') || source.startsWith('Tools/') ? source : script + source;
@@ -94,6 +114,8 @@ const passed = (log.match(/^PASS /gm) || []).length;
 const failed = (log.match(/^FAIL /gm) || []).length;
 const warmupPath = 'Artifacts/EditorValidation/office-asset-cache.txt';
 const warmupLog = fs.existsSync(path.join(root, warmupPath)) ? fs.readFileSync(path.join(root, warmupPath), 'utf8') : '';
+const feedbackPath = 'Artifacts/FeedbackValidation/results.txt';
+const feedbackLog = fs.existsSync(path.join(root, feedbackPath)) ? fs.readFileSync(path.join(root, feedbackPath), 'utf8') : '';
 const revision = runGit('rev-parse', '--short', 'HEAD');
 const localDate = new Intl.DateTimeFormat('sv-SE', { timeZone: 'America/Argentina/Buenos_Aires' }).format(new Date());
 const commits = runGit('log', '-12', '--format=%h%x09%s%x09%b%x1e').split('\x1e').map(s => s.trim()).filter(Boolean).map(s => s.split('\t'));
@@ -111,6 +133,7 @@ const sheets = [
     ['Validación registrada', `${passed} PASS y ${failed} FAIL en el último informe del editor.`],
     ['Fuente de resultados', logPath],
     ['Comprobación de precarga', warmupLog ? `${(warmupLog.match(/^PASS /gm) || []).length} PASS registrados en ${warmupPath}. No se ejecutó un build para verificar el fallo nativo de memoria compartida.` : 'Sin informe de precarga registrado.'],
+    ['Regresión de feedback', feedbackLog ? `${(feedbackLog.match(/^PASS /gm) || []).length} PASS y ${(feedbackLog.match(/^FAIL /gm) || []).length} FAIL en ${feedbackPath}.` : 'Sin informe de feedback registrado.'],
     ['Referencia de Git por cambio', 'La columna indica el último commit del archivo consultado, no necesariamente el commit de origen de cada comportamiento.'],
     ['Commits recientes', `La hoja Commits muestra los ${commits.length} commits locales más recientes anteriores a esta exportación.`],
     ['Límites', 'Las pruebas automatizadas cubren sus comprobaciones concretas. No certifican percepción visual, sensación corporal ni 60 FPS en todos los equipos.'],
