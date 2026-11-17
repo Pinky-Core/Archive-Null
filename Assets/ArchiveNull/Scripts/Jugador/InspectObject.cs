@@ -113,6 +113,7 @@ public class InspectObject : MonoBehaviour
 
     void Update()
     {
+        if(EchoMemory.BlocksInput) return;
         if(ArchiveNull.Evidence.EvidenceMarkerPlacement.HandledInputThisFrame) return;
         if (ArchiveNull.Evidence.TestingToolsController.IsPlacing || ArchiveNull.Evidence.TestingToolsController.BrushActive) return;
         if (GlobalPauseMenu.IsPaused || RuntimeConfirmationDialog.IsOpen || EvidenceNotebookUI.IsAnyNotebookOpen ||
@@ -252,6 +253,14 @@ public class InspectObject : MonoBehaviour
         inspectDistance = Mathf.Clamp(inspectAnchorDistance, GetMinimumSafeInspectDistance(), Mathf.Max(maxInspectDistance, inspectAnchorDistance));
         currentObject.transform.SetParent(inspectPosition, true);
         ShowInspectionNarration(currentObject);
+        var echoTarget=currentObject.GetComponent<EvidenceTarget>();
+        string echoId=echoTarget!=null ? echoTarget.EvidenceData.evidenceId : "";
+        if(echoId is "f1_house_cup" or "f1_house_cube")
+        {
+            var echo=GetComponent<EchoMemory>() ?? gameObject.AddComponent<EchoMemory>();
+            bool cup=echoId=="f1_house_cup";
+            echo.Play(originalPosition,cup ? "echo_cup":"echo_phone",cup ? "El té estaba caliente. Escuché pasos en el lateral. Después, me costaba mantener los ojos abiertos.":"Mañana voy a hablar con Funes. Voy a dejar el teléfono acá. Alguien acaba de llegar.");
+        }
         isInspecting = true;
         IsAnyInspecting = true;
         movementPreviouslyEnabled = movementScript != null && movementScript.enabled;

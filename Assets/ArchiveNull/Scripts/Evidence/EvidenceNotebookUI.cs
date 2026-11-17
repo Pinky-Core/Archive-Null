@@ -131,6 +131,7 @@ namespace ArchiveNull.Evidence
 
         private void Update()
         {
+            if(ArchiveNull.Narrative.EchoMemory.BlocksInput) return;
             if (GlobalPauseMenu.IsPaused || RuntimeConfirmationDialog.IsOpen || ArchiveNull.Accusation.AccusationPanel.IsAnyOpen)
             {
                 return;

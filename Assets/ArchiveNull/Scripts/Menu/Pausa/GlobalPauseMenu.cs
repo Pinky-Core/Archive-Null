@@ -135,6 +135,7 @@ public sealed class GlobalPauseMenu : MonoBehaviour
 
     private void Update()
     {
+        if(ArchiveNull.Narrative.EchoMemory.BlocksInput) return;
         if (RuntimeConfirmationDialog.IsOpen)
         {
             return;
