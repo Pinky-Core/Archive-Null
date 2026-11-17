@@ -7,12 +7,16 @@ La implementación utiliza el GDD V4 y el documento **La llave por dentro**. El 
 Abrir `Assets/ArchiveNull/Scenes/MainMenu.unity` en Unity o ejecutar `Builds/Windows/Archive NULL.exe`. Para compartir la build, copiar toda la carpeta `Builds/Windows`, conservando el ejecutable, sus DLL y `Archive NULL_Data` juntos.
 
 1. Consultar el expediente y seleccionar Casa Herrera en el terminal. Montar la memoria y usar los cascos VR.
-2. Explorar con WASD y mouse. E inspecciona; mantener clic permite girar el objeto y E lo devuelve con una transición.
+2. Explorar con WASD y mouse. Mantener Ctrl izquierdo permite agacharse; si hay un obstáculo arriba, el personaje permanece agachado hasta tener espacio para levantarse. E inspecciona; mantener clic permite girar el objeto y E lo devuelve con una transición. El objeto sostenido se renderiza por delante del entorno y recupera su capa al devolverlo.
 3. Mantener G para elegir herramienta. Con la cámara equipada, F la levanta y clic toma una fotografía; la rueda ajusta el zoom. Las fotografías libres no cuentan como evidencias.
-4. Leer la nota del estante: contiene información sobre los documentos y el PIN del teléfono. Recoger el teléfono y consultar la conversación con Sofía y el registro de llamadas. Esa combinación habilita la oficina del contratista.
+4. Leer la nota del estante: contiene información sobre los documentos. El PIN está en una pegatina junto al teléfono. Recogerlo, equiparlo con la rueda y consultar la conversación con Sofía y el registro de llamadas. Esa combinación habilita la oficina del contratista. Las notas de voz incluyen reproducción, detención y transcripción.
 5. ESC abre la pausa en las memorias. «Ir a la oficina» conserva los hallazgos. TAB abre evidencias, fotos, libreta y reconstrucción tanto en las memorias como en la oficina.
 6. Contrastar las evidencias de ambas memorias en la pizarra. El informe final devuelve una objeción concreta para cada argumento que todavía no esté respaldado.
 7. Completar la secuencia de salida en TAB → RECONSTRUIR. Presentar la acusación en el terminal cuando las pruebas y conexiones la sostengan.
+
+La UV permite observar residuos fluorescentes y el pincel con polvo revela huellas latentes de forma permanente. La huella de barro junto a la salida se ve sin herramientas. En F1-Office se puede usar el ordenador de Salas para consultar documentos y registrar sus comprobantes. Inspeccionar la taza o la nota de Julián evoca un recuerdo con siluetas y narración en tercera persona; Escape lo omite. Las voces actuales son sintéticas y provisionales.
+
+En el pizarrón, apuntar a su superficie muestra cómo elegir una foto y luego otra para conectarlas, arrastrarlas o quitar un hilo con clic derecho. El menú Inicio del ordenador principal incluye «Cerrar sesión y salir», con confirmación.
 
 En la oficina, los controles contextuales indican cómo enfocar el monitor y levantarse. Clic derecho permite salir de la vista del monitor y pasar a la posición de pie. Las teclas de interacción y movimiento se pueden reasignar en las opciones existentes.
 
@@ -47,4 +51,4 @@ La captura usa la API de [solicitudes de render de URP](https://docs.unity3d.com
 
 Verificado el 9 de septiembre de 2026 con Unity 6000.6.0f1: build Windows completada con cero errores y ocho advertencias; prueba de integración `PASS ALL`, sin errores de ejecución capturados. Se revisaron las capturas del chat y del cuaderno después de corregir el ancho del contenido y la separación de los títulos. Persisten advertencias de assets sobre colliders con escala negativa y efectos de posprocesado excluidos; no se ha realizado una partida manual completa.
 
-Esta entrega cierra el caso existente con una reconstrucción por orden de acciones y una acusación respaldada. Los prototipos de trípode con holograma y pincel/revelador se prueban ahora en `MechanicsLab` (ver `Docs/MechanicsLab.md`). Siguen pendientes el acabado artístico, soltar y recuperar todas las herramientas, flashbacks escenificados y nuevos casos. La reconstrucción actual no simula físicamente el hilo ni reemplaza esas ampliaciones.
+Esta entrega conserva la reconstrucción por orden de acciones y la acusación respaldada. El trípode con holograma y el pincel/revelador se prueban en `MechanicsLab` (ver `Docs/MechanicsLab.md`). Hay dos recuerdos escenificados de presentación provisional; siguen pendientes su acabado artístico y nuevos casos. La reconstrucción de la salida no simula físicamente el hilo. La regresión del feedback y sus límites se documentan en `Docs/Feedback_Testing.md`.
