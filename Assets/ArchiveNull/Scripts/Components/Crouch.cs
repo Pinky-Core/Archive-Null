@@ -15,16 +15,26 @@ public class Crouch : MonoBehaviour
     private Vector3 standingCenter;
     private readonly Collider[] overlaps=new Collider[32];
     private bool ready;
+    public Collider StandingObstruction {get;private set;}
     public bool CanStandNow()
     {
+        StandingObstruction=null;
         if(!ready) return true;
         Transform rig=controller.transform;
-        float radius=controller.radius*Mathf.Max(Mathf.Abs(rig.lossyScale.x),Mathf.Abs(rig.lossyScale.z))*.92f;
+        float horizontalScale=Mathf.Max(Mathf.Abs(rig.lossyScale.x),Mathf.Abs(rig.lossyScale.z));
+        float verticalScale=Mathf.Abs(rig.lossyScale.y);
+        float radius=Mathf.Max(.01f,(controller.radius-controller.skinWidth*.5f)*horizontalScale);
         Vector3 center=rig.TransformPoint(standingCenter);
-        float half=standingHeight*Mathf.Abs(rig.lossyScale.y)*.5f;
-        int count=Physics.OverlapCapsuleNonAlloc(center+Vector3.up*(half-radius),center-Vector3.up*(half-radius-.04f),radius,overlaps,~(1<<31),QueryTriggerInteraction.Ignore);
+        float half=standingHeight*verticalScale*.5f;
+        Vector3 top=center+rig.up*(half-radius);
+        Vector3 currentTop=rig.TransformPoint(controller.center)+rig.up*(controller.height*verticalScale*.5f);
+        // Only test the space the head needs to grow into. Testing the complete
+        // standing capsule also catches the floor/steps already supporting us.
+        Vector3 bottom=currentTop+rig.up*radius;
+        if(Vector3.Dot(bottom-top,rig.up)>0) bottom=top;
+        int count=Physics.OverlapCapsuleNonAlloc(top,bottom,radius,overlaps,~((1<<30)|(1<<31)),QueryTriggerInteraction.Ignore);
         if(count==overlaps.Length) return false;
-        for(int i=0;i<count;i++) if(!overlaps[i].transform.IsChildOf(rig)) return false;
+        for(int i=0;i<count;i++) if(!overlaps[i].transform.IsChildOf(rig)) {StandingObstruction=overlaps[i];return false;}
         return true;
     }
     private void Start()
@@ -39,6 +49,7 @@ public class Crouch : MonoBehaviour
         movement.speedOverrides.Add(SpeedOverride);
     }
     private float SpeedOverride()=>IsCrouched ? movement.speed*.45f : movement.IsRunning ? movement.runSpeed : movement.speed;
+    private void OnEnable() {if(ready && !movement.speedOverrides.Contains(SpeedOverride)) movement.speedOverrides.Add(SpeedOverride);}
     public void SetRequestedCrouch(bool requested)
     {
         if(!ready) return;
@@ -66,5 +77,6 @@ public class Crouch : MonoBehaviour
         controller.height=standingHeight;controller.center=standingCenter;controller.stepOffset=standingStep;
         if(headToLower!=null) {var p=headToLower.localPosition;p.y=headY;headToLower.localPosition=p;}
         IsCrouched=false;
+        amount=0;
     }
 }
