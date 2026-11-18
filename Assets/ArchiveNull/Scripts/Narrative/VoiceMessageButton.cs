@@ -32,13 +32,13 @@ namespace ArchiveNull.Narrative
                 var bar=Rect("Wave "+i,wave,Vector2.zero,new Vector2(3,4+amplitudes[i]*23));bar.anchorMin=bar.anchorMax=new Vector2(i/(float)(voice.bars.Length-1),.5f);bar.pivot=new Vector2(.5f,.5f);bar.anchoredPosition=Vector2.zero;
                 voice.bars[i]=bar.gameObject.AddComponent<Image>();voice.bars[i].color=Unplayed;voice.bars[i].raycastTarget=false;
             }
-            var marker=Rect("Playback position",wave,Vector2.zero,new Vector2(4,30));marker.pivot=new Vector2(.5f,.5f);var markerImage=marker.gameObject.AddComponent<Image>();markerImage.color=Played;markerImage.raycastTarget=false;
+            var marker=Rect("Playback position",wave,Vector2.zero,new Vector2(3,0));marker.pivot=new Vector2(.5f,.5f);var markerImage=marker.gameObject.AddComponent<Image>();markerImage.color=Played;markerImage.raycastTarget=false;
             var slider=wave.gameObject.AddComponent<Slider>();slider.minValue=0;slider.maxValue=1;slider.handleRect=marker;slider.targetGraphic=markerImage;slider.onValueChanged.AddListener(value=>CaseVoicePlayer.Seek(resource,value));voice.ProgressSlider=slider;
             voice.duration=Label(bubble,"Duration",Format(voice.clipLength),12,new Vector2(17,-62),new Vector2(76,20));
             var transcriptButton=Rect("Transcript toggle",bubble,new Vector2(102,-62),new Vector2(125,23));transcriptButton.gameObject.AddComponent<Image>().color=Color.clear;
             var toggle=transcriptButton.gameObject.AddComponent<Button>();toggle.targetGraphic=transcriptButton.GetComponent<Image>();
             var toggleLabel=Label(transcriptButton,"Caption","Transcripción",12,Vector2.zero,new Vector2(125,22));toggleLabel.color=new Color(.72f,.86f,.83f);toggle.onClick.AddListener(voice.ToggleTranscript);
-            var stamp=Label(bubble,"Timestamp",time+(outgoing ? "  ✓✓":""),11,new Vector2(-12,-65),new Vector2(65,20));stamp.rectTransform.anchorMin=stamp.rectTransform.anchorMax=new Vector2(1,1);stamp.rectTransform.pivot=new Vector2(1,1);stamp.alignment=TextAlignmentOptions.Right;
+            var stamp=Label(bubble,"Timestamp",time,11,new Vector2(-12,-65),new Vector2(65,20));stamp.rectTransform.anchorMin=stamp.rectTransform.anchorMax=new Vector2(1,1);stamp.rectTransform.pivot=new Vector2(1,1);stamp.alignment=TextAlignmentOptions.Right;
             voice.transcription=Label(bubble,"Transcript",transcript,14,new Vector2(14,-95),new Vector2(-28,135));voice.transcription.rectTransform.anchorMax=new Vector2(1,1);voice.transcription.textWrappingMode=TextWrappingModes.Normal;voice.transcription.gameObject.SetActive(false);
             row.preferredHeight=94;return voice;
         }
