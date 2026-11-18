@@ -70,13 +70,14 @@ namespace ArchiveNull.Narrative
         private static string Format(float seconds) {int value=Mathf.Max(0,Mathf.FloorToInt(seconds));return value/60+":"+(value%60).ToString("D2");}
         private static RectTransform Rect(string name,Transform parent,Vector2 position,Vector2 size)
         {
-            var obj=new GameObject(name,typeof(RectTransform));obj.transform.SetParent(parent,false);var rect=(RectTransform)obj.transform;rect.anchorMin=rect.anchorMax=rect.pivot=new Vector2(0,1);rect.anchoredPosition=position;rect.sizeDelta=size;return rect;
+            var obj=new GameObject(name,typeof(RectTransform),typeof(CanvasRenderer));obj.transform.SetParent(parent,false);var rect=(RectTransform)obj.transform;rect.anchorMin=rect.anchorMax=rect.pivot=new Vector2(0,1);rect.anchoredPosition=position;rect.sizeDelta=size;return rect;
         }
         private static TMP_Text Label(Transform parent,string name,string value,float size,Vector2 position,Vector2 dimensions)
         {
             var rect=Rect(name,parent,position,dimensions);var text=rect.gameObject.AddComponent<TextMeshProUGUI>();text.text=value;text.fontSize=size;text.color=new Color(.82f,.9f,.86f);text.raycastTarget=false;return text;
         }
     }
+    [RequireComponent(typeof(CanvasRenderer))]
     public sealed class VoicePlaybackIcon : MaskableGraphic
     {
         private bool pause;
