@@ -32,12 +32,14 @@ public static class FeedbackEditorProbe
             if(state==PlayModeStateChange.EnteredPlayMode && SessionState.GetBool(Flag,false))
             {
                 results.Clear();started=EditorApplication.timeSinceStartup;Application.runInBackground=true;Application.logMessageReceived+=Log;
+                EditorApplication.ExecuteMenuItem("Window/General/Game");
                 var host=new GameObject("Feedback regression");Object.DontDestroyOnLoad(host);host.AddComponent<FeedbackTestRunner>().StartCoroutine(RunSafe());
             }
             if(state==PlayModeStateChange.EnteredEditMode && SessionState.GetBool("archive.feedback.restore",false))
             {
                 EditorSceneManager.playModeStartScene=AssetDatabase.LoadAssetAtPath<SceneAsset>(SessionState.GetString("archive.feedback.oldStart",""));
                 SessionState.SetBool("archive.feedback.restore",false);
+                if(Environment.GetCommandLineArgs().Contains("-archive-feedback-test")) EditorApplication.Exit(SessionState.GetBool("archive.feedback.failed",false) ? 1:0);
             }
         };
     }
@@ -78,6 +80,11 @@ public static class FeedbackEditorProbe
         var focus=Object.FindAnyObjectByType<CRTMenuCameraFocus>();
         Check(focus.IsInStandPose && Mathf.Abs(Camera.main.transform.position.y-focus.StandingEyeHeight)<.025f,"arrival and standing height include office eye lift");
         Check(Object.FindAnyObjectByType<GlobalPauseMenu>()==null,"office has no pause overlay");
+        var officeAudio=Object.FindAnyObjectByType<OfficeFreeLookController>();
+        var originalSteps=AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/ArchiveNull/Prefabs/Jugador/Steps.wav");
+        Check(officeAudio.FootstepClip==originalSteps,"office uses the original House footstep recording");
+        officeAudio.PlayCarpetStep();
+        Check(Mathf.Abs(((AudioSource)Field(officeAudio,"carpetSource")).pitch-.72f)<.001f,"office walking uses the House playback pitch");
         PlayerPrefs.SetInt("archive.office.casefile.discovered",1);PlayerPrefs.SetInt(OfficeSpeakerTutorial.CompletedPref,1);
         focus.FocusComputer();yield return new WaitForSecondsRealtime(2);
         var desktop=Object.FindAnyObjectByType<ModernOfficeDesktop>();Call(desktop,"OpenStart");
@@ -116,6 +123,10 @@ public static class FeedbackEditorProbe
         Capture("house");yield return new WaitForEndOfFrame();
         var movement=Object.FindAnyObjectByType<FirstPersonMovement>();var crouch=movement.GetComponentInChildren<Crouch>();var controller=movement.GetComponentInParent<CharacterController>();
         Check(crouch!=null && crouch.enabled,"active player has crouch component");
+        Check(Object.FindAnyObjectByType<FirstPersonAudio>().stepAudio.clip==Resources.Load<FootstepAudioProfile>("OfficeFootsteps").clip,"House and office resolve the same shared recording");
+        InputSystem.QueueStateEvent(Keyboard.current,new KeyboardState(GlobalInputBindings.GetKey(GameInputAction.Crouch)));yield return new WaitForSecondsRealtime(.5f);
+        InputSystem.QueueStateEvent(Keyboard.current,new KeyboardState());yield return new WaitForSecondsRealtime(.6f);
+        Check(!crouch.IsCrouched,"House player stands after releasing crouch on the actual floor; blocker="+(crouch.StandingObstruction!=null ? crouch.StandingObstruction.name:"none"));
         Vector3 playerPosition=movement.transform.position;movement.enabled=false;controller.enabled=false;movement.transform.position=new Vector3(100,80,100);controller.enabled=true;
         float standing=controller.height;float head=Camera.main.transform.position.y;
         InputSystem.QueueStateEvent(Keyboard.current,new KeyboardState(GlobalInputBindings.GetKey(GameInputAction.Crouch)));yield return new WaitForSecondsRealtime(.5f);
@@ -140,7 +151,15 @@ public static class FeedbackEditorProbe
         var screenType=typeof(PhoneEvidenceReader).GetNestedType("PhoneScreen",BindingFlags.NonPublic);Call(phone,"OpenScreen",Enum.Parse(screenType,"Chat"));yield return new WaitForSecondsRealtime(.3f);
         var voiceButton=Object.FindObjectsByType<VoiceMessageButton>(FindObjectsInactive.Include).FirstOrDefault(b=>b.gameObject.activeInHierarchy);
         Check(voiceButton!=null,"phone chat presents a playable voice message");
+        Check(!voiceButton.TranscriptVisible && voiceButton.ProgressSlider!=null && voiceButton.GetComponentInChildren<VoicePlaybackIcon>()!=null,"voice bubble has a drawn play icon, waveform seek bar and hidden transcript");
         voiceButton.GetComponent<Button>().onClick.Invoke();yield return new WaitForSecondsRealtime(.3f);
+        float atPause=CaseVoicePlayer.Position(voiceButton.Resource);voiceButton.GetComponent<Button>().onClick.Invoke();yield return new WaitForSecondsRealtime(.2f);
+        Check(CaseVoicePlayer.IsPaused(voiceButton.Resource) && Mathf.Abs(CaseVoicePlayer.Position(voiceButton.Resource)-atPause)<.08f,"voice message pauses without losing its position");
+        voiceButton.GetComponent<Button>().onClick.Invoke();yield return new WaitForSecondsRealtime(.2f);
+        Check(CaseVoicePlayer.IsPlaying(voiceButton.Resource) && CaseVoicePlayer.Position(voiceButton.Resource)>=atPause,"play resumes the paused voice message");
+        voiceButton.ProgressSlider.value=.5f;yield return new WaitForSecondsRealtime(.15f);
+        Check(CaseVoicePlayer.Fraction(voiceButton.Resource)>=.48f,"waveform seeks to the chosen position");
+        voiceButton.ToggleTranscript();Check(voiceButton.TranscriptVisible,"voice transcript opens on request");voiceButton.ToggleTranscript();Check(!voiceButton.TranscriptVisible,"voice transcript collapses again");
         Check(CaseVoicePlayer.IsPlaying(voiceButton.Resource),"voice message plays a real imported Spanish clip");Capture("phone-voice");yield return new WaitForEndOfFrame();Object.FindAnyObjectByType<EvidenceCameraController>().SelectTool(EvidenceCameraController.ToolSlot.Hand);CaseVoicePlayer.Stop();
         var echo=new GameObject("Echo regression").AddComponent<EchoMemory>();echo.Play(Camera.main.transform.position+Camera.main.transform.forward,"echo_cup","El té estaba caliente. Escuché pasos en el lateral.");
         yield return new WaitForSecondsRealtime(.4f);Check(EchoMemory.IsPlaying && GameObject.Find("Echo third-person camera")!=null,"echo opens third-person recollection with shadow figures");
@@ -149,6 +168,10 @@ public static class FeedbackEditorProbe
         Capture("echo");yield return new WaitForEndOfFrame();Object.Destroy(echo.gameObject);yield return null;Check(!EchoMemory.IsPlaying,"closing echo restores input state");
         MemoryLoadingScreen.Load("F1-Office");while(MemoryLoadingScreen.IsBusy || SceneManager.GetActiveScene().name!="F1-Office") yield return null;
         yield return new WaitForSecondsRealtime(6);
+        var officeMemoryCrouch=Object.FindAnyObjectByType<FirstPersonMovement>().GetComponentInChildren<Crouch>();
+        InputSystem.QueueStateEvent(Keyboard.current,new KeyboardState(GlobalInputBindings.GetKey(GameInputAction.Crouch)));yield return new WaitForSecondsRealtime(.5f);
+        InputSystem.QueueStateEvent(Keyboard.current,new KeyboardState());yield return new WaitForSecondsRealtime(.6f);
+        Check(!officeMemoryCrouch.IsCrouched,"Salas player stands after releasing crouch on the authored floor");
         var terminal=Object.FindAnyObjectByType<SalasComputer>();Check(terminal!=null && terminal.HasMonitor,"Salas computer locates a physical monitor in the scene");terminal.Open();yield return new WaitForSecondsRealtime(.3f);
         Check(SalasComputer.IsOpen && !Object.FindAnyObjectByType<FirstPersonMovement>().enabled,"Salas documents open and capture player input");Capture("salas-computer");
         var register=terminal.GetComponentsInChildren<Button>().First(b=>b.name=="Registrar comprobantes");Click(register);
@@ -164,13 +187,17 @@ public static class FeedbackEditorProbe
         Check(photo.transform.localScale.magnitude>template.transform.localScale.magnitude*1.4f,"spawned board photographs are larger than the template");
         Object.FindAnyObjectByType<CRTMenuCameraFocus>().enabled=false;Object.FindAnyObjectByType<OfficeFreeLookController>().enabled=false;
         var surface=(Transform)Field(board,"boardSurface");var collider=(Collider)Field(board,"boardCollider");
-        Vector3 normal=(Vector3)Call(board,"GetBoardNormal");Camera.main.transform.position=collider.bounds.center+normal*1.8f;Camera.main.transform.LookAt(collider.bounds.center);Mouse.current.WarpCursorPosition(new Vector2(Screen.width*.5f,Screen.height*.5f));
+        board.enabled=false;
+        var boardCamera=Camera.main;
+        board.GetType().GetField("interactionCamera",BindingFlags.Instance|BindingFlags.NonPublic).SetValue(board,boardCamera);
+        Vector3 normal=(Vector3)Call(board,"GetBoardNormal");boardCamera.transform.position=collider.bounds.center+normal*1.8f;boardCamera.transform.LookAt(collider.bounds.center);Cursor.lockState=CursorLockMode.None;
         var connections=(ArchiveNull.InvestigationBoard.WorldBoardConnectionManager)Field(board,"connectionManager");connections.HandlePhotoClicked(photo);
-        yield return null;Call(board,"UpdateBoardHelp");
+        Physics.SyncTransforms();
+        InputSystem.QueueStateEvent(Mouse.current,new MouseState{position=(Vector2)boardCamera.WorldToScreenPoint(collider.bounds.center)});InputSystem.Update();Call(board,"UpdateBoardHelp");
         Check(((TMPro.TMP_Text)Field(board,"boardHelp")).text.Contains("2."),"board tutorial advances to choosing a second photograph");
         Vector3 photoPoint=photo.InteractionCollider.bounds.center;
-        Camera.main.transform.position=photoPoint+normal*1.8f;Camera.main.transform.LookAt(photoPoint);Cursor.lockState=CursorLockMode.None;
-        Mouse.current.WarpCursorPosition(new Vector2(Screen.width*.5f,Screen.height*.5f));yield return null;Call(board,"UpdateBoardHelp");
+        boardCamera.transform.position=photoPoint+normal*1.8f;boardCamera.transform.LookAt(photoPoint);Physics.SyncTransforms();
+        InputSystem.QueueStateEvent(Mouse.current,new MouseState{position=(Vector2)boardCamera.WorldToScreenPoint(photoPoint)});InputSystem.Update();Call(board,"UpdateBoardHelp");
         Check(((RectTransform)Field(board,"photoPreview")).gameObject.activeSelf,"pointing at a board photograph opens its enlarged preview");
         Check(((Image)Field(board,"previewImage")).sprite!=null,"enlarged preview displays the photograph sprite");
         Capture("board");yield return new WaitForEndOfFrame();
@@ -196,6 +223,7 @@ public static class FeedbackEditorProbe
     {
         if(Keyboard.current!=null) InputSystem.QueueStateEvent(Keyboard.current,new KeyboardState());
         Directory.CreateDirectory("Artifacts/FeedbackValidation");File.WriteAllLines("Artifacts/FeedbackValidation/results.txt",results);
+        SessionState.SetBool("archive.feedback.failed",results.Any(line=>line.StartsWith("FAIL")));
         Application.logMessageReceived-=Log;SessionState.SetBool(Flag,false);SessionState.SetBool("archive.mechanics.test",false);SessionState.SetBool("archive.feedback.restore",true);EditorApplication.ExitPlaymode();
     }
 }

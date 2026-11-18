@@ -1,6 +1,6 @@
 # Feedback de la revisión jugable
 
-El recorrido automatizado en Play Mode completó **41 comprobaciones aprobadas y cero fallos** en Unity 6000.6.0f1. Recorre MainMenu → F1-House → F1-Office → MainMenu, con guardados aislados por ejecución. El informe completo está en [results.txt](../Artifacts/FeedbackValidation/results.txt). No se generó un ejecutable.
+El recorrido automatizado en Play Mode completó **52 comprobaciones aprobadas y cero fallos** en Unity 6000.6.0f1. Recorre MainMenu → F1-House → F1-Office → MainMenu, con guardados aislados por ejecución. El informe completo está en [results.txt](../Artifacts/FeedbackValidation/results.txt). No se generó un ejecutable.
 
 ## Qué se comprobó
 
@@ -11,9 +11,9 @@ El recorrido automatizado en Play Mode completó **41 comprobaciones aprobadas y
 | Libreta | Raycasts reales alcanzan Reconstruir, Fotos, Eliminar y la confirmación; se elimina la toma seleccionada. |
 | Evidencia 2 | La nota conserva información del caso; el PIN se encuentra en una pegatina separada junto al teléfono. |
 | Huellas | El rastro de salida no requiere revelado; la huella latente responde al polvo y rechaza UV. |
-| Agachado | Ctrl reduce la cápsula activa y la vista; un techo impide incorporarse hasta liberar espacio. |
+| Agachado | Ctrl reduce la cápsula activa y la vista; al soltarlo, el personaje se levanta en los pisos reales de Casa y Salas. Un techo sigue impidiendo incorporarse hasta liberar espacio. |
 | Inspección | La pegatina se muestra en una capa de primer plano y recupera su capa al devolverla. |
-| Teléfono | La rueda equipa el teléfono y el chat presenta una nota de voz reproducible con transcripción. |
+| Teléfono | La rueda equipa el teléfono; las notas tienen icono de reproducción, onda, duración y transcripción opcional. Se comprueban reproducción, pausa, reanudación y avance. |
 | Recuerdo eco | Abre una cámara de tercera persona, reproduce voz y libera el estado al cerrar. |
 | Salas | Se localiza el monitor, se abren documentos, se registran comprobantes y se recupera el movimiento al salir. |
 | Pizarrón | Las tarjetas aumentan de tamaño, la guía avanza a elegir la segunda foto y la vista ampliada presenta su imagen. |
@@ -28,7 +28,7 @@ El recorrido automatizado en Play Mode completó **41 comprobaciones aprobadas y
 - Las opciones de pausa mezclaban azul con el esquema amarillo. Se unificaron fondos cálidos y acentos dorados.
 - Las tarjetas físicas seguían siendo difíciles de leer a distancia. La vista ampliada al apuntarlas conserva la interacción del tablero sin interceptar clics.
 
-La captura de inspección mostró además texto demasiado pequeño en la pegatina. Se aumentó el cuerpo del PIN después de la ejecución de 41 comprobaciones; ese ajuste tipográfico posterior se verificó por compilación. El informe conserva el alcance real de la prueba.
+El recorrido posterior incluye el texto ampliado del PIN. También reproduce los pasos de MainMenu desde el mismo archivo y con el mismo tono de caminata que F1-House. El bloqueo al levantarse se debía a contactos laterales con el piso importado: la comprobación distingue esos contactos de un techo mediante un barrido ascendente y la dirección de penetración.
 
 ## Material para revisión
 
@@ -40,7 +40,7 @@ La captura de inspección mostró además texto demasiado pequeño en la pegatin
 
 Para repetir con Unity abierto: `./Tools/Test-Feedback.ps1`. El script solicita el recorrido en la instancia existente y conserva/restaura PlayerPrefs. El comando `Archive NULL > Test feedback changes in editor` también inicia la prueba directamente; para preservar preferencias, utilizar el script. Se usan únicamente escenas y Play Mode, sin iniciar un build.
 
-Las voces del teléfono y los ecos son sintéticas, provisionales y en español. Su procedencia está en `Assets/ArchiveNull/Resources/CaseAudio/Provenance.txt`. Las siluetas y partículas son una puesta en escena funcional que admite acabado artístico posterior. La automatización no sustituye feedback humano sobre dificultad, interpretación de las pistas, timbre, mareo o rendimiento en otros equipos.
+Las voces del teléfono y los ecos son sintéticas y provisionales: Julián usa una voz argentina y Salas una uruguaya, con ritmos diferentes. La voz del detective conserva sus grabaciones existentes. Su procedencia está en `Assets/ArchiveNull/Resources/CaseAudio/Provenance.txt`. Las siluetas y partículas son una puesta en escena funcional que admite acabado artístico posterior. La automatización no sustituye feedback humano sobre dificultad, interpretación de las pistas, timbre, mareo o rendimiento en otros equipos.
 
 ## Cambios reservados por el autor
 

@@ -1,6 +1,8 @@
 PASS starts in real office
 PASS arrival and standing height include office eye lift
 PASS office has no pause overlay
+PASS office uses the original House footstep recording
+PASS office walking uses the House playback pitch
 PASS Archive OS offers confirmed sign out
 PASS pointer reaches ReconstructionTab (first hit: ReconstructionTab)
 PASS raycast click opens reconstruction tab
@@ -15,8 +17,10 @@ PASS PIN sticker is separate from Julian's note
 PASS evidence 2 contains investigation notes rather than phone PIN
 PASS door footprint needs no revealing tool
 PASS technical object names become readable Spanish names
-STATE house camera (5.75, 3.65, 13.95) rotation (0.03, 273.68, 0.00) mask -1 far 1000 player (5.42, 0.13, 13.97)
+STATE house camera (5.75, 3.65, 13.95) rotation (0.16, 273.68, 0.00) mask -1 far 1000 player (5.42, 0.13, 13.97)
 PASS active player has crouch component
+PASS House and office resolve the same shared recording
+PASS House player stands after releasing crouch on the actual floor; blocker=none
 PASS real crouch input reduces active character capsule
 PASS crouching lowers viewpoint smoothly
 PASS ceiling prevents standing into geometry
@@ -26,10 +30,17 @@ PASS powder permanently reveals a latent fingerprint
 PASS inspection uses a separate foreground camera and layer
 PASS returning object restores its original layer
 PASS phone chat presents a playable voice message
+PASS voice bubble has a drawn play icon, waveform seek bar and hidden transcript
+PASS voice message pauses without losing its position
+PASS play resumes the paused voice message
+PASS waveform seeks to the chosen position
+PASS voice transcript opens on request
+PASS voice transcript collapses again
 PASS voice message plays a real imported Spanish clip
 PASS echo opens third-person recollection with shadow figures
 PASS echo plays narrated recollection
 PASS closing echo restores input state
+PASS Salas player stands after releasing crouch on the authored floor
 PASS Salas computer locates a physical monitor in the scene
 PASS Salas documents open and capture player input
 PASS pointer reaches Registrar comprobantes (first hit: Registrar comprobantes)
