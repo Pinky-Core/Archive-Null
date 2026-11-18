@@ -15,6 +15,7 @@ public class Crouch : MonoBehaviour
     private Vector3 standingCenter;
     private readonly Collider[] overlaps=new Collider[32];
     private bool ready;
+    private SphereCollider headProbe;
     public Collider StandingObstruction {get;private set;}
     public bool CanStandNow()
     {
@@ -28,13 +29,21 @@ public class Crouch : MonoBehaviour
         float half=standingHeight*verticalScale*.5f;
         Vector3 top=center+rig.up*(half-radius);
         Vector3 currentTop=rig.TransformPoint(controller.center)+rig.up*(controller.height*verticalScale*.5f);
-        // Only test the space the head needs to grow into. Testing the complete
-        // standing capsule also catches the floor/steps already supporting us.
-        Vector3 bottom=currentTop+rig.up*radius;
-        if(Vector3.Dot(bottom-top,rig.up)>0) bottom=top;
+        Vector3 bottom=currentTop-rig.up*radius;
         int count=Physics.OverlapCapsuleNonAlloc(top,bottom,radius,overlaps,~((1<<30)|(1<<31)),QueryTriggerInteraction.Ignore);
         if(count==overlaps.Length) return false;
-        for(int i=0;i<count;i++) if(!overlaps[i].transform.IsChildOf(rig)) {StandingObstruction=overlaps[i];return false;}
+        Vector3 scale=headProbe.transform.lossyScale;
+        headProbe.radius=radius/Mathf.Max(Mathf.Abs(scale.x),Mathf.Abs(scale.y),Mathf.Abs(scale.z));
+        int samples=Mathf.Max(1,Mathf.CeilToInt(Vector3.Distance(bottom,top)/(radius*.5f)));
+        for(int i=0;i<count;i++)
+        {
+            Collider other=overlaps[i];if(other.transform.IsChildOf(rig)) continue;
+            // Walls and the floor can already be touching the body. Only a
+            // contact pushing the growing head down is a ceiling obstruction.
+            for(int step=0;step<=samples;step++)
+                if(Physics.ComputePenetration(headProbe,Vector3.Lerp(bottom,top,step/(float)samples),rig.rotation,other,other.transform.position,other.transform.rotation,out var direction,out _)
+                    && Vector3.Dot(direction,rig.up)<-.05f) {StandingObstruction=other;return false;}
+        }
         return true;
     }
     private void Start()
@@ -45,6 +54,7 @@ public class Crouch : MonoBehaviour
         var camera=movement.GetComponentInChildren<Camera>();
         if(headToLower==null && camera!=null) headToLower=camera.transform;
         if(controller==null || headToLower==null) { enabled=false;return; }
+        var probe=new GameObject("Standing head clearance");probe.transform.SetParent(controller.transform,false);headProbe=probe.AddComponent<SphereCollider>();headProbe.enabled=false;
         standingHeight=controller.height;standingCenter=controller.center;standingStep=controller.stepOffset;headY=headToLower.localPosition.y;ready=true;
         movement.speedOverrides.Add(SpeedOverride);
     }
