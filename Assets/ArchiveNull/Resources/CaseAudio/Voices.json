@@ -1,0 +1,18 @@
+{
+  "phone_julian": {
+    "voice": "es-AR-TomasNeural", "rate": "-4%", "pitch": "-2Hz",
+    "text": "Sofi, escuchame. Mañana llevo las copias a Funes. Los números se repiten, pero los montos no coinciden. Dejame confirmarlo antes de denunciar."
+  },
+  "phone_salas": {
+    "voice": "es-UY-MateoNeural", "rate": "+8%", "pitch": "-8Hz",
+    "text": "Julián, ya estoy llegando. Voy por el lateral, como quedamos. Dejá la taza en la mesa, ¿sí?"
+  },
+  "echo_cup": {
+    "voice": "es-AR-TomasNeural", "rate": "-12%", "pitch": "-4Hz",
+    "text": "El té... estaba caliente. Escuché pasos en el lateral. Había dejado los papeles sobre la mesa. Después... me costaba mantener los ojos abiertos."
+  },
+  "echo_phone": {
+    "voice": "es-AR-TomasNeural", "rate": "-6%", "pitch": "-2Hz",
+    "text": "Mañana voy a hablar con Funes. No quiero denunciar sin confirmar todo. Voy a dejar el teléfono acá... Alguien acaba de llegar."
+  }
+}

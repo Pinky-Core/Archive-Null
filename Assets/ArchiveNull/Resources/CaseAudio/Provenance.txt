@@ -1,10 +1,12 @@
-Voces provisionales sintetizadas en español para pruebas del caso.
-Motor de síntesis: Piper 2023.11.14-2, https://github.com/rhasspy/piper (MIT).
-Modelo: es_ES-davefx-medium, revisión v1.0.0 de rhasspy/piper-voices.
-https://huggingface.co/rhasspy/piper-voices/tree/v1.0.0/es/es_ES/davefx/medium
-Según MODEL_CARD, el conjunto de datos de la voz tiene licencia CC0:
-https://github.com/NabuCasa/voice-datasets
+Voces provisionales sintetizadas en español rioplatense para pruebas del caso.
+Julián y sus recuerdos: es-AR-TomasNeural; Salas: es-UY-MateoNeural.
+Son dos voces base diferentes, con ritmos y pausas propios, no una voz cambiada de tono.
+Síntesis mediante edge-tts y el servicio de lectura de Microsoft Edge:
+https://github.com/rany2/edge-tts
+Identificadores oficiales de voz:
+https://learn.microsoft.com/en-us/azure/ai-services/speech-service/language-support?tabs=text-to-speech
 Las frases son texto original del caso; no son grabaciones de actores.
-No se incluye el motor ni el modelo ONNX en el juego.
-Regeneración: Tools/Generate-CaseAudio.ps1 con rutas locales de Piper y modelo.
+El juego reproduce WAV incluidos: no necesita red ni el generador durante la partida.
+Regeneración: Tools/Generate-CaseAudio.ps1 con rutas locales de uv y FFmpeg.
+Texto, voz, velocidad y tono quedan registrados en Voices.json.
 Son material provisional que puede reemplazarse por interpretación grabada.

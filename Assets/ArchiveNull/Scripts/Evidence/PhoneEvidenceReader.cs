@@ -224,9 +224,9 @@ namespace ArchiveNull.Evidence
                 var messages=new List<string>(chat.conversation ?? System.Array.Empty<string>());
                 for(int i=0;i<messages.Count;i++) messages[i]=CorrectSpanish(messages[i]);
                 if(chat.contact.Contains("Sofía") && !messages.Exists(line=>line.Contains("phone_julian")))
-                    messages.Insert(Mathf.Min(3,messages.Count),"OUT_AUDIO|18:17|Mañana llevo las copias a Funes. Hay números repetidos y montos distintos. Prefiero confirmarlo antes de denunciar.|phone_julian");
+                    messages.Insert(Mathf.Min(3,messages.Count),"OUT_AUDIO|18:17|Sofi, escuchame. Mañana llevo las copias a Funes. Los números se repiten, pero los montos no coinciden. Dejame confirmarlo antes de denunciar.|phone_julian");
                 if(chat.contact.Contains("Salas") && !messages.Exists(line=>line.Contains("phone_salas")))
-                    messages.Add("IN_AUDIO|19:09|Estoy llegando. Entro por el lateral, como habíamos quedado. Dejame la taza en la mesa.|phone_salas");
+                    messages.Add("IN_AUDIO|19:09|Julián, ya estoy llegando. Voy por el lateral, como quedamos. Dejá la taza en la mesa, ¿sí?|phone_salas");
                 chat.conversation=messages.ToArray();
             }
         }
