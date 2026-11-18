@@ -1136,6 +1136,12 @@ namespace ArchiveNull.Evidence
             bubble.rectTransform.offsetMin = Vector2.zero;
             bubble.rectTransform.offsetMax = Vector2.zero;
 
+            if(parts.Length>3 && parts[0].Contains("AUDIO"))
+            {
+                VoiceMessageButton.Create(bubble.rectTransform,rowLayout,parts[3],message,time,outgoing);
+                return;
+            }
+
             TMP_Text text = CreateText("Message", bubble.rectTransform, 16f, FontStyles.Normal, TextAlignmentOptions.TopLeft);
             text.text = message;
             text.enableAutoSizing = false;
@@ -1158,13 +1164,6 @@ namespace ArchiveNull.Evidence
             float availableTextWidth = Mathf.Max(60f, (contentWidth - 20f) * 0.79f - 24f);
             Vector2 preferred = text.GetPreferredValues(message, availableTextWidth, 0f);
             rowLayout.preferredHeight = Mathf.Max(64f, preferred.y + 43f);
-            if(parts.Length>3 && parts[0].Contains("AUDIO"))
-            {
-                string resource=parts[3];
-                var button=bubble.gameObject.AddComponent<Button>();button.targetGraphic=bubble;button.onClick.AddListener(()=>CaseVoicePlayer.Play(resource));
-                var voice=bubble.gameObject.AddComponent<VoiceMessageButton>();voice.Label=text;voice.Resource=resource;voice.Transcript=message;
-                text.raycastTarget=false;rowLayout.preferredHeight+=44;
-            }
         }
 
         private void ShowScreenNarration(PhoneScreen screen)
