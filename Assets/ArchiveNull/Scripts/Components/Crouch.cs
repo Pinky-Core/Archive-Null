@@ -14,6 +14,7 @@ public class Crouch : MonoBehaviour
     private float standingHeight,standingStep,headY,amount;
     private Vector3 standingCenter;
     private readonly Collider[] overlaps=new Collider[32];
+    private readonly RaycastHit[] headHits=new RaycastHit[32];
     private bool ready;
     private SphereCollider headProbe;
     public Collider StandingObstruction {get;private set;}
@@ -24,12 +25,18 @@ public class Crouch : MonoBehaviour
         Transform rig=controller.transform;
         float horizontalScale=Mathf.Max(Mathf.Abs(rig.lossyScale.x),Mathf.Abs(rig.lossyScale.z));
         float verticalScale=Mathf.Abs(rig.lossyScale.y);
+        float physicalRadius=controller.radius*horizontalScale;
         float radius=Mathf.Max(.01f,(controller.radius-controller.skinWidth*.5f)*horizontalScale);
         Vector3 center=rig.TransformPoint(standingCenter);
         float half=standingHeight*verticalScale*.5f;
-        Vector3 top=center+rig.up*(half-radius);
+        Vector3 top=center+rig.up*(half-physicalRadius);
         Vector3 currentTop=rig.TransformPoint(controller.center)+rig.up*(controller.height*verticalScale*.5f);
-        Vector3 bottom=currentTop-rig.up*radius;
+        Vector3 bottom=currentTop-rig.up*physicalRadius;
+        float rise=Mathf.Max(0,Vector3.Dot(top-bottom,rig.up));
+        int hitCount=Physics.SphereCastNonAlloc(bottom,radius,rig.up,headHits,rise,~((1<<30)|(1<<31)),QueryTriggerInteraction.Ignore);
+        for(int i=0;i<hitCount;i++)
+            if(headHits[i].distance>.0005f && !headHits[i].collider.transform.IsChildOf(rig) && Vector3.Dot(headHits[i].normal,rig.up)<-.05f)
+            {StandingObstruction=headHits[i].collider;return false;}
         int count=Physics.OverlapCapsuleNonAlloc(top,bottom,radius,overlaps,~((1<<30)|(1<<31)),QueryTriggerInteraction.Ignore);
         if(count==overlaps.Length) return false;
         Vector3 scale=headProbe.transform.lossyScale;
