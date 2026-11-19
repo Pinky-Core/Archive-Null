@@ -38,6 +38,7 @@ public sealed class GameSaveSystem : MonoBehaviour
         public List<EvidenceMarkerPlacement.Record> markers = new();
         public List<PlayerPoseRecord> memoryPositions = new();
         public bool caseCompleted;
+        public GameTelemetry.Progress telemetry;
         public List<StringPair> notes = new();
         public string operatorNotes;
         public List<Vector2Record> cardPositions = new();
@@ -202,6 +203,7 @@ public sealed class GameSaveSystem : MonoBehaviour
     {
         SaveData data = new()
         {
+            telemetry = GameTelemetry.CaptureProgress(),
             activeScene = SceneManager.GetActiveScene().name,
             operatorNotes = EvidenceInventory.Instance.GetOperatorNotes()
         };
@@ -280,6 +282,7 @@ public sealed class GameSaveSystem : MonoBehaviour
             return;
         }
 
+        GameTelemetry.RestoreProgress(data.telemetry);
         BoardSessionState.Clear();
         RestoreBoardData(data);
         memoryPositions.Clear();
@@ -372,6 +375,7 @@ public sealed class GameSaveSystem : MonoBehaviour
         PlayerPrefs.DeleteKey(ArchiveNull.Accusation.AccusationPanel.CaseCompletedPref);
         PlayerPrefs.DeleteKey(ArchiveNull.UI.OfficeDissolveTransition.PendingOfficeRebuildPref);
         MarkOfficeContext();
+        GameTelemetry.NewRun();
         SaveNow();
     }
 
