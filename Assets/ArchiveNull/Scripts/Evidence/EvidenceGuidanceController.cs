@@ -227,6 +227,7 @@ namespace ArchiveNull.Evidence
         private void ShowNextHint()
         {
             hintedTarget = FindNearestPendingEvidence();
+            GameTelemetry.Record("hint_requested",hintedTarget!=null && hintedTarget.EvidenceData!=null ? hintedTarget.EvidenceData.evidenceId:"");
             if (hintedTarget == null)
             {
                 ShowHint(GameLocalization.Text("No parece quedar evidencia directa por registrar. Revise la galería y conecte lo que ya encontró.", "There appears to be no direct evidence left to record. Review the gallery and connect what you found."));

@@ -18,6 +18,7 @@ namespace ArchiveNull.Narrative
         public void Play(Vector3 origin,string audio,string subtitle)
         {
             if(IsPlaying) return;
+            GameTelemetry.Record("echo_started",audio);
             StartCoroutine(Replay(origin,audio,subtitle));
         }
         private IEnumerator Replay(Vector3 origin,string audio,string subtitle)
@@ -58,6 +59,7 @@ namespace ArchiveNull.Narrative
                 victim.localRotation=Quaternion.Euler(0,Mathf.Sin(elapsed*.7f)*12,Mathf.SmoothStep(0,18,Mathf.Clamp01((elapsed-duration*.65f)/3)));
                 yield return null;
             }
+            GameTelemetry.Record("echo_ended",audio,context:elapsed<duration ? "skipped":"finished");
             Cleanup();
         }
         private Transform Figure(Transform parent,Vector3 local)

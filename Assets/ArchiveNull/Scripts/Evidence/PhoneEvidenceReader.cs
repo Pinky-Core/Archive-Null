@@ -506,6 +506,7 @@ namespace ArchiveNull.Evidence
         private IEnumerator ValidatePinRoutine()
         {
             yield return new WaitForSecondsRealtime(0.12f);
+            GameTelemetry.Record("phone_pin_attempt",value:enteredPin==NormalizePin(pin) ? 1:0);
             if (enteredPin == NormalizePin(pin))
             {
                 Unlock();
@@ -534,6 +535,7 @@ namespace ArchiveNull.Evidence
 
         private void OpenScreen(PhoneScreen screen)
         {
+            GameTelemetry.Record("phone_screen",screen.ToString());
             if (screen != PhoneScreen.Home && screen != PhoneScreen.Lock && screen != PhoneScreen.Pin && screen != PhoneScreen.Recents)
             {
                 previousAppScreen = screen;
@@ -1020,6 +1022,7 @@ namespace ArchiveNull.Evidence
 
         private void OpenChat(int index)
         {
+            GameTelemetry.Record("phone_chat",index.ToString());
             if (index == 0)
             RegisterDigitalEvidence(messagesEvidence, "phone_messages", "Mensajes del teléfono de Julián",
                 "Los mensajes conservan el tono habitual de Julián y permiten compararlo con el supuesto mensaje final enviado a Sofía.",

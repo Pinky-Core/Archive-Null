@@ -257,6 +257,10 @@ namespace ArchiveNull.Accusation
             }
 
             int score = correct * 20;
+            var failedRows = new List<string>();
+            for(int i=0;i<selections.Length;i++)
+                if(selections[i]!=1 || !CaseEvidenceCatalog.HasArgument(i,out _)) failedRows.Add(i.ToString());
+            GameTelemetry.Report(score,string.Join(",",failedRows));
             if (score == 100)
             {
                 completed = true;

@@ -95,6 +95,7 @@ namespace ArchiveNull.Timeline
                 {
                     slots[i].Assign(card.Data.eventId);
                     BoardSessionState.TimelineSlots[card.Data.eventId] = slots[i].SlotIndex;
+                    GameTelemetry.Record("timeline_placed",card.Data.eventId,value:slots[i].SlotIndex);
                     return;
                 }
             }
@@ -118,6 +119,7 @@ namespace ArchiveNull.Timeline
                 if (!BoardSessionState.TimelineSlots.TryGetValue(data.eventId, out int slotIndex) || slotIndex != data.correctOrderIndex)
                 {
                     ShowMessage("Evento fuera de lugar: " + data.title);
+                    GameTelemetry.Record("timeline_attempt",data.eventId,value:0);
                     return;
                 }
             }
@@ -127,6 +129,7 @@ namespace ArchiveNull.Timeline
                 BoardSessionState.UnlockedConclusions.Add(finalConclusion.conclusionId);
             }
 
+            GameTelemetry.Record("timeline_attempt",value:1);
             ShowMessage("Linea temporal validada.");
         }
 

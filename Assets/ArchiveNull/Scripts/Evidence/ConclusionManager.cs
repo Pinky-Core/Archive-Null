@@ -86,6 +86,7 @@ namespace ArchiveNull.Evidence
                 {
                     unlocked.Add(conclusion.conclusionId);
                     BoardSessionState.UnlockedConclusions.Add(conclusion.conclusionId);
+                    GameTelemetry.Record("conclusion_unlocked",conclusion.conclusionId);
                     OnConclusionUnlocked?.Invoke(conclusion);
                     if (messageUI != null)
                     {

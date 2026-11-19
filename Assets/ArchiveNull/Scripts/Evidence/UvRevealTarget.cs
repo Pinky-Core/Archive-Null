@@ -134,7 +134,10 @@ namespace ArchiveNull.Evidence
         private void AccumulateExposure(float strength)
         {
             lastRevealTime = Time.time;
+            bool wasRevealed=IsFullyRevealed;
             exposure = Mathf.Clamp01(exposure + Mathf.Clamp01(strength) * Time.deltaTime / Mathf.Max(0.05f, revealSeconds));
+            if(!wasRevealed && IsFullyRevealed)
+                GameTelemetry.Record("trace_revealed",GetComponentInParent<EvidenceTarget>()?.EvidenceData?.evidenceId ?? gameObject.name,context:revealMethod.ToString());
         }
 
         private void ApplyVisibility(bool immediate)

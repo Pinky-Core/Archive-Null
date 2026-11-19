@@ -611,6 +611,7 @@ namespace ArchiveNull.Evidence
             }
 
             equippedTool = hoveredTool;
+            GameTelemetry.Record("tool_equipped",equippedTool.ToString());
             IsAnyCameraEquipped = equippedTool == ToolSlot.Camera;
             if (equippedTool != ToolSlot.Camera)
             {

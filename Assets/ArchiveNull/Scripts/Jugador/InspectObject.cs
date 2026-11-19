@@ -255,6 +255,7 @@ public class InspectObject : MonoBehaviour
         ShowInspectionNarration(currentObject);
         var echoTarget=currentObject.GetComponent<EvidenceTarget>();
         string echoId=echoTarget!=null ? echoTarget.EvidenceData.evidenceId : "";
+        GameTelemetry.Record("inspection_started",string.IsNullOrEmpty(echoId) ? currentObject.name:echoId);
         if(echoId is "f1_house_cup" or "f1_house_cube")
         {
             var echo=GetComponent<EchoMemory>() ?? gameObject.AddComponent<EchoMemory>();
@@ -425,6 +426,7 @@ public class InspectObject : MonoBehaviour
 
     void RestoreObject()
     {
+        if(isInspecting) GameTelemetry.Record("inspection_ended");
         if (currentObject == null)
         {
             isInspecting = false;

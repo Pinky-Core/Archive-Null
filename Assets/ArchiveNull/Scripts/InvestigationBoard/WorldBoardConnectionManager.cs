@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System;
+using ArchiveNull.Evidence;
 using UnityEngine;
 
 namespace ArchiveNull.InvestigationBoard
@@ -68,6 +69,7 @@ namespace ArchiveNull.InvestigationBoard
             }
 
             CreateLine(key, a, b);
+            GameTelemetry.Record("connection_created",a.EvidenceId,b.EvidenceId,value:CaseEvidenceCatalog.IsSupportedPair(a.EvidenceId,b.EvidenceId) ? 1:0);
             EvidenceConnectionNarration.Show(a.EvidenceId, b.EvidenceId);
             OnConnectionsChanged?.Invoke();
             return true;
@@ -201,6 +203,7 @@ namespace ArchiveNull.InvestigationBoard
                 return;
             }
 
+            GameTelemetry.Record("connection_removed",key);
             if (linesByKey.TryGetValue(key, out LineRenderer line))
             {
                 if (line != null)

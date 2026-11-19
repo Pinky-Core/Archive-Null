@@ -61,6 +61,7 @@ namespace ArchiveNull.Evidence
 
         private void ValidateSequence()
         {
+            GameTelemetry.Record("reconstruction_attempt",context:string.Join(",",sequence));
             foreach (string id in new[] { "f1_ofice_llave", "f1_house_huella-zapato", "f1_office_Huellas" })
                 if (!EvidenceInventory.Instance.HasEvidence(id)) { status.text = "Falta documentar: " + CaseEvidenceCatalog.Label(id); return; }
             if (sequence.Count != Steps.Length) { status.text = "La reconstrucción necesita los cinco pasos."; return; }
@@ -71,6 +72,7 @@ namespace ArchiveNull.Evidence
                     return;
                 }
             BoardSessionState.UnlockedConclusions.Add(ConclusionId);
+            GameTelemetry.Record("reconstruction_solved",ConclusionId);
             GameSaveSystem.SaveNow();
             Refresh();
             status.text = "RECONSTRUCCIÓN VALIDADA\nSalida por la ventana → hilo bajo la puerta → giro de la llave → retirada del hilo. El encierro era una puesta en escena. Esta secuencia queda incorporada al informe.";

@@ -25,6 +25,7 @@ namespace ArchiveNull.Evidence
             photo.sourceSceneName = scene;
             photo.photoSprite = image;
             photos.Add(photo);
+            GameTelemetry.Record("photo_taken",photo.evidenceId,context:scene);
             Changed?.Invoke();
             return true;
         }
@@ -34,6 +35,7 @@ namespace ArchiveNull.Evidence
             EvidenceData photo = photos.Find(p => p.evidenceId == id);
             if (photo == null) return;
             photos.Remove(photo);
+            GameTelemetry.Record("photo_deleted",id);
             Changed?.Invoke();
             GameSaveSystem.SaveNow();
             GameSaveSystem.DeletePhotoFile(id);
