@@ -29,6 +29,8 @@ try {
     [void]$content.Append('<w:p><w:pPr><w:pageBreakBefore/><w:pStyle w:val="Heading1"/></w:pPr><w:r><w:t>Capturas y secuencias del prototipo jugable</w:t></w:r></w:p>')
     [void]$content.Append('<w:p><w:r><w:t>Material capturado en Play Mode sobre el juego implementado. Las voces son sintéticas y provisionales. Los GIF y el video se entregan como archivos externos para conservar la animación; dentro de este documento se incluyen capturas reales.</w:t></w:r></w:p>')
     [void]$content.Append('<w:p><w:r><w:t>Controles actuales: WASD y mouse para explorar; Ctrl izquierdo para agacharse; E para interactuar; G para elegir equipo; TAB para consultar evidencias y reconstrucción. La UV revela residuos fluorescentes y el pincel revela huellas latentes. El PIN se consulta en una pegatina junto al teléfono, separado de la nota de Julián.</w:t></w:r></w:p>')
+    [void]$content.Append('<w:p><w:r><w:t>El video explicativo tiene doce capítulos y dura 2:40, en 1920 × 1080 a 30 fps, sin sonido. Explica objetivo, herramientas, teléfono, recuerdos eco, conexiones, reconstrucción e informe; combina capturas animadas y secuencias del prototipo.</w:t></w:r></w:p>')
+    [void]$content.Append('<w:p><w:r><w:t>La telemetría local permite analizar pistas más y menos recogidas, tiempo hasta resolver, etapas alcanzadas, visitas, ayudas e intentos. Los datos de pruebas automáticas se separan de las partidas normales y no representan estadísticas de jugadores. Consultar Docs/Telemetry.md para generar el informe HTML y los CSV.</w:t></w:r></w:p>')
     $captures=[ordered]@{
         'desktop'='Ordenador de la oficina: escritorio físico y cierre de sesión.'
         'house'='Casa Herrera: exploración de la primera memoria.'
@@ -38,6 +40,7 @@ try {
         'salas-computer'='Oficina de Salas: documentos y registro de comprobantes.'
         'pause-options'='Opciones de pausa de una memoria.'
         'board'='Pizarrón: fotografías ampliadas y guía para conectar pruebas.'
+        'case-report'='Ficha final: hipótesis y envío del informe de investigación.'
     }
     $index=0
     foreach($name in $captures.Keys) {
