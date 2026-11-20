@@ -21,7 +21,7 @@ public sealed class GameTelemetry : MonoBehaviour
         public string utc, sessionId, runId, type, scene, id, relatedId, label, context, version;
         public bool test, partial;
         public double sessionActive, sessionElapsed, runActive, runElapsed;
-        public float x, y, z;
+        public float x, y, z, fps, maxFrameMs, managedMemoryMb;
     }
     private static GameTelemetry instance;
     private static Progress restored;
@@ -30,6 +30,9 @@ public sealed class GameTelemetry : MonoBehaviour
     private StreamWriter journal;
     private double sessionActive, sessionElapsed;
     private float sampleAt, lastInput;
+    private double lastTick, sampleStart;
+    private int sampleFrames;
+    private float worstFrame;
     private int sequence;
     private bool ready, failed, focused = true, suspended, ended;
     public static string DirectoryPath { get; private set; }
@@ -55,6 +58,8 @@ public sealed class GameTelemetry : MonoBehaviour
         progress=restored ?? NewProgress();
         if(restored==null) progress.partial=EvidenceInventory.Instance.GetAllEvidence().Count>0 || PlayerPrefs.GetInt(ArchiveNull.Accusation.AccusationPanel.CaseCompletedPref,0)==1 || initial!="MainMenu";
         scene=initial;focused=Application.isFocused;lastInput=Time.realtimeSinceStartup;
+        lastTick=sampleStart=Time.realtimeSinceStartupAsDouble;
+        progress.completed |= PlayerPrefs.GetInt(ArchiveNull.Accusation.AccusationPanel.CaseCompletedPref,0)==1;
         ready=true;
         Record("session_started",context:Application.isEditor ? "editor":"player");
         Record("run_resumed",context:progress.completed ? "already_completed":(restored!=null ? "saved_progress":"new_tracking"));
@@ -95,6 +100,8 @@ public sealed class GameTelemetry : MonoBehaviour
             runActive=self.progress.activeSeconds,runElapsed=self.progress.elapsedSeconds};
         if(type=="heartbeat" && Camera.main!=null)
         { Vector3 p=Camera.main.transform.position;row.x=Mathf.Round(p.x*2)/2;row.y=Mathf.Round(p.y*2)/2;row.z=Mathf.Round(p.z*2)/2; }
+        if(type=="heartbeat")
+        { row.fps=(float)(self.sampleFrames/Math.Max(.001,Time.realtimeSinceStartupAsDouble-self.sampleStart));row.maxFrameMs=self.worstFrame;row.managedMemoryMb=GC.GetTotalMemory(false)/(1024f*1024f); }
         try
         {
             if(self.journal==null)
@@ -114,12 +121,13 @@ public sealed class GameTelemetry : MonoBehaviour
         if(input) lastInput=Time.realtimeSinceStartup;
         bool loading=MemoryLoadingScreen.IsBusy;
         string next=!focused || suspended ? "unfocused":loading ? "loading":GlobalPauseMenu.IsPaused ? "paused":Time.realtimeSinceStartup-lastInput>120 ? "idle":"active";
-        // Count only the preceding frame's context; cap stalls rather than fabricating play time.
-        double dt=Math.Min(Time.unscaledDeltaTime,1f);
+        double dt=Math.Max(0,Time.realtimeSinceStartupAsDouble-lastTick);lastTick=Time.realtimeSinceStartupAsDouble;
         sessionElapsed+=dt;progress.elapsedSeconds+=dt;
-        if(context=="active") {sessionActive+=dt;progress.activeSeconds+=dt;}
+        // Long main-thread stalls count as elapsed time, not as active investigation.
+        if(context=="active" && next=="active") {double active=Math.Min(dt,1);sessionActive+=active;progress.activeSeconds+=active;}
+        sampleFrames++;worstFrame=Mathf.Max(worstFrame,(float)dt*1000);
         if(next!=context) {context=next;Record("activity",context:next);}
-        if(Time.realtimeSinceStartup>=sampleAt) {sampleAt=Time.realtimeSinceStartup+10;Record("heartbeat",context:context);}
+        if(Time.realtimeSinceStartup>=sampleAt) {sampleAt=Time.realtimeSinceStartup+10;Record("heartbeat",context:context);sampleFrames=0;sampleStart=Time.realtimeSinceStartupAsDouble;worstFrame=0;}
     }
     private void OnApplicationFocus(bool value) {focused=value;if(ready) Record("focus",value:value ? 1:0);}
     private void OnApplicationPause(bool value) {suspended=value;}
