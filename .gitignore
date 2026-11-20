@@ -74,6 +74,8 @@ crashlytics-build.properties
 # Local playtest reports; source journals live outside the repository.
 /Artifacts/TelemetryReport/
 /Artifacts/TelemetryReportTests/
+__pycache__/
+*.pyc
 
 # Packed Addressables
 /[Aa]ssets/[Aa]ddressable[Aa]ssets[Dd]ata/*/*.bin*

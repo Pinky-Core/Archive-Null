@@ -169,9 +169,24 @@ def analyze(events):
                'p90_resolucion_segundos': percentile(completed_times, .9), 'min_resolucion_segundos': min(completed_times) if completed_times else None,
                'max_resolucion_segundos': max(completed_times) if completed_times else None,
                'tiempo_por_estado_segundos': {k: round(v, 2) for k, v in activity.items()}}
+    stages = [('Entró en Casa Herrera', 'scene_enter', 'F1-House'), ('Leyó los mensajes', 'evidence_collected', 'phone_messages'),
+              ('Consultó las llamadas', 'evidence_collected', 'phone_call_log'), ('Entró en la oficina de Salas', 'scene_enter', 'F1-Office'),
+              ('Creó conexiones', 'connection_created', None), ('Intentó reconstruir', 'reconstruction_attempt', None),
+              ('Validó la reconstrucción', 'reconstruction_solved', None), ('Presentó el informe', 'report_submitted', None),
+              ('Resolvió el caso', 'case_completed', None)]
+    funnel = []
+    for title, kind, subject in stages:
+        times = []
+        for rid in full:
+            first = next((e for e in runs[rid] if e['type'] == kind and (subject is None or e.get('id') == subject)), None)
+            if first:
+                times.append(number(first, 'runActive'))
+        funnel.append({'etapa': title, 'casos_que_llegaron': len(times), 'casos_desde_cero': len(full),
+                       'porcentaje': round(len(times) * 100 / len(full), 1) if full else None,
+                       'mediana_segundos_hasta_etapa': median(times)})
     return summary, {'pistas': evidence_rows, 'casos': run_rows, 'sesiones': session_rows, 'visitas': scene_rows,
                      'recorridos': routes, 'intervalos_pistas': gaps, 'intentos': attempts, 'acciones': actions,
-                     'posiciones': positions, 'rendimiento': performance,
+                     'posiciones': positions, 'rendimiento': performance, 'etapas': funnel,
                      'herramientas': [{'herramienta': k, 'segundos_activos_equipada': round(v, 2)} for k, v in tools.items()]}
 
 
@@ -205,7 +220,7 @@ def export(source, output, include_tests=False):
              ('Casos con progreso previo', summary['casos_con_progreso_previo']), ('Resueltos desde cero', summary['resueltos_desde_cero']),
              ('Mediana hasta resolver (min)', round(summary['mediana_resolucion_segundos'] / 60, 1) if summary['mediana_resolucion_segundos'] is not None else 'Sin casos resueltos')]
     bars = ''.join('<div class="bar"><span>' + html.escape(row['pista']) + '</span><i style="width:' + str(row['recogida_por_visita_pct'] or 0) + '%"></i><b>' + (str(row['recogida_por_visita_pct']) + '%' if row['recogida_por_visita_pct'] is not None else 'Sin visitas') + f" · {row['casos_que_recogieron']}/{row['casos_que_visitaron_escena']}</b></div>" for row in tables['pistas'])
-    sections = [('Pistas: recogida y dificultad de búsqueda', 'pistas'), ('Tiempo y resultado por caso', 'casos'),
+    sections = [('Avance por etapas del caso', 'etapas'), ('Pistas: recogida y dificultad de búsqueda', 'pistas'), ('Tiempo y resultado por caso', 'casos'),
                 ('Tiempo por visita a cada escena', 'visitas'), ('Intentos, PIN y errores del informe', 'intentos'),
                 ('Herramientas: tiempo equipado observado', 'herramientas'), ('Acciones: fotos, descartes, conexiones, audios y ayudas', 'acciones'),
                 ('Intervalos entre pistas', 'intervalos_pistas'), ('Orden de escenas y revisitas', 'recorridos'), ('Sesiones y cierres', 'sesiones'),
