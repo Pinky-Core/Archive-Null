@@ -1,0 +1,5 @@
+PASS video explicativo: 12 capítulos y 160 segundos.
+PASS salida: 1920 x 1080, 30 fps, 4800 frames, un solo stream de video y ninguna pista de audio.
+PASS fuentes del pizarrón y ficha final: coinciden con las capturas de la regresión aprobada.
+PASS revisión visual del montaje: textos al costado, capturas visibles y fundidos.
+NOTA: combina capturas animadas y secuencias de menor cadencia; no representa gameplay continuo a 30 fps.

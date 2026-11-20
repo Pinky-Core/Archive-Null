@@ -1,0 +1,100 @@
+[
+    {
+        "image":  "desktop",
+        "seconds":  12,
+        "title":  "Un caso.\nDos memorias.\nTu investigación.",
+        "body":  "Una muerte sospechosa.\nVersiones que no coinciden.\n\nExplorá los recuerdos,\ncontrastá las pruebas\ny explicá lo que pasó.",
+        "caption":  "ARCHIVE: NULL · Juego de investigación en primera persona",
+        "view":  "LA OFICINA DEL DETECTIVE"
+    },
+    {
+        "image":  "desktop",
+        "seconds":  12,
+        "title":  "Empezá por\nel expediente.",
+        "body":  "Leé la información primaria\ny conocé a los sospechosos.\n\nDespués, sentate frente\nal ordenador y seleccioná\nla primera memoria.",
+        "caption":  "El tutorial guía los primeros pasos antes de entrar en la memoria.",
+        "view":  "EXPEDIENTE Y ESCRITORIO"
+    },
+    {
+        "frames":  "reconstruction-wave",
+        "image":  "house",
+        "seconds":  12,
+        "title":  "Entrá en\nla memoria.",
+        "body":  "El entorno se reconstruye\ndesde el vacío.\n\nCuando termina la carga,\npodés recorrer el área\nreconstruida y buscar\nlas primeras pistas.",
+        "caption":  "La casa y la oficina de Salas son espacios para investigar.",
+        "view":  "RECONSTRUCCIÓN DEL ENTORNO"
+    },
+    {
+        "image":  "pin-inspection",
+        "seconds":  13,
+        "title":  "Observá.\nInspeccioná.\nCompará.",
+        "body":  "Prestá atención a notas,\nobjetos y rastros del lugar.\n\nInspeccioná las piezas\npara leerlas de cerca.\nUn detalle pequeño puede\ncambiar tu interpretación.",
+        "caption":  "WASD: moverse · Mouse: mirar · E: inspeccionar · Ctrl: agacharse",
+        "view":  "INSPECCIÓN DE OBJETOS"
+    },
+    {
+        "image":  "house",
+        "seconds":  14,
+        "title":  "Documentá\nlo que\nencontrás.",
+        "body":  "La cámara registra fotos.\nLa UV muestra residuos.\nEl polvo revela huellas.\n\nLos marcadores numerados\norganizan la escena.\nFotografiar algo no prueba\npor sí solo una hipótesis.",
+        "caption":  "Mantené G para elegir herramienta. Revisá sus controles al equiparla.",
+        "view":  "HERRAMIENTAS DE INVESTIGACIÓN"
+    },
+    {
+        "image":  "phone-voice",
+        "seconds":  15,
+        "title":  "Escuchá\ny contrastá\nlos mensajes.",
+        "body":  "Desbloqueá el teléfono\ncon el PIN que encontrás.\n\nConsultá chats, llamadas\ny notas de voz. Compará\nel tono y los horarios\ncon la información\ndel expediente.",
+        "caption":  "Las notas de voz permiten reproducir, pausar, avanzar y abrir la transcripción.",
+        "view":  "EL TELÉFONO DE JULIÁN"
+    },
+    {
+        "frames":  "echo",
+        "image":  "echo",
+        "seconds":  12,
+        "title":  "Algunos\nobjetos\nconservan ecos.",
+        "body":  "Ciertas inspecciones\nevocan fragmentos de\nlos recuerdos de la víctima.\n\nLas siluetas y la narración\naportan contexto. Relacionalo\ncon las pruebas físicas.",
+        "caption":  "Los ecos son fragmentos de memoria: también necesitan interpretación.",
+        "view":  "RECUERDOS ECO"
+    },
+    {
+        "image":  "salas-computer",
+        "seconds":  14,
+        "title":  "Seguí\nlas pistas\na otro lugar.",
+        "body":  "Los hallazgos del teléfono\nhabilitan la segunda memoria.\n\nEn la oficina de Salas,\nrevisá objetos y documentos\ndel ordenador. Contrastá\nlo encontrado con la casa.",
+        "caption":  "Las dos memorias aportan pruebas complementarias para explicar el caso.",
+        "view":  "LA OFICINA DE SALAS"
+    },
+    {
+        "image":  "board",
+        "seconds":  14,
+        "title":  "Conectá\nlas pruebas.",
+        "body":  "Volvé a tu oficina para\norganizar las fotografías.\n\nElegí una foto y después\notra para unirlas. Arrastrá\nlas tarjetas para ordenar\nel pizarrón. Cada vínculo\ndebe tener una razón.",
+        "caption":  "No alcanza con acumular evidencias: necesitás justificar las relaciones.",
+        "view":  "EL PIZARRÓN DE INVESTIGACIÓN"
+    },
+    {
+        "image":  "reconstruction",
+        "seconds":  14,
+        "title":  "Reconstruí\nla secuencia.",
+        "body":  "Abrí la libreta con TAB\ny revisá tus hallazgos.\n\nEn Reconstruir, ordená\nlos pasos que explican\nla salida de la casa.\nSi faltan pruebas, volvé\na investigar.",
+        "caption":  "La reconstrucción validada se incorpora a los argumentos del informe.",
+        "view":  "LA SECUENCIA DE LOS HECHOS"
+    },
+    {
+        "image":  "case-report",
+        "seconds":  16,
+        "title":  "Presentá\nun informe\ncon fundamento.",
+        "body":  "Completá la ficha del caso\ncon una explicación coherente.\n\nEl informe evalúa tus\nrespuestas y las pruebas\nque las respaldan. Revisá\nlas objeciones y corregí\nlo que todavía no encaja.",
+        "caption":  "Responsable, método, motivo y puesta en escena deben sostenerse con evidencias.",
+        "view":  "EL CIERRE DE LA INVESTIGACIÓN"
+    },
+    {
+        "image":  "house",
+        "seconds":  12,
+        "title":  "La respuesta\nestá en\nlos detalles.",
+        "body":  "Explorá con atención.\nEscuchá las contradicciones.\nRelacioná lo que encontrás.\n\nResolver el caso es entender\ncómo encajan las pruebas.",
+        "caption":  "ARCHIVE: NULL · Prototipo jugable · Video sin sonido",
+        "view":  "INVESTIGÁ A TU RITMO"
+    }
+]
