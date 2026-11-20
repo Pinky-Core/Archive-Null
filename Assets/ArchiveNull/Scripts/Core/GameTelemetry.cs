@@ -47,7 +47,7 @@ public sealed class GameTelemetry : MonoBehaviour
     }
     private void Start()
     {
-        IsTest=Array.Exists(Environment.GetCommandLineArgs(),arg=>arg is "-archive-feedback-test" or "-archive-editor-test");
+        IsTest=Array.Exists(Environment.GetCommandLineArgs(),arg=>arg is "-archive-feedback-test" or "-archive-editor-test" or "-archive-smoke");
 #if UNITY_EDITOR
         IsTest |= UnityEditor.SessionState.GetBool("archive.feedback.test",false) || UnityEditor.SessionState.GetBool("archive.mechanics.test",false);
 #endif

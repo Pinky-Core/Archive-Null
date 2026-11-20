@@ -40,6 +40,9 @@ namespace ArchiveNull.Evidence
             }
 
             instance = this;
+            // Authored scenes can nest this service under a scene root. Unity only
+            // preserves root objects, otherwise evidence and event subscribers vanish.
+            if(transform.parent!=null) transform.SetParent(null,true);
             DontDestroyOnLoad(gameObject);
         }
 
