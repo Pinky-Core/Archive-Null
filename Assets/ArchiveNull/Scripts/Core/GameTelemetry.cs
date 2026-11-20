@@ -6,7 +6,7 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.SceneManagement;
 
-// Local, anonymous event journal. No network, device identifiers or player-entered text.
+// Anonymous local journal. Optional cloud delivery is handled separately.
 public sealed class GameTelemetry : MonoBehaviour
 {
     [Serializable] public sealed class Progress
@@ -69,6 +69,7 @@ public sealed class GameTelemetry : MonoBehaviour
         Record("scene_enter",scene);
         SceneManager.activeSceneChanged+=SceneChanged;
         EvidenceInventory.Instance.OnEvidenceRegistered+=EvidenceRegistered;
+        gameObject.AddComponent<TelemetryCloudSender>();
     }
     private static Progress NewProgress()=>new Progress{runId=Guid.NewGuid().ToString("N")};
     public static void RestoreProgress(Progress value)
