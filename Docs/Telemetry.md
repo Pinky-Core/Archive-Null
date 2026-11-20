@@ -74,4 +74,6 @@ Los campos incorrectos del informe son índices 0–4, en el orden de la ficha. 
 
 Los registros y los informes locales quedan fuera de Git. El Excel de cambios documenta la implementación; no se usa para presentar partidas de prueba como resultados de usuarios.
 
+Para completar una maqueta o demostrar los informes, hay una [muestra de datos simulados](TelemetryDemo/LEER_PRIMERO.md), con un XLSX importable en Sheets. Está separada de los registros del juego y no representa pruebas con jugadores.
+
 Durante la integración se corrigió además la persistencia del inventario: estaba anidado bajo un objeto de la oficina y Unity lo destruía al descargar la escena. El servicio se conserva ahora como objeto raíz; esto mantiene tanto las pistas como los suscriptores que registran su recogida.
