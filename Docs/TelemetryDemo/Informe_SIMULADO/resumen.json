@@ -1,0 +1,21 @@
+{
+  "origen": "SIMULADO",
+  "nota": "Datos ficticios; no son resultados de jugadores.",
+  "sesiones": 26,
+  "casos": 20,
+  "casos_desde_cero": 16,
+  "casos_con_progreso_previo": 4,
+  "resueltos_desde_cero": 12,
+  "mediana_resolucion_segundos": 2367.74,
+  "p90_resolucion_segundos": 3012.72,
+  "min_resolucion_segundos": 1664.7303194103706,
+  "max_resolucion_segundos": 3214.9980404465646,
+  "tiempo_por_estado_segundos": {
+    "sin clasificar": 0,
+    "active": 39544.64,
+    "loading": 966.0
+  },
+  "eventos_prueba_excluidos": 0,
+  "advertencias": [],
+  "incluye_pruebas": true
+}

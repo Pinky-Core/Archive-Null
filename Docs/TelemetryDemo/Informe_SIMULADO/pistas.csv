@@ -1,0 +1,18 @@
+﻿origen;id;pista;escena;casos_desde_cero;casos_que_visitaron_escena;casos_que_recogieron;recogida_por_visita_pct;recogida_por_caso_pct;mediana_segundos_hasta_pista;p90_segundos_hasta_pista;mediana_desde_primera_visita;registros_todas_coberturas;inspecciones_todas_coberturas;ayudas_todas_coberturas
+SIMULADO;f1_house_phone;Teléfono de Julián;F1-House;16;16;16;100.0;100.0;296.45;646.63;158.23;16;16;4
+SIMULADO;f1_ofice_factura1;Facturas duplicadas de Obra Salas;F1-Office;16;14;14;100.0;87.5;1441.85;1849.02;293.37;16;16;4
+SIMULADO;f1_house_huella-zapato;Huella de barro en la salida;F1-House;16;16;15;93.8;93.8;629.42;1158.86;529.25;19;19;6
+SIMULADO;phone_call_log;Registro de llamadas;F1-House;16;16;15;93.8;93.8;572.13;1119.35;489.36;19;19;6
+SIMULADO;f1_office_Huellas;Huellas de las botas de Salas;F1-Office;16;14;13;92.9;81.2;1293.13;1626.09;164.06;16;16;0
+SIMULADO;f1_office_tarro_pastillas;Medicación de la oficina de Salas;F1-Office;16;14;13;92.9;81.2;1234.29;1561.47;92.19;15;15;2
+SIMULADO;f1_ofice_llave;Llave y útiles de acceso de Salas;F1-Office;16;14;13;92.9;81.2;1424.83;1722.7;235.64;16;16;4
+SIMULADO;f1_house_ornamentsmall_01;Azúcar con polvo de medicación;F1-House;16;16;14;87.5;87.5;670.16;1227.27;568.9;17;17;7
+SIMULADO;phone_messages;Mensajes de Julián;F1-House;16;16;14;87.5;87.5;587.89;1021.38;435.14;17;17;1
+SIMULADO;f1_house_cup;Taza lavada de Julián;F1-House;16;16;13;81.2;81.2;585.73;823.95;471.64;16;16;4
+SIMULADO;f1_house_documento;Documento sucesorio adulterado;F1-House;16;16;13;81.2;81.2;784.06;1193.08;657.86;13;13;5
+SIMULADO;f1_house_comprobante;Ticket de Nicolás;F1-House;16;16;12;75.0;75.0;472.68;1108.5;381.31;15;15;2
+SIMULADO;f1_house_cube;Nota de Julián;F1-House;16;16;12;75.0;75.0;660.42;985.61;556.43;12;12;3
+SIMULADO;f1_house_ornamentmedium_01;Tarro del lavabo;F1-House;16;16;12;75.0;75.0;654.1;782.3;525.29;15;15;5
+SIMULADO;f1_house_huella-dactilar;Huella en la taza de la visita;F1-House;16;16;10;62.5;62.5;897.4;1249.25;750.94;12;12;2
+SIMULADO;f1_house_pastillero;Pastillero junto al cuerpo;F1-House;16;16;10;62.5;62.5;876.16;1172.63;770.42;12;12;2
+SIMULADO;f1_house_guest_cup;Taza de la visita;F1-House;16;16;8;50.0;50.0;638.38;1042.52;526.6;10;10;2

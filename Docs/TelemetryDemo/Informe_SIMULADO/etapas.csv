@@ -1,0 +1,10 @@
+﻿origen;etapa;casos_que_llegaron;casos_desde_cero;porcentaje;mediana_segundos_hasta_etapa
+SIMULADO;Entró en Casa Herrera;16;16;100.0;101.18
+SIMULADO;Leyó los mensajes;14;16;87.5;587.89
+SIMULADO;Consultó las llamadas;15;16;93.8;572.13
+SIMULADO;Entró en la oficina de Salas;14;16;87.5;1124.89
+SIMULADO;Creó conexiones;14;16;87.5;1776.79
+SIMULADO;Intentó reconstruir;14;16;87.5;1999.82
+SIMULADO;Validó la reconstrucción;12;16;75.0;2292.88
+SIMULADO;Presentó el informe;14;16;87.5;2101.07
+SIMULADO;Resolvió el caso;12;16;75.0;2367.74
