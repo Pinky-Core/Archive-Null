@@ -71,6 +71,10 @@ sysinfo.txt
 # Crashlytics generated file
 crashlytics-build.properties
 
+# Local playtest reports; source journals live outside the repository.
+/Artifacts/TelemetryReport/
+/Artifacts/TelemetryReportTests/
+
 # Packed Addressables
 /[Aa]ssets/[Aa]ddressable[Aa]ssets[Dd]ata/*/*.bin*
 
