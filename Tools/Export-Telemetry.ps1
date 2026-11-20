@@ -11,4 +11,4 @@ $arguments=@((Join-Path $PSScriptRoot 'Export-Telemetry.py'),'--input',$InputDir
 if($IncludeTests){$arguments+='--include-tests'}
 & $PythonExe @arguments
 if($LASTEXITCODE -ne 0){throw 'No se pudo exportar la telemetría. Se necesita Python 3.10 o posterior.'}
-if($Open){Start-Process (Join-Path $OutputDirectory 'index.html') -WindowStyle Hidden}
+if($Open){Start-Process (Join-Path $OutputDirectory 'index.html')}
