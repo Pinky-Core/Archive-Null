@@ -1,0 +1,16 @@
+PASS empty queue does not invent events
+PASS batch limit and UTF-8 event contents are preserved
+PASS preparing a request never advances its durable cursor
+PASS authentication and HTTP failures are not acknowledgements
+PASS HTML, health replies and invalid saved counts cannot discard events
+PASS new rows and server-deduplicated retries are accepted
+PASS a new queue instance resumes only unacknowledged events
+PASS confirmed delivery retains the complete local journal
+PASS changing the destination uses an independent cursor
+PASS request envelope matches the Apps Script receiver without test events
+PASS unfinished final line is never uploaded or acknowledged
+PASS completed final line becomes available without losing bytes
+PASS invalid records remain pending rather than being silently discarded
+PASS test records cannot enter the normal upload queue
+PASS configuration accepts only the intended HTTPS deployment format
+PASS Unity request has JSON POST, timeout and redirect handling

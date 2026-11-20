@@ -81,6 +81,7 @@ public static class FeedbackEditorProbe
         Check(focus.IsInStandPose && Mathf.Abs(Camera.main.transform.position.y-focus.StandingEyeHeight)<.025f,"arrival and standing height include office eye lift");
         Check(Object.FindAnyObjectByType<GlobalPauseMenu>()==null,"office has no pause overlay");
         Check(GameTelemetry.IsTest && GameTelemetry.DirectoryPath.EndsWith("tests"),"telemetry isolates automated editor runs from player samples");
+        Check(Object.FindAnyObjectByType<TelemetryCloudSender>()!=null && TelemetryCloudSender.Status.Contains("desactivado"),"cloud sender stays disabled throughout automated Play Mode validation");
         string telemetryRun=GameTelemetry.CaptureProgress().runId;
         var originalInventory=EvidenceInventory.Instance;
         var officeAudio=Object.FindAnyObjectByType<OfficeFreeLookController>();

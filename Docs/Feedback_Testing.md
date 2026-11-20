@@ -1,6 +1,6 @@
 # Feedback de la revisión jugable
 
-El recorrido automatizado en Play Mode completó **61 comprobaciones aprobadas y cero fallos** en Unity 6000.6.0f1. Recorre MainMenu → F1-House → F1-Office → MainMenu, con guardados aislados por ejecución. El informe completo está en [results.txt](../Artifacts/FeedbackValidation/results.txt). No se generó un ejecutable.
+El recorrido automatizado en Play Mode completó **62 comprobaciones aprobadas y cero fallos** en Unity 6000.6.0f1. Recorre MainMenu → F1-House → F1-Office → MainMenu, con guardados aislados por ejecución. El informe completo está en [results.txt](../Artifacts/FeedbackValidation/results.txt). No se generó un ejecutable.
 
 ## Qué se comprobó
 
@@ -17,7 +17,7 @@ El recorrido automatizado en Play Mode completó **61 comprobaciones aprobadas y
 | Recuerdo eco | Abre una cámara de tercera persona, reproduce voz y libera el estado al cerrar. |
 | Salas | Se localiza el monitor, se abren documentos, se registran comprobantes y se recupera el movimiento al salir. |
 | Pizarrón | Las tarjetas aumentan de tamaño, la guía avanza a elegir la segunda foto y la vista ampliada presenta su imagen. |
-| Telemetría | Mantiene el caso y el inventario entre escenas, recibe recogidas y controles de audio, separa las pruebas y registra una sola resolución. Reiniciar crea otro caso con tiempo cero. |
+| Telemetría | Mantiene el caso y el inventario entre escenas, recibe recogidas y controles de audio, separa las pruebas y registra una sola resolución. Reiniciar crea otro caso con tiempo cero. El emisor de Sheets permanece desactivado en las regresiones automáticas. |
 | Ficha final | Se abre y se captura sin elegir respuestas ni revelar la solución del caso. |
 
 ## Hallazgos corregidos durante el recorrido
