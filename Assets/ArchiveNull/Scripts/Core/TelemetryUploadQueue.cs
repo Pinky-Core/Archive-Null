@@ -61,7 +61,7 @@ public sealed class TelemetryUploadQueue
                     if(events.Count>0) return new Batch{source=file,checkpoint=checkpoint,start=offset,end=end,events=events.ToArray()};
                 }
             }
-            catch(Exception e) when(e is IOException || e is UnauthorizedAccessException || e is ArgumentException)
+            catch(Exception e) when(e is IOException || e is InvalidDataException || e is UnauthorizedAccessException || e is ArgumentException)
             {LastError="Hay un diario que no se pudo leer; se conserva pendiente.";}
         }
         return null;
