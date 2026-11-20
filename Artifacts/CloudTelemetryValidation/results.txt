@@ -14,3 +14,8 @@ PASS invalid records remain pending rather than being silently discarded
 PASS test records cannot enter the normal upload queue
 PASS configuration accepts only the intended HTTPS deployment format
 PASS Unity request has JSON POST, timeout and redirect handling
+PASS integración en Play Mode: 62 comprobaciones, cero fallos; emisor remoto desactivado en la regresión.
+PASS preferencias restauradas y escenas del autor conservadas.
+NOTA receptor publicado: GET de salud respondió HTTP 200 con ok=true.
+PENDIENTE escritura remota: ingresar INGEST_KEY localmente y confirmar la prueba manual en Google Sheets.
+NOTA no se generaron ejecutables ni se incluyeron credenciales en los commits.
