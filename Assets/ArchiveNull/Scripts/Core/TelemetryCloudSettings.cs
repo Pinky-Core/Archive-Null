@@ -9,12 +9,17 @@ public sealed class TelemetryCloudSettings
 {
     public bool enabled = true;
     public string endpoint = "", key = "";
+    public const string PackagedResource="TelemetryCloudConnection";
     public static string FilePath => Path.Combine(Application.persistentDataPath,"Telemetry","cloud.json");
     public bool IsReady => enabled && ValidEndpoint(endpoint) && !string.IsNullOrWhiteSpace(key);
     public static bool ValidEndpoint(string url) => url!=null && Regex.IsMatch(url,@"\Ahttps://script\.google\.com/macros/s/[A-Za-z0-9_-]+/exec\z");
     public static TelemetryCloudSettings Load()
     {
-        try {return File.Exists(FilePath) ? JsonUtility.FromJson<TelemetryCloudSettings>(File.ReadAllText(FilePath)) ?? new TelemetryCloudSettings():new TelemetryCloudSettings();}
+        try
+        {
+            string json=File.Exists(FilePath) ? File.ReadAllText(FilePath):Resources.Load<TextAsset>(PackagedResource)?.text;
+            return string.IsNullOrEmpty(json) ? new TelemetryCloudSettings():JsonUtility.FromJson<TelemetryCloudSettings>(json) ?? new TelemetryCloudSettings();
+        }
         catch(Exception e) when(e is IOException || e is UnauthorizedAccessException || e is ArgumentException) {return new TelemetryCloudSettings();}
     }
     public void Save()

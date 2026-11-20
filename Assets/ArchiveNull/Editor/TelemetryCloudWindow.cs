@@ -1,4 +1,6 @@
 using System;
+using System.IO;
+using System.Text;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.Networking;
@@ -21,7 +23,10 @@ public sealed class TelemetryCloudWindow : EditorWindow
         settings.key=EditorGUILayout.PasswordField("INGEST_KEY",settings.key);
         if(GUILayout.Button("Guardar configuración local")) Save();
         using(new EditorGUI.DisabledScope(probe!=null || !settings.IsReady))
+        {
             if(GUILayout.Button("Enviar prueba a la pestaña Pruebas")) SendProbe();
+            if(GUILayout.Button("Preparar conexión para próximas builds")) PreparePackage();
+        }
         EditorGUILayout.HelpBox("La prueba crea un solo evento identificado como prueba. Para enviar partidas, guardá la configuración y jugá desde MainMenu. Las copias locales no se eliminan.",MessageType.None);
         EditorGUILayout.LabelField("Juego: "+TelemetryCloudSender.Status,EditorStyles.wordWrappedLabel);
         EditorGUILayout.LabelField(message,EditorStyles.wordWrappedLabel);
@@ -38,6 +43,17 @@ public sealed class TelemetryCloudWindow : EditorWindow
         var batch=new TelemetryUploadQueue.Batch{events=new[]{entry}};
         probe=TelemetryCloudSender.CreateRequest(settings.endpoint,TelemetryUploadQueue.Body(batch,settings.key));
         probe.SendWebRequest();message="Comprobando recepción…";
+    }
+    private void PreparePackage()
+    {
+        if(!Save()) return;
+        try
+        {
+            string path="Assets/ArchiveNull/Resources/"+TelemetryCloudSettings.PackagedResource+".json";
+            File.WriteAllText(path,JsonUtility.ToJson(settings,true),new UTF8Encoding(false));AssetDatabase.ImportAsset(path);
+            message="Conexión preparada como recurso local excluido de Git. Se incluirá al generar una build; no se generó ningún ejecutable.";
+        }
+        catch(Exception) {message="No se pudo preparar el recurso local de conexión.";}
     }
     private void Poll()
     {

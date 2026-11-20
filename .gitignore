@@ -76,6 +76,8 @@ crashlytics-build.properties
 /Artifacts/TelemetryReportTests/
 __pycache__/
 *.pyc
+/Assets/ArchiveNull/Resources/TelemetryCloudConnection.json
+/Assets/ArchiveNull/Resources/TelemetryCloudConnection.json.meta
 
 # Packed Addressables
 /[Aa]ssets/[Aa]ddressable[Aa]ssets[Dd]ata/*/*.bin*
