@@ -1,0 +1,7 @@
+PASS exportador: 8 pruebas sintéticas aprobadas.
+PASS recorrido en Unity 6000.6.0f1: 61 comprobaciones aprobadas y cero fallos.
+PASS diario JSONL: recogida de evidencias, pausa y reanudación de voz, intentos de informe y resolución.
+PASS guardado explícito: conserva el identificador y tiempo del caso medido, antes del reinicio sintético.
+PASS informe normal: excluye los eventos automáticos y muestra cero sesiones reales.
+PASS preferencias originales restauradas byte a byte y escenas del autor conservadas.
+NOTA: las resoluciones de la regresión son estímulos sintéticos, no resultados de jugadores.

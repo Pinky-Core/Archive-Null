@@ -56,3 +56,5 @@ Los campos incorrectos del informe son índices 0–4, en el orden de la ficha. 
 `Tools/Test-Telemetry.py` usa escenarios sintéticos para comprobar tasas, reanudaciones, reinicios, deduplicación, archivos truncados y exportación. `FeedbackEditorProbe` verifica la instrumentación durante el recorrido real por las tres escenas y genera únicamente datos identificados como pruebas. Para revisar esos eventos: `-IncludeTests -OutputDirectory Artifacts/TelemetryReportTests`. Ese informe es técnico y **no contiene estadísticas de jugadores**.
 
 Los registros y los informes locales quedan fuera de Git. El Excel de cambios documenta la implementación; no se usa para presentar partidas de prueba como resultados de usuarios.
+
+Durante la integración se corrigió además la persistencia del inventario: estaba anidado bajo un objeto de la oficina y Unity lo destruía al descargar la escena. El servicio se conserva ahora como objeto raíz; esto mantiene tanto las pistas como los suscriptores que registran su recogida.

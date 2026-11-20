@@ -1,6 +1,6 @@
 # Feedback de la revisión jugable
 
-El recorrido automatizado en Play Mode completó **52 comprobaciones aprobadas y cero fallos** en Unity 6000.6.0f1. Recorre MainMenu → F1-House → F1-Office → MainMenu, con guardados aislados por ejecución. El informe completo está en [results.txt](../Artifacts/FeedbackValidation/results.txt). No se generó un ejecutable.
+El recorrido automatizado en Play Mode completó **61 comprobaciones aprobadas y cero fallos** en Unity 6000.6.0f1. Recorre MainMenu → F1-House → F1-Office → MainMenu, con guardados aislados por ejecución. El informe completo está en [results.txt](../Artifacts/FeedbackValidation/results.txt). No se generó un ejecutable.
 
 ## Qué se comprobó
 
@@ -17,6 +17,8 @@ El recorrido automatizado en Play Mode completó **52 comprobaciones aprobadas y
 | Recuerdo eco | Abre una cámara de tercera persona, reproduce voz y libera el estado al cerrar. |
 | Salas | Se localiza el monitor, se abren documentos, se registran comprobantes y se recupera el movimiento al salir. |
 | Pizarrón | Las tarjetas aumentan de tamaño, la guía avanza a elegir la segunda foto y la vista ampliada presenta su imagen. |
+| Telemetría | Mantiene el caso y el inventario entre escenas, recibe recogidas y controles de audio, separa las pruebas y registra una sola resolución. Reiniciar crea otro caso con tiempo cero. |
+| Ficha final | Se abre y se captura sin elegir respuestas ni revelar la solución del caso. |
 
 ## Hallazgos corregidos durante el recorrido
 
@@ -27,6 +29,7 @@ El recorrido automatizado en Play Mode completó **52 comprobaciones aprobadas y
 - El HUD y subtítulos normales se superponían al eco. La vista del recuerdo se dibuja por encima.
 - Las opciones de pausa mezclaban azul con el esquema amarillo. Se unificaron fondos cálidos y acentos dorados.
 - Las tarjetas físicas seguían siendo difíciles de leer a distancia. La vista ampliada al apuntarlas conserva la interacción del tablero sin interceptar clics.
+- El inventario de la oficina estaba bajo otro objeto y `DontDestroyOnLoad` no lo conservaba. Ahora se convierte en raíz antes de preservarlo, manteniendo las pistas y los suscriptores de telemetría al cambiar de escena.
 
 El recorrido posterior incluye el texto ampliado del PIN. También reproduce los pasos de MainMenu desde el mismo archivo y con el mismo tono de caminata que F1-House. El bloqueo al levantarse se debía a contactos laterales con el piso importado: la comprobación distingue esos contactos de un techo mediante un barrido ascendente y la dirección de penetración.
 
@@ -37,6 +40,7 @@ El recorrido posterior incluye el texto ampliado del PIN. También reproduce los
 - [GIF del recuerdo eco](Media/recuerdo-eco.gif)
 - [Video explicativo sin sonido](Media/ArchiveNull_Explicativo_SinAudio.mp4)
 - [GDD con capturas y enlaces multimedia](../Assets/ArchiveNull/Documentation/GDD_Archive_NULL-V4.docx)
+- [Guía de telemetría local y criterios de interpretación](Telemetry.md)
 
 Para repetir con Unity abierto: `./Tools/Test-Feedback.ps1`. El script solicita el recorrido en la instancia existente y conserva/restaura PlayerPrefs. El comando `Archive NULL > Test feedback changes in editor` también inicia la prueba directamente; para preservar preferencias, utilizar el script. Se usan únicamente escenas y Play Mode, sin iniciar un build.
 

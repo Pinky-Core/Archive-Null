@@ -1,6 +1,7 @@
 PASS starts in real office
 PASS arrival and standing height include office eye lift
 PASS office has no pause overlay
+PASS telemetry isolates automated editor runs from player samples
 PASS office uses the original House footstep recording
 PASS office walking uses the House playback pitch
 PASS Archive OS offers confirmed sign out
@@ -17,7 +18,8 @@ PASS PIN sticker is separate from Julian's note
 PASS evidence 2 contains investigation notes rather than phone PIN
 PASS door footprint needs no revealing tool
 PASS technical object names become readable Spanish names
-STATE house camera (5.75, 3.65, 13.95) rotation (0.16, 273.68, 0.00) mask -1 far 1000 player (5.42, 0.13, 13.97)
+STATE house camera (5.75, 3.65, 13.95) rotation (0.08, 273.68, 0.00) mask -1 far 1000 player (5.42, 0.13, 13.97)
+PASS evidence service and telemetry subscription survive leaving the authored office hierarchy
 PASS active player has crouch component
 PASS House and office resolve the same shared recording
 PASS House player stands after releasing crouch on the actual floor; blocker=none
@@ -52,3 +54,10 @@ PASS spawned board photographs are larger than the template
 PASS board tutorial advances to choosing a second photograph
 PASS pointing at a board photograph opens its enlarged preview
 PASS enlarged preview displays the photograph sprite
+PASS final report opens for the explanatory video capture
+PASS telemetry keeps the case identifier across scene changes
+PASS telemetry distinguishes observed and active time
+PASS telemetry marks every validation event as test data
+PASS telemetry records failed reports and a single case completion
+PASS telemetry captures voice controls and evidence collection
+PASS new game starts a separate telemetry case with zero time

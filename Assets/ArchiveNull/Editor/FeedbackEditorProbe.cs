@@ -80,6 +80,9 @@ public static class FeedbackEditorProbe
         var focus=Object.FindAnyObjectByType<CRTMenuCameraFocus>();
         Check(focus.IsInStandPose && Mathf.Abs(Camera.main.transform.position.y-focus.StandingEyeHeight)<.025f,"arrival and standing height include office eye lift");
         Check(Object.FindAnyObjectByType<GlobalPauseMenu>()==null,"office has no pause overlay");
+        Check(GameTelemetry.IsTest && GameTelemetry.DirectoryPath.EndsWith("tests"),"telemetry isolates automated editor runs from player samples");
+        string telemetryRun=GameTelemetry.CaptureProgress().runId;
+        var originalInventory=EvidenceInventory.Instance;
         var officeAudio=Object.FindAnyObjectByType<OfficeFreeLookController>();
         var originalSteps=AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/ArchiveNull/Prefabs/Jugador/Steps.wav");
         Check(officeAudio.FootstepClip==originalSteps,"office uses the original House footstep recording");
@@ -122,6 +125,7 @@ public static class FeedbackEditorProbe
         results.Add("STATE house camera "+Camera.main.transform.position+" rotation "+Camera.main.transform.eulerAngles+" mask "+Camera.main.cullingMask+" far "+Camera.main.farClipPlane+" player "+Object.FindAnyObjectByType<FirstPersonMovement>().transform.position);
         Capture("house");yield return new WaitForEndOfFrame();
         var movement=Object.FindAnyObjectByType<FirstPersonMovement>();var crouch=movement.GetComponentInChildren<Crouch>();var controller=movement.GetComponentInParent<CharacterController>();
+        Check(EvidenceInventory.Instance==originalInventory && originalInventory.transform.parent==null,"evidence service and telemetry subscription survive leaving the authored office hierarchy");
         Check(crouch!=null && crouch.enabled,"active player has crouch component");
         Check(Object.FindAnyObjectByType<FirstPersonAudio>().stepAudio.clip==Resources.Load<FootstepAudioProfile>("OfficeFootsteps").clip,"House and office resolve the same shared recording");
         InputSystem.QueueStateEvent(Keyboard.current,new KeyboardState(GlobalInputBindings.GetKey(GameInputAction.Crouch)));yield return new WaitForSecondsRealtime(.5f);
@@ -200,7 +204,25 @@ public static class FeedbackEditorProbe
         InputSystem.QueueStateEvent(Mouse.current,new MouseState{position=(Vector2)boardCamera.WorldToScreenPoint(photoPoint)});InputSystem.Update();Call(board,"UpdateBoardHelp");
         Check(((RectTransform)Field(board,"photoPreview")).gameObject.activeSelf,"pointing at a board photograph opens its enlarged preview");
         Check(((Image)Field(board,"previewImage")).sprite!=null,"enlarged preview displays the photograph sprite");
-        Capture("board");yield return new WaitForEndOfFrame();
+        yield return null;yield return new WaitForEndOfFrame();
+        Capture("board");yield return null;yield return new WaitForEndOfFrame();
+        ArchiveNull.Accusation.AccusationPanel.OpenRuntime();yield return new WaitForSecondsRealtime(.4f);
+        Check(ArchiveNull.Accusation.AccusationPanel.IsAnyOpen,"final report opens for the explanatory video capture");
+        Capture("case-report");yield return null;yield return new WaitForEndOfFrame();
+        Check(GameTelemetry.CaptureProgress().runId==telemetryRun,"telemetry keeps the case identifier across scene changes");
+        GameSaveSystem.SaveNow();
+        Check(GameTelemetry.CaptureProgress().elapsedSeconds>=GameTelemetry.CaptureProgress().activeSeconds,"telemetry distinguishes observed and active time");
+        GameTelemetry.Report(40,"1,3");GameTelemetry.Report(100,"");GameTelemetry.Report(100,"");
+        string journal=Directory.GetFiles(GameTelemetry.DirectoryPath,"*.jsonl").OrderByDescending(File.GetLastWriteTimeUtc).First();
+        GameTelemetry.Event[] telemetryEvents;
+        using(var stream=new FileStream(journal,FileMode.Open,FileAccess.Read,FileShare.ReadWrite))
+        using(var reader=new StreamReader(stream))
+            telemetryEvents=reader.ReadToEnd().Split(new[]{'\n'},StringSplitOptions.RemoveEmptyEntries).Select(JsonUtility.FromJson<GameTelemetry.Event>).ToArray();
+        Check(telemetryEvents.All(e=>e.test),"telemetry marks every validation event as test data");
+        Check(telemetryEvents.Count(e=>e.type=="case_completed")==1 && telemetryEvents.Count(e=>e.type=="report_submitted")==3,"telemetry records failed reports and a single case completion");
+        Check(telemetryEvents.Any(e=>e.type=="voice_paused") && telemetryEvents.Any(e=>e.type=="voice_resumed") && telemetryEvents.Any(e=>e.type=="evidence_collected"),"telemetry captures voice controls and evidence collection");
+        GameTelemetry.NewRun();
+        Check(GameTelemetry.CaptureProgress().runId!=telemetryRun && GameTelemetry.CaptureProgress().activeSeconds==0,"new game starts a separate telemetry case with zero time");
     }
     private static void Check(bool ok,string value) {if(!ok) throw new InvalidOperationException(value);results.Add("PASS "+value);}
     private static object Field(object target,string name)=>target.GetType().GetField(name,BindingFlags.Instance|BindingFlags.NonPublic).GetValue(target);
