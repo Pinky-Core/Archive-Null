@@ -1,244 +1,241 @@
 [
   {
-    "image": "desktop",
+    "source": "Artifacts/EditorValidation/office-return.png",
+    "title": "La oficina",
     "seconds": 7,
-    "title": "El expediente",
-    "body": "Leé la información primaria\nantes de sentarte.",
+    "body": "La investigación empieza en\nla oficina, frente a la\npuerta.",
     "caption": "",
     "view": ""
   },
   {
-    "image": "desktop",
+    "source": "Artifacts/EditorValidation/primary-case-file.png",
+    "title": "Información primaria",
     "seconds": 7,
-    "title": "Los sospechosos",
-    "body": "Fijate quién conocía a Julián y\nqué relación tenían.",
+    "body": "Leé el expediente antes de\nacercarte al escritorio.",
     "caption": "",
     "view": ""
   },
   {
-    "image": "desktop",
+    "source": "Assets/ArchiveNull/Resources/CasePortraits/People.png",
+    "title": "Las caras del caso",
     "seconds": 7,
-    "title": "El escritorio",
-    "body": "Sentate frente al monitor para\nentrar en ArchiveOS.",
-    "caption": "",
-    "view": "",
-    "frames": "desktop"
-  },
-  {
-    "image": "desktop",
-    "seconds": 7,
-    "title": "La primera memoria",
-    "body": "Abrí la casa desde el selector\nde memorias.",
+    "body": "El expediente pone rostro a\nJulián, Nicolás, Sofía y\nVíctor.",
     "caption": "",
     "view": ""
   },
   {
-    "image": "house",
+    "source": "Artifacts/EditorValidation/modern-desktop.png",
+    "title": "El monitor físico",
     "seconds": 7,
-    "title": "La reconstrucción",
-    "body": "Esperá a que la onda revele el\nespacio explorable.",
+    "body": "Al sentarte, el escritorio\naparece en el monitor de la\nescena.",
     "caption": "",
-    "view": "",
-    "frames": "reconstruction-wave"
+    "view": ""
   },
   {
-    "image": "house",
+    "source": "Docs/Media/escritorio.gif",
+    "title": "Abrir ventanas",
     "seconds": 7,
+    "body": "El cursor del ordenador te\npermite moverte entre\naplicaciones.",
+    "caption": "",
+    "view": ""
+  },
+  {
+    "source": "Artifacts/EditorValidation/monitor-settings.png",
+    "title": "Los ajustes",
+    "seconds": 7,
+    "body": "Desde el monitor podés\ncambiar las preferencias de\nla oficina.",
+    "caption": "",
+    "view": ""
+  },
+  {
+    "source": "Artifacts/EditorValidation/memory-folders.png",
+    "title": "Las carpetas",
+    "seconds": 7,
+    "body": "Abrí el directorio para\nconsultar las memorias\ndisponibles.",
+    "caption": "",
+    "view": ""
+  },
+  {
+    "source": "Artifacts/FeedbackValidation/desktop.png",
+    "title": "Elegir un destino",
+    "seconds": 7,
+    "body": "Seleccioná la memoria que\nquerés investigar desde el\nordenador.",
+    "caption": "",
+    "view": ""
+  },
+  {
+    "source": "Artifacts/EditorValidation/headset-session.png",
+    "title": "Iniciar la sesión",
+    "seconds": 7,
+    "body": "El visor indica cuándo\ncomienza la conexión con el\nrecuerdo.",
+    "caption": "",
+    "view": ""
+  },
+  {
+    "source": "Docs/Media/reconstruccion.gif",
+    "title": "La onda de carga",
+    "seconds": 7,
+    "body": "El entorno aparece por etapas\nalrededor del punto de\nentrada.",
+    "caption": "",
+    "view": ""
+  },
+  {
+    "source": "Artifacts/FeedbackValidation/house.png",
+    "title": "La casa Herrera",
+    "seconds": 7,
+    "body": "Explorá las habitaciones y\nacercate a los objetos de\ninterés.",
+    "caption": "",
+    "view": ""
+  },
+  {
+    "source": "Artifacts/FeedbackValidation/pin-inspection.png",
+    "title": "La pegatina",
+    "seconds": 7,
+    "body": "Al inspeccionar la nota, el\ncódigo queda a la vista.",
+    "caption": "",
+    "view": ""
+  },
+  {
+    "source": "Artifacts/FeedbackValidation/phone-voice.png",
+    "title": "El chat de Julián",
+    "seconds": 7,
+    "body": "Abrí la conversación y tocá\nreproducir en la nota de\nvoz.",
+    "caption": "",
+    "view": ""
+  },
+  {
+    "source": "Assets/ArchiveNull/Resources/CaseAudio/phone_salas.wav",
+    "title": "La voz de Salas",
+    "seconds": 7,
+    "body": "Esta es la forma de onda del\nmensaje de Salas que se\nescucha en el teléfono.",
+    "caption": "",
+    "view": ""
+  },
+  {
+    "source": "Artifacts/FeedbackValidation/echo.png",
+    "title": "Los testigos",
+    "seconds": 7,
+    "body": "Dos siluetas ocupan el\nespacio donde ocurrió el\nrecuerdo.",
+    "caption": "",
+    "view": ""
+  },
+  {
+    "source": "Docs/Media/recuerdo-eco.gif",
+    "title": "El recuerdo eco",
+    "seconds": 7,
+    "body": "Seguí la acción desde fuera\ndel cuerpo del investigador.",
+    "caption": "",
+    "view": ""
+  },
+  {
+    "source": "Artifacts/EditorValidation/tripod-hologram.png",
+    "title": "Colocar el trípode",
+    "seconds": 7,
+    "body": "Laboratorio. El holograma\nanticipa dónde van a apoyar\nlas patas.",
+    "caption": "",
+    "view": ""
+  },
+  {
+    "source": "Artifacts/EditorValidation/evidence-markers.png",
+    "title": "Marcar un hallazgo",
+    "seconds": 7,
+    "body": "Laboratorio. Los números\ndistinguen las posiciones que\nseñalaste.",
+    "caption": "",
+    "view": ""
+  },
+  {
+    "source": "Artifacts/EditorValidation/camera-in-hands.png",
+    "title": "Encuadrar la toma",
+    "seconds": 7,
+    "body": "Laboratorio. Levantá la\ncámara para ver su pantalla\nen tus manos.",
+    "caption": "",
+    "view": ""
+  },
+  {
+    "source": "Artifacts/EditorValidation/camera-lcd.png",
+    "title": "La vista del lente",
+    "seconds": 7,
+    "body": "Laboratorio. El encuadre sale\nde la cámara física.",
+    "caption": "",
+    "view": ""
+  },
+  {
+    "source": "Artifacts/EditorValidation/notebook-ui.png",
+    "title": "Revisar la foto",
+    "seconds": 7,
+    "body": "Abrí la libreta para\nconsultar la captura y\ndecidir si conservarla.",
+    "caption": "",
+    "view": ""
+  },
+  {
+    "source": "Artifacts/EditorValidation/boundary-editor.png",
     "title": "El límite",
-    "body": "Los píxeles marcan hasta dónde\nllega el recuerdo.",
+    "seconds": 7,
+    "body": "Laboratorio. Los píxeles\nmarcan el borde de la zona\nreconstruida.",
     "caption": "",
     "view": ""
   },
   {
-    "image": "pin-inspection",
+    "source": "Artifacts/EditorValidation/pause-ui.png",
+    "title": "Pausar la memoria",
     "seconds": 7,
-    "title": "La inspección",
-    "body": "Acercá el objeto y giralo para\nleer sus detalles.",
+    "body": "Desde la pausa podés\ncontinuar o preparar el\nregreso a la oficina.",
     "caption": "",
     "view": ""
   },
   {
-    "image": "pin-inspection",
+    "source": "Artifacts/FeedbackValidation/pause-options.png",
+    "title": "Ajustar la imagen",
     "seconds": 7,
-    "title": "El código",
-    "body": "Anotá los números que\nencuentres durante la\ninspección.",
+    "body": "Las opciones de la memoria\npermiten cambiar los ajustes\nde video.",
     "caption": "",
     "view": ""
   },
   {
-    "image": "phone-voice",
+    "source": "Artifacts/EditorValidation/session-confirmation.png",
+    "title": "Confirmar la salida",
     "seconds": 7,
-    "title": "El teléfono",
-    "body": "Probá el código en la pantalla\nde bloqueo.",
+    "body": "El diálogo permite volver a\nla oficina o seguir\nexplorando.",
     "caption": "",
     "view": ""
   },
   {
-    "image": "phone-voice",
+    "source": "Artifacts/FeedbackValidation/office-return.png",
+    "title": "De vuelta al escritorio",
     "seconds": 7,
-    "title": "Los mensajes",
-    "body": "Abrí una conversación y compará\nlas versiones.",
+    "body": "Al salir de la memoria volvés\na la mesa del investigador.",
     "caption": "",
     "view": ""
   },
   {
-    "image": "phone-voice",
+    "source": "Artifacts/FeedbackValidation/salas-computer.png",
+    "title": "Los registros de Salas",
     "seconds": 7,
-    "title": "Las voces",
-    "body": "Tocá el botón de reproducción\npara escuchar el audio.",
+    "body": "Consultá el equipo de la\nsegunda memoria para\ncontrastar documentos.",
     "caption": "",
     "view": ""
   },
   {
-    "image": "phone-voice",
-    "seconds": 7,
-    "title": "Las llamadas",
-    "body": "Revisá el registro para situar\nlos contactos en el tiempo.",
-    "caption": "",
-    "view": ""
-  },
-  {
-    "image": "house",
-    "seconds": 7,
-    "title": "Las herramientas",
-    "body": "Abrí la rueda y elegí con qué\nexaminar la escena.",
-    "caption": "",
-    "view": ""
-  },
-  {
-    "image": "house",
-    "seconds": 7,
-    "title": "La luz UV",
-    "body": "Iluminá las superficies para\nbuscar rastros fluorescentes.",
-    "caption": "",
-    "view": ""
-  },
-  {
-    "image": "house",
-    "seconds": 7,
-    "title": "El pincel",
-    "body": "Aplicá revelador sobre una\nsuperficie sospechosa.",
-    "caption": "",
-    "view": ""
-  },
-  {
-    "image": "house",
-    "seconds": 7,
-    "title": "Los marcadores",
-    "body": "Colocá un número junto al\nhallazgo antes de fotografiarlo.",
-    "caption": "",
-    "view": ""
-  },
-  {
-    "image": "house",
-    "seconds": 7,
-    "title": "La cámara",
-    "body": "Levantá la cámara y encuadrá el\ndetalle en su pantalla.",
-    "caption": "",
-    "view": ""
-  },
-  {
-    "image": "house",
-    "seconds": 7,
-    "title": "El álbum",
-    "body": "Revisá las tomas y descartá las\nque no sirvan.",
-    "caption": "",
-    "view": ""
-  },
-  {
-    "image": "echo",
-    "seconds": 7,
-    "title": "El objeto eco",
-    "body": "Inspeccioná el objeto que\nconserva el recuerdo.",
-    "caption": "",
-    "view": ""
-  },
-  {
-    "image": "echo",
-    "seconds": 7,
-    "title": "El testimonio",
-    "body": "Observá las sombras y escuchá\nla escena desde fuera.",
-    "caption": "",
-    "view": "",
-    "frames": "echo"
-  },
-  {
-    "image": "office-return",
-    "seconds": 7,
-    "title": "La retirada",
-    "body": "Al salir, la memoria se\nrepliega hacia tu posición.",
-    "caption": "",
-    "view": ""
-  },
-  {
-    "image": "desktop",
-    "seconds": 7,
-    "title": "La segunda visita",
-    "body": "Consultá el selector para ver\nsi se habilitó la oficina.",
-    "caption": "",
-    "view": ""
-  },
-  {
-    "image": "salas-computer",
-    "seconds": 7,
-    "title": "La oficina de Salas",
-    "body": "Contrastá los objetos de la\noficina con los de la\ncasa.",
-    "caption": "",
-    "view": ""
-  },
-  {
-    "image": "salas-computer",
-    "seconds": 7,
-    "title": "El ordenador",
-    "body": "Acercate al equipo de Salas\npara consultar sus registros.",
-    "caption": "",
-    "view": ""
-  },
-  {
-    "image": "board",
-    "seconds": 7,
+    "source": "Artifacts/FeedbackValidation/board.png",
     "title": "El pizarrón",
-    "body": "Reuní las evidencias antes de\nformular tu hipótesis.",
+    "seconds": 7,
+    "body": "Usá las pruebas reunidas para\nvincular hallazgos del\ncaso.",
     "caption": "",
     "view": ""
   },
   {
-    "image": "board",
+    "source": "Artifacts/FeedbackValidation/reconstruction.png",
+    "title": "La reconstrucción",
     "seconds": 7,
-    "title": "Las conexiones",
-    "body": "Vinculá dos pistas que\nsostengan el mismo argumento.",
+    "body": "En la libreta, ordená los\nsucesos a partir de lo que\ndescubriste.",
     "caption": "",
     "view": ""
   },
   {
-    "image": "reconstruction",
+    "source": "Artifacts/FeedbackValidation/case-report.png",
+    "title": "El informe final",
     "seconds": 7,
-    "title": "La secuencia",
-    "body": "Ordená los sucesos según lo que\nindican las pruebas.",
-    "caption": "",
-    "view": ""
-  },
-  {
-    "image": "reconstruction",
-    "seconds": 7,
-    "title": "La comprobación",
-    "body": "Contrastá el orden con los\nmensajes y las llamadas.",
-    "caption": "",
-    "view": ""
-  },
-  {
-    "image": "case-report",
-    "seconds": 7,
-    "title": "La ficha",
-    "body": "Completá las conclusiones con\nlas evidencias del caso.",
-    "caption": "",
-    "view": ""
-  },
-  {
-    "image": "case-report",
-    "seconds": 7,
-    "title": "El veredicto",
-    "body": "Presentá la ficha y revisá qué\nargumentos se sostienen.",
+    "body": "Completá la ficha y presentá\ntu explicación del caso.",
     "caption": "",
     "view": ""
   }
