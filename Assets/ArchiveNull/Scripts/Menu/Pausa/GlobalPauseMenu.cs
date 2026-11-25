@@ -280,7 +280,7 @@ public sealed class GlobalPauseMenu : MonoBehaviour
         pauseActions=CreatePanel("Pause actions",root,new Vector2(760,430),new Vector2(.5f,.5f),Color.clear).gameObject;
         var actions=(RectTransform)pauseActions.transform; actions.anchoredPosition=new Vector2(0,-36);
         resumeButton=ThinButton(actions,L("Continuar investigación","Resume investigation"),new Vector2(0,132),new Vector2(760,104),Resume,30);
-        ThinButton(actions,L("Configuración","Settings"),new Vector2(0,0),new Vector2(760,104),ShowOptions,30);
+        ThinButton(actions,L("Consultar expediente","Review case file"),new Vector2(0,0),new Vector2(760,104),ShowCaseSummary,30);
         ThinButton(actions,L("Salir de la memoria","Leave memory"),new Vector2(0,-132),new Vector2(760,104),ExitToMainMenu,30);
         caseSummaryRoot=CreatePanel("Case overview",root,new Vector2(980,510),new Vector2(.5f,.5f),Color.clear).gameObject;
         caseSummaryText=CreateText("Case details",(RectTransform)caseSummaryRoot.transform,"",27,FontStyles.Normal,TextAlignmentOptions.TopLeft); Stretch(caseSummaryText.rectTransform); caseSummaryText.color=new Color(.89f,.88f,.81f);
@@ -317,13 +317,20 @@ public sealed class GlobalPauseMenu : MonoBehaviour
             return;
         }
 
-        int evidenceCount = ArchiveNull.Evidence.EvidenceInventory.Instance.GetAllEvidence().Count;
+        var evidence = ArchiveNull.Evidence.EvidenceInventory.Instance.GetAllEvidence();
         string sceneName = SceneManager.GetActiveScene().name;
-        caseSummaryText.text = L(
-            $"LA LLAVE POR DENTRO\n\nUBICACIÓN  {sceneName.ToUpperInvariant()}\nEVIDENCIAS REGISTRADAS  {evidenceCount:00}\n\nOBJETIVO ACTUAL\nDocumentar la escena, contrastar los registros y volver a la oficina cuando exista una hipótesis sostenible.",
-            $"THE KEY FROM INSIDE\n\nLOCATION  {sceneName.ToUpperInvariant()}\nREGISTERED EVIDENCE  {evidenceCount:00}\n\nCURRENT OBJECTIVE\nDocument the scene, compare records, and return to the office once a defensible hypothesis exists.");
-        caseSummaryText.text = "LA LLAVE POR DENTRO\n\n" + sceneName + " · " + evidenceCount + " evidencias\n\n" +
-            ArchiveNull.Evidence.CaseEvidenceCatalog.NextObjective() + "\n\nTAB: libreta y fotografías";
+        string location = sceneName == "F1-House" ? L("Casa Herrera", "Herrera house")
+            : sceneName == "F1-Office" ? L("Oficina de Salas", "Salas office") : sceneName;
+        string latest = evidence.Count == 0
+            ? L("Todavía no registraste evidencias.", "No evidence recorded yet.")
+            : evidence[evidence.Count - 1].evidenceName;
+        caseSummaryText.text =
+            $"<size=70%><color=#CBB480>{L("LUGAR DE INVESTIGACIÓN", "SCENE")}</color></size>\n" +
+            $"<size=150%>{location}</size>\n\n" +
+            $"<size=70%><color=#CBB480>{L("PRÓXIMO PASO", "NEXT STEP")}</color></size>\n" +
+            ArchiveNull.Evidence.CaseEvidenceCatalog.NextObjective() + "\n\n" +
+            $"<size=70%><color=#CBB480>{L("ÚLTIMA EVIDENCIA", "LATEST EVIDENCE")}   ·   {evidence.Count:00}</color></size>\n" +
+            latest;
         if (sceneName == "MechanicsLab") caseSummaryText.text = "LABORATORIO DE MECÁNICAS\n\nG: rueda de herramientas\nTrípode: clic para colocar · Q/R para rotar\nE sobre trípode: montar / recuperar\nL: encender montada · P: foto montada\n\nG: herramientas · F: levantar cámara\nTAB: libreta y fotografías";
     }
 
