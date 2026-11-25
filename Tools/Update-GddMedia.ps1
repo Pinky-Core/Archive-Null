@@ -1,4 +1,4 @@
-﻿param([string]$CaptureDirectory='Artifacts/FeedbackValidation')
+param([string]$CaptureDirectory='Artifacts/FeedbackValidation')
 $ErrorActionPreference='Stop'
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 Add-Type -AssemblyName System.IO.Compression
@@ -27,9 +27,9 @@ try {
     if($old){$old.ParentNode.RemoveChild($old)|Out-Null}
     $content=[Text.StringBuilder]::new()
     [void]$content.Append('<w:p><w:pPr><w:pageBreakBefore/><w:pStyle w:val="Heading1"/></w:pPr><w:r><w:t>Capturas y secuencias del prototipo jugable</w:t></w:r></w:p>')
-    [void]$content.Append('<w:p><w:r><w:t>Material capturado en Play Mode sobre el juego implementado. Las voces son sintéticas y provisionales. Los GIF y el video se entregan como archivos externos para conservar la animación; dentro de este documento se incluyen capturas reales.</w:t></w:r></w:p>')
+    [void]$content.Append('<w:p><w:r><w:t>Material capturado en Play Mode sobre el juego implementado. Las voces son sintéticas y provisionales. El escritorio, la onda de reconstrucción y el recuerdo eco se ilustran con GIF animados. Los enlaces permiten reproducirlos también fuera de Word.</w:t></w:r></w:p>')
     [void]$content.Append('<w:p><w:r><w:t>Controles actuales: WASD y mouse para explorar; Ctrl izquierdo para agacharse; E para interactuar; G para elegir equipo; TAB para consultar evidencias y reconstrucción. La UV revela residuos fluorescentes y el pincel revela huellas latentes. El PIN se consulta en una pegatina junto al teléfono, separado de la nota de Julián.</w:t></w:r></w:p>')
-    [void]$content.Append('<w:p><w:r><w:t>El video explicativo tiene doce capítulos y dura 2:40, en 1920 × 1080 a 30 fps, sin sonido. Explica objetivo, herramientas, teléfono, recuerdos eco, conexiones, reconstrucción e informe; combina capturas animadas y secuencias del prototipo.</w:t></w:r></w:p>')
+    [void]$content.Append('<w:p><w:r><w:t>El video explicativo tiene treinta capítulos y dura 3:30, en 1920 × 1080 a 30 fps, sin sonido. Explica objetivo, herramientas, teléfono, recuerdos eco, conexiones, reconstrucción e informe; combina capturas animadas y secuencias del prototipo.</w:t></w:r></w:p>')
     [void]$content.Append('<w:p><w:r><w:t>La telemetría local permite analizar pistas más y menos recogidas, tiempo hasta resolver, etapas alcanzadas, visitas, ayudas e intentos. Los datos de pruebas automáticas se separan de las partidas normales y no representan estadísticas de jugadores. Consultar Docs/Telemetry.md para generar el informe HTML y los CSV.</w:t></w:r></w:p>')
     $captures=[ordered]@{
         'desktop'='Ordenador de la oficina: escritorio físico y cierre de sesión.'
@@ -42,11 +42,22 @@ try {
         'board'='Pizarrón: fotografías ampliadas y guía para conectar pruebas.'
         'case-report'='Ficha final: hipótesis y envío del informe de investigación.'
     }
+    $animated = @{desktop='escritorio';house='reconstruccion';echo='recuerdo-eco'}
+    if (!($types.DocumentElement.ChildNodes | Where-Object {$_.Extension -eq 'gif'})) {
+        $type=$types.CreateElement('Default',$types.DocumentElement.NamespaceURI)
+        $type.SetAttribute('Extension','gif')
+        $type.SetAttribute('ContentType','image/gif')
+        $types.DocumentElement.AppendChild($type)|Out-Null
+    }
     $index=0
     foreach($name in $captures.Keys) {
         $path=Join-Path $root "$CaptureDirectory/$name.png"
         if(!(Test-Path -LiteralPath $path)){throw "Falta la captura $path"}
         $index++;$rid="rIdFeedbackImage$index";$media="feedback-$name.png"
+        if ($animated.ContainsKey($name)) {
+            $path=Join-Path $root ('Docs/Media/'+$animated[$name]+'.gif')
+            $media='feedback-'+$name+'.gif'
+        }
         $oldEntry=$zip.GetEntry("word/media/$media");if($oldEntry){$oldEntry.Delete()}
         [IO.Compression.ZipFileExtensions]::CreateEntryFromFile($zip,$path,"word/media/$media")|Out-Null
         $image=[Drawing.Image]::FromFile($path)
@@ -60,7 +71,7 @@ try {
 <w:p><w:r><w:drawing><wp:inline><wp:extent cx="$width" cy="$height"/><wp:docPr id="$(900+$index)" name="$media"/><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic><pic:nvPicPr><pic:cNvPr id="0" name="$media"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="$rid"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="$width" cy="$height"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p>
 "@)
     }
-    $links=[ordered]@{'reconstruccion.gif'='GIF: reconstrucción de la memoria';'recuerdo-eco.gif'='GIF: recuerdo en tercera persona';'ArchiveNull_Explicativo_SinAudio.mp4'='Video explicativo sin sonido'}
+    $links=[ordered]@{'escritorio.gif'='GIF: escritorio de investigación';'reconstruccion.gif'='GIF: reconstrucción de la memoria';'recuerdo-eco.gif'='GIF: recuerdo en tercera persona';'ArchiveNull_Explicativo.mp4'='Video explicativo sin sonido'}
     foreach($file in $links.Keys) {
         if(!(Test-Path (Join-Path $root "Docs/Media/$file"))){throw "Falta el archivo multimedia $file"}
         $rid="rIdFeedbackMedia$index";$index++
