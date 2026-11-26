@@ -1,121 +1,185 @@
 [
   {
-    "source": "Artifacts/EditorValidation/office-return.png",
-    "title": "La oficina",
+    "source": "Docs/Media/Acciones/sentarse.gif",
+    "title": "Sentarse",
     "seconds": 7,
-    "body": "La investigación empieza en\nla oficina, frente a la\npuerta.",
+    "body": "Acercate al monitor para\nusar el ordenador de la\noficina.",
     "caption": "",
     "view": ""
   },
   {
-    "source": "Artifacts/EditorValidation/primary-case-file.png",
-    "title": "Información primaria",
+    "source": "Docs/Media/Acciones/inicio.gif",
+    "title": "Inicio",
     "seconds": 7,
-    "body": "Leé el expediente antes de\nacercarte al escritorio.",
+    "body": "Abrí Inicio para acceder a\nlas aplicaciones del\nescritorio.",
     "caption": "",
     "view": ""
   },
   {
-    "source": "Assets/ArchiveNull/Resources/CasePortraits/People.png",
-    "title": "Las caras del caso",
+    "source": "Docs/Media/Acciones/expedientes.gif",
+    "title": "Expedientes",
     "seconds": 7,
-    "body": "El expediente pone rostro a\nJulián, Nicolás, Sofía y\nVíctor.",
+    "body": "Desde Inicio podés abrir el\nexplorador de expedientes.",
     "caption": "",
     "view": ""
   },
   {
-    "source": "Artifacts/EditorValidation/modern-desktop.png",
-    "title": "El monitor físico",
+    "source": "Docs/Media/Acciones/la-carpeta-del-caso.gif",
+    "title": "La carpeta del caso",
     "seconds": 7,
-    "body": "Al sentarte, el escritorio\naparece en el monitor de la\nescena.",
+    "body": "Entrá en La llave por dentro\npara consultar sus\ndocumentos.",
     "caption": "",
     "view": ""
   },
   {
-    "source": "Docs/Media/escritorio.gif",
-    "title": "Abrir ventanas",
+    "source": "Docs/Media/Acciones/las-memorias.gif",
+    "title": "Las memorias",
     "seconds": 7,
-    "body": "El cursor del ordenador te\npermite moverte entre\naplicaciones.",
+    "body": "El directorio indica qué\nrecuerdos están disponibles.",
     "caption": "",
     "view": ""
   },
   {
-    "source": "Artifacts/EditorValidation/monitor-settings.png",
-    "title": "Los ajustes",
+    "source": "Docs/Media/Acciones/preparar-la-visita.gif",
+    "title": "Preparar la visita",
     "seconds": 7,
-    "body": "Desde el monitor podés\ncambiar las preferencias de\nla oficina.",
+    "body": "Seleccioná una memoria antes\nde usar el visor.",
     "caption": "",
     "view": ""
   },
   {
-    "source": "Artifacts/EditorValidation/memory-folders.png",
-    "title": "Las carpetas",
+    "source": "Docs/Media/Acciones/preferencias.gif",
+    "title": "Preferencias",
     "seconds": 7,
-    "body": "Abrí el directorio para\nconsultar las memorias\ndisponibles.",
+    "body": "Abrí la configuración desde\nel propio monitor.",
     "caption": "",
     "view": ""
   },
   {
-    "source": "Artifacts/FeedbackValidation/desktop.png",
-    "title": "Elegir un destino",
+    "source": "Docs/Media/Acciones/levantarse.gif",
+    "title": "Levantarse",
     "seconds": 7,
-    "body": "Seleccioná la memoria que\nquerés investigar desde el\nordenador.",
+    "body": "Apartate del ordenador para\nvolver a recorrer la\noficina.",
     "caption": "",
     "view": ""
   },
   {
-    "source": "Artifacts/EditorValidation/headset-session.png",
-    "title": "Iniciar la sesión",
+    "source": "Docs/Media/Acciones/la-libreta.gif",
+    "title": "La libreta",
     "seconds": 7,
-    "body": "El visor indica cuándo\ncomienza la conexión con el\nrecuerdo.",
+    "body": "Abrí la libreta para revisar\nla investigación.",
+    "caption": "",
+    "view": ""
+  },
+  {
+    "source": "Docs/Media/Acciones/reconstruccion.gif",
+    "title": "Reconstrucción",
+    "seconds": 7,
+    "body": "Pasá a la pestaña que reúne\nlos sucesos del caso.",
+    "caption": "",
+    "view": ""
+  },
+  {
+    "source": "Docs/Media/Acciones/entrar-a-la-casa.gif",
+    "title": "Entrar a la casa",
+    "seconds": 7,
+    "body": "El visor pasa a negro antes\nde cargar la memoria.",
     "caption": "",
     "view": ""
   },
   {
     "source": "Docs/Media/reconstruccion.gif",
-    "title": "La onda de carga",
+    "title": "Reconstruir la casa",
     "seconds": 7,
-    "body": "El entorno aparece por etapas\nalrededor del punto de\nentrada.",
+    "body": "La onda descubre las\nsuperficies de la memoria.",
     "caption": "",
     "view": ""
   },
   {
-    "source": "Artifacts/FeedbackValidation/house.png",
-    "title": "La casa Herrera",
+    "source": "Docs/Media/Acciones/luz-ultravioleta.gif",
+    "title": "Luz ultravioleta",
     "seconds": 7,
-    "body": "Explorá las habitaciones y\nacercate a los objetos de\ninterés.",
+    "body": "Equipá la luz UV para buscar\nresiduos fluorescentes.",
     "caption": "",
     "view": ""
   },
   {
-    "source": "Artifacts/FeedbackValidation/pin-inspection.png",
-    "title": "La pegatina",
+    "source": "Docs/Media/Acciones/el-pincel.gif",
+    "title": "El pincel",
     "seconds": 7,
-    "body": "Al inspeccionar la nota, el\ncódigo queda a la vista.",
+    "body": "Cambiá al pincel para\ntrabajar con polvo\nrevelador.",
     "caption": "",
     "view": ""
   },
   {
-    "source": "Artifacts/FeedbackValidation/phone-voice.png",
-    "title": "El chat de Julián",
+    "source": "Docs/Media/Acciones/equipar-la-camara.gif",
+    "title": "Equipar la cámara",
     "seconds": 7,
-    "body": "Abrí la conversación y tocá\nreproducir en la nota de\nvoz.",
+    "body": "Elegí la cámara entre las\nherramientas disponibles.",
     "caption": "",
     "view": ""
   },
   {
-    "source": "Assets/ArchiveNull/Resources/CaseAudio/phone_salas.wav",
-    "title": "La voz de Salas",
+    "source": "Docs/Media/Acciones/el-visor-de-la-camara.gif",
+    "title": "El visor de la cámara",
     "seconds": 7,
-    "body": "Esta es la forma de onda del\nmensaje de Salas que se\nescucha en el teléfono.",
+    "body": "Levantá la cámara para\ncomponer la foto en su\npantalla.",
     "caption": "",
     "view": ""
   },
   {
-    "source": "Artifacts/FeedbackValidation/echo.png",
-    "title": "Los testigos",
+    "source": "Docs/Media/Acciones/el-disparo.gif",
+    "title": "El disparo",
     "seconds": 7,
-    "body": "Dos siluetas ocupan el\nespacio donde ocurrió el\nrecuerdo.",
+    "body": "Accioná el obturador para\nguardar el encuadre.",
+    "caption": "",
+    "view": ""
+  },
+  {
+    "source": "Docs/Media/Acciones/bajar-la-camara.gif",
+    "title": "Bajar la cámara",
+    "seconds": 7,
+    "body": "Al salir del modo de captura\nse apaga la pantalla.",
+    "caption": "",
+    "view": ""
+  },
+  {
+    "source": "Docs/Media/Acciones/leer-la-pegatina.gif",
+    "title": "Leer la pegatina",
+    "seconds": 7,
+    "body": "Inspeccioná el papel para\nacercar el código a la\nvista.",
+    "caption": "",
+    "view": ""
+  },
+  {
+    "source": "Docs/Media/Acciones/devolver-la-pista.gif",
+    "title": "Devolver la pista",
+    "seconds": 7,
+    "body": "Al terminar la inspección,\nla pegatina vuelve a su\nsitio.",
+    "caption": "",
+    "view": ""
+  },
+  {
+    "source": "Docs/Media/Acciones/el-telefono.gif",
+    "title": "El teléfono",
+    "seconds": 7,
+    "body": "Al desbloquear el teléfono\naparecen las aplicaciones.",
+    "caption": "",
+    "view": ""
+  },
+  {
+    "source": "Docs/Media/Acciones/el-chat.gif",
+    "title": "El chat",
+    "seconds": 7,
+    "body": "Abrí la conversación para\nconsultar sus mensajes.",
+    "caption": "",
+    "view": ""
+  },
+  {
+    "source": "Docs/Media/Acciones/la-transcripcion.gif",
+    "title": "La transcripción",
+    "seconds": 7,
+    "body": "Desplegá el texto de la nota\nde voz.",
     "caption": "",
     "view": ""
   },
@@ -123,119 +187,55 @@
     "source": "Docs/Media/recuerdo-eco.gif",
     "title": "El recuerdo eco",
     "seconds": 7,
-    "body": "Seguí la acción desde fuera\ndel cuerpo del investigador.",
+    "body": "Seguí a las siluetas que\nreconstruyen el momento.",
     "caption": "",
     "view": ""
   },
   {
-    "source": "Artifacts/EditorValidation/tripod-hologram.png",
+    "source": "Docs/Media/Acciones/colocar-el-tripode.gif",
     "title": "Colocar el trípode",
     "seconds": 7,
-    "body": "Laboratorio. El holograma\nanticipa dónde van a apoyar\nlas patas.",
+    "body": "Laboratorio. Orientá la\nvista previa y confirmá\ndónde apoyar el trípode.",
     "caption": "",
     "view": ""
   },
   {
-    "source": "Artifacts/EditorValidation/evidence-markers.png",
-    "title": "Marcar un hallazgo",
+    "source": "Docs/Media/Acciones/marcar-el-suelo.gif",
+    "title": "Marcar el suelo",
     "seconds": 7,
-    "body": "Laboratorio. Los números\ndistinguen las posiciones que\nseñalaste.",
+    "body": "Laboratorio. Elegí la\nposición y colocá el\nmarcador numerado.",
     "caption": "",
     "view": ""
   },
   {
-    "source": "Artifacts/EditorValidation/camera-in-hands.png",
-    "title": "Encuadrar la toma",
+    "source": "Docs/Media/Acciones/el-equipo-de-salas.gif",
+    "title": "El equipo de Salas",
     "seconds": 7,
-    "body": "Laboratorio. Levantá la\ncámara para ver su pantalla\nen tus manos.",
+    "body": "Abrí el ordenador para leer\nlos registros de la oficina.",
     "caption": "",
     "view": ""
   },
   {
-    "source": "Artifacts/EditorValidation/camera-lcd.png",
-    "title": "La vista del lente",
+    "source": "Docs/Media/Acciones/opciones-de-pausa.gif",
+    "title": "Opciones de pausa",
     "seconds": 7,
-    "body": "Laboratorio. El encuadre sale\nde la cámara física.",
+    "body": "Consultá las preferencias\nmientras la memoria está en\npausa.",
     "caption": "",
     "view": ""
   },
   {
-    "source": "Artifacts/EditorValidation/notebook-ui.png",
-    "title": "Revisar la foto",
+    "source": "Docs/Media/Acciones/retomar-el-caso.gif",
+    "title": "Retomar el caso",
     "seconds": 7,
-    "body": "Abrí la libreta para\nconsultar la captura y\ndecidir si conservarla.",
+    "body": "El expediente de pausa\nmuestra el lugar, el\nobjetivo y el hallazgo más\nreciente.",
     "caption": "",
     "view": ""
   },
   {
-    "source": "Artifacts/EditorValidation/boundary-editor.png",
-    "title": "El límite",
+    "source": "Docs/Media/Acciones/presentar-el-informe.gif",
+    "title": "Presentar el informe",
     "seconds": 7,
-    "body": "Laboratorio. Los píxeles\nmarcan el borde de la zona\nreconstruida.",
-    "caption": "",
-    "view": ""
-  },
-  {
-    "source": "Artifacts/EditorValidation/pause-ui.png",
-    "title": "Pausar la memoria",
-    "seconds": 7,
-    "body": "Desde la pausa podés\ncontinuar o preparar el\nregreso a la oficina.",
-    "caption": "",
-    "view": ""
-  },
-  {
-    "source": "Artifacts/FeedbackValidation/pause-options.png",
-    "title": "Ajustar la imagen",
-    "seconds": 7,
-    "body": "Las opciones de la memoria\npermiten cambiar los ajustes\nde video.",
-    "caption": "",
-    "view": ""
-  },
-  {
-    "source": "Artifacts/EditorValidation/session-confirmation.png",
-    "title": "Confirmar la salida",
-    "seconds": 7,
-    "body": "El diálogo permite volver a\nla oficina o seguir\nexplorando.",
-    "caption": "",
-    "view": ""
-  },
-  {
-    "source": "Artifacts/FeedbackValidation/office-return.png",
-    "title": "De vuelta al escritorio",
-    "seconds": 7,
-    "body": "Al salir de la memoria volvés\na la mesa del investigador.",
-    "caption": "",
-    "view": ""
-  },
-  {
-    "source": "Artifacts/FeedbackValidation/salas-computer.png",
-    "title": "Los registros de Salas",
-    "seconds": 7,
-    "body": "Consultá el equipo de la\nsegunda memoria para\ncontrastar documentos.",
-    "caption": "",
-    "view": ""
-  },
-  {
-    "source": "Artifacts/FeedbackValidation/board.png",
-    "title": "El pizarrón",
-    "seconds": 7,
-    "body": "Usá las pruebas reunidas para\nvincular hallazgos del\ncaso.",
-    "caption": "",
-    "view": ""
-  },
-  {
-    "source": "Artifacts/FeedbackValidation/reconstruction.png",
-    "title": "La reconstrucción",
-    "seconds": 7,
-    "body": "En la libreta, ordená los\nsucesos a partir de lo que\ndescubriste.",
-    "caption": "",
-    "view": ""
-  },
-  {
-    "source": "Artifacts/FeedbackValidation/case-report.png",
-    "title": "El informe final",
-    "seconds": 7,
-    "body": "Completá la ficha y presentá\ntu explicación del caso.",
+    "body": "Abrí la ficha del caso para\nregistrar tus conclusiones.",
     "caption": "",
     "view": ""
   }

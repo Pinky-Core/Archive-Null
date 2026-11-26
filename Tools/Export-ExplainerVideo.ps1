@@ -20,17 +20,10 @@ try {
         }
         $number=('{0:D2} / {1:D2}' -f ($index+1),$chapters.Count)
         [IO.File]::WriteAllText((Join-Path $scratch ('number-'+$index+'.txt')),$number,[Text.UTF8Encoding]::new($false))
-        $seconds=[int]$chapter.seconds;$frames=$seconds*30
-        $inputArgs=@('-loop','1','-i',$image)
-        $visual="[0:v]scale=1320:742:force_original_aspect_ratio=decrease,pad=1320:742:(ow-iw)/2:(oh-ih)/2:color=0x090f16,setsar=1,zoompan=z='min(zoom+0.00004,1.012)':x='iw/2-iw/zoom/2':y='ih/2-ih/zoom/2':d=1:s=1320x742:fps=30,trim=duration=$seconds,setpts=PTS-STARTPTS[game]"
-        if($chapter.source.EndsWith('.gif')){
-            $inputArgs=@('-stream_loop','-1','-ignore_loop','1','-i',$image)
-            $visual="[0:v]scale=1320:742:force_original_aspect_ratio=decrease,pad=1320:742:(ow-iw)/2:(oh-ih)/2,setsar=1,fps=30,trim=duration=$seconds,setpts=PTS-STARTPTS[game]"
-        }
-        if($chapter.source.EndsWith('.wav')){
-            $inputArgs=@('-i',$image)
-            $visual="[0:a]showwavespic=s=1320x742:colors=0x89e7d3,format=rgb24,loop=loop=-1:size=1:start=0,setpts=N/30/TB,fps=30[game]"
-        }
+        $seconds=[int]$chapter.seconds
+        if ([IO.Path]::GetExtension($image) -ne '.gif') { throw "Se esperaba una secuencia GIF en $image" }
+        $inputArgs=@('-stream_loop','-1','-ignore_loop','1','-i',$image)
+        $visual="[0:v]scale=1320:742:force_original_aspect_ratio=decrease,pad=1320:742:(ow-iw)/2:(oh-ih)/2,setsar=1,fps=30,trim=duration=$seconds,setpts=PTS-STARTPTS[game]"
         $font="fontfile='C\:/Windows/Fonts/segoeui.ttf'"
         $bold="fontfile='C\:/Windows/Fonts/seguisb.ttf'"
         $filter="$visual;color=c=0x101820:s=1920x1080:r=30:d=$seconds[bg];[bg][game]overlay=x=540:y=183,drawbox=x=70:y=92:w=1780:h=1:color=0x304654:t=fill,drawtext=${font}:text='ARCHIVE  NULL  /  GUÍA DEL JUEGO':x=70:y=48:fontsize=23:fontcolor=0x9bacb8,drawtext=${font}:textfile='.utmp/ExplainerVideo/number-$index.txt':x=70:y=126:fontsize=25:fontcolor=0x89e7d3,drawtext=${bold}:textfile='.utmp/ExplainerVideo/title-$index.txt':x=70:y=190:fontsize=45:line_spacing=9:fontcolor=0xffffff,drawtext=${font}:textfile='.utmp/ExplainerVideo/body-$index.txt':x=70:y=412:fontsize=25:line_spacing=10:fontcolor=0xc6d3dd,drawtext=${font}:textfile='.utmp/ExplainerVideo/view-$index.txt':x=540:y=141:fontsize=20:fontcolor=0x89e7d3,drawtext=${font}:textfile='.utmp/ExplainerVideo/caption-$index.txt':x=70:y=964:fontsize=25:fontcolor=0xf0ca7e,drawbox=x=70:y=1024:w=1780:h=3:color=0x304654:t=fill,drawbox=x=70:y=1024:w='$([int](1780*($index+1)/$chapters.Count))':h=3:color=0x89e7d3:t=fill,fade=t=in:st=0:d=0.28,fade=t=out:st=$($seconds-.28):d=0.28,format=yuv420p[out]"
