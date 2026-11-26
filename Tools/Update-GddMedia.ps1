@@ -29,7 +29,7 @@ try {
     [void]$content.Append('<w:p><w:pPr><w:pageBreakBefore/><w:pStyle w:val="Heading1"/></w:pPr><w:r><w:t>Capturas y secuencias del prototipo jugable</w:t></w:r></w:p>')
     [void]$content.Append('<w:p><w:r><w:t>Material capturado en Play Mode sobre el juego implementado. Las voces son sintéticas y provisionales. El escritorio, la onda de reconstrucción y el recuerdo eco se ilustran con GIF animados. Los enlaces permiten reproducirlos también fuera de Word.</w:t></w:r></w:p>')
     [void]$content.Append('<w:p><w:r><w:t>Controles actuales: WASD y mouse para explorar; Ctrl izquierdo para agacharse; E para interactuar; G para elegir equipo; TAB para consultar evidencias y reconstrucción. La UV revela residuos fluorescentes y el pincel revela huellas latentes. El PIN se consulta en una pegatina junto al teléfono, separado de la nota de Julián.</w:t></w:r></w:p>')
-    [void]$content.Append('<w:p><w:r><w:t>El video explicativo tiene treinta capítulos y dura 3:30, en 1920 × 1080 a 30 fps, sin sonido. Explica objetivo, herramientas, teléfono, recuerdos eco, conexiones, reconstrucción e informe; combina capturas animadas y secuencias del prototipo.</w:t></w:r></w:p>')
+    [void]$content.Append('<w:p><w:r><w:t>El video explicativo tiene treinta capítulos y dura 3:30, en 1920 × 1080 a 30 fps, sin sonido. Explica objetivo, herramientas, teléfono, recuerdos eco, conexiones, reconstrucción e informe; muestra una acción grabada en el editor por capítulo.</w:t></w:r></w:p>')
     [void]$content.Append('<w:p><w:r><w:t>La telemetría local permite analizar pistas más y menos recogidas, tiempo hasta resolver, etapas alcanzadas, visitas, ayudas e intentos. Los datos de pruebas automáticas se separan de las partidas normales y no representan estadísticas de jugadores. Consultar Docs/Telemetry.md para generar el informe HTML y los CSV.</w:t></w:r></w:p>')
     $captures=[ordered]@{
         'desktop'='Ordenador de la oficina: escritorio físico y cierre de sesión.'
@@ -42,7 +42,7 @@ try {
         'board'='Pizarrón: fotografías ampliadas y guía para conectar pruebas.'
         'case-report'='Ficha final: hipótesis y envío del informe de investigación.'
     }
-    $animated = @{desktop='escritorio';house='reconstruccion';echo='recuerdo-eco'}
+    $animated = @{desktop='escritorio';house='reconstruccion';echo='recuerdo-eco';'phone-voice'='Acciones/la-transcripcion';reconstruction='Acciones/reconstruccion';'salas-computer'='Acciones/el-equipo-de-salas';'pause-options'='Acciones/opciones-de-pausa';'case-report'='Acciones/presentar-el-informe'}
     if (!($types.DocumentElement.ChildNodes | Where-Object {$_.Extension -eq 'gif'})) {
         $type=$types.CreateElement('Default',$types.DocumentElement.NamespaceURI)
         $type.SetAttribute('Extension','gif')
